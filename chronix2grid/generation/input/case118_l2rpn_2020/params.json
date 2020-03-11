@@ -1,0 +1,23 @@
+{
+  "Lx": 1000,
+  "Ly": 1000,
+  "T_hazards_min": 0,
+  "T_maintenance_min": 0,
+  "daily_proba_hazards": "0.05",
+  "daily_proba_maintenance": "0.1",
+  "dt": 5,
+  "dx_corr": 1000,
+  "dy_corr": 1000,
+  "end_date": "2018-12-31",
+  "long_wind_corr": 20160,
+  "medium_wind_corr": 1440,
+  "n_timesteps_consecutive_soft_overflow_breaks": 20,
+  "n_timesteps_hard_overflow_is_broken": 144,
+  "n_timesteps_soft_overflow_is_broken": 144,
+  "nuclear_smoothing": 10080,
+  "planned_std": "0.01",
+  "short_wind_corr": 120,
+  "solar_corr": 240,
+  "start_date": "2018-01-01",
+  "temperature_corr": 400
+}
