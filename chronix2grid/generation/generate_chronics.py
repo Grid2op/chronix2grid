@@ -10,34 +10,34 @@ from datetime import timedelta
 
 # Libraries developed for this module
 import consumption.generate_load as gen_loads
+import renewable.generate_solar_wind as gen_enr
+import thermal.generate_dispatch as gen_dispatch
+
 
 ## Temporaire: constantes
-# Calculation period of the scenarios
+# Calculation period of the scenarios (dates in params.json)
 YEAR = 2007
-MONTH = 1  # random.randint(1, 12)
-DAY = 1  # random.randint(1,29)
-WEEKS = 52
-start_date = date(YEAR, MONTH, DAY)
-end_date = start_date + timedelta(days=7 * WEEKS)
 
 # Miscellaneaous configuration
-n_scenarios = 2
+n_scenarios = 1
 case = 'case118_l2rpn_2020'
+
+# Chemin des inputs, outputs et outputs intermédiaires
 INPUT_FOLDER = 'input'
-
-# Chemin de
-if WEEKS == 52:
-    DISPATCH_INPUT_FOLDER = 'input/dispatch/'+str(YEAR)
-else:
-    DISPATCH_INPUT_FOLDER = 'input/dispatch/' + str(YEAR)+'_'+str(WEEKS)+'Weeks'
+OUTPUT_FOLDER = 'output'
+DISPATCH_INPUT_FOLDER = os.path.join(INPUT_FOLDER,'dispatch/'+str(YEAR))
+DISPATCH_OUTPUT_FOLDER = os.path.join(OUTPUT_FOLDER,str(YEAR))
 
 
+# Paramètres de modélisation
+SMOOTHDIST = 0.001  # parameter to smooth the distribution, and make it continuous. It is advised not to modify this parameter
+COSPHI = 0.7  # parameter used to sample reactive from active
 
 
 # ======================================================================================================================
 ## Proper functions
 # Read data (independant of the number of scenarios)
-def read_configuration(start_date, end_date, input_folder, case):
+def read_configuration(input_folder, case):
     # Json parameters
     print('Importing parameters ...')
     json1_file = open(os.path.join(input_folder, case, 'params.json'))
@@ -49,11 +49,8 @@ def read_configuration(start_date, end_date, input_folder, case):
         except ValueError:
             params[key] = pd.to_datetime(value, format='%Y-%m-%d')
 
-    params['start_date'] = pd.to_datetime(start_date)
-    params['end_date'] = pd.to_datetime(end_date)
-
     # date and time parameters
-    params['T'] = int(pd.Timedelta(end_date - start_date).total_seconds() // (60))
+    params['T'] = int(pd.Timedelta(params['end_date'] - params['start_date']).total_seconds() // (60))
     Nt_inter = int(params['T'] // params['dt'] + 1)
 
     # Import loads_charac.csv and prods_charac.csv
@@ -69,26 +66,35 @@ def read_configuration(start_date, end_date, input_folder, case):
 
 
 # Call generation scripts n_scenario times with dedicated random seeds
-def main(n_scenarios, start_date, end_date, params, dispatch_input_folder, weeks, loads_charac, load_weekly_pattern):
+def main(n_scenarios, params, dispatch_input_folder, dispatch_output_folder, loads_charac, load_weekly_pattern):
     print('=====================================================================================================================================')
     print('============================================== CHRONICS GENERATION ==================================================================')
     print('=====================================================================================================================================')
 
-    # Make sure the seeds are the same, whether computation is parrallel or sequential
+    # Make sure the seeds are the same, whether computation is parallel or sequential
     seeds = [np.random.randint(low=0, high=2**31) for _ in range(n_scenarios)]
 
-    # Make sure the output folder exists
+    # Make sure the output folders exist
     main_folder = os.path.join(dispatch_input_folder)
     if not os.path.exists(main_folder):
         os.mkdir(main_folder)
 
+    out_folder = os.path.join(dispatch_output_folder)
+    if not os.path.exists(out_folder):
+        os.mkdir(out_folder)
+
     # Launch proper scenario generation
     for i, seed in enumerate(seeds):
         print("================ Generating scenario number "+str(i)+" ================")
-        gen_loads.main(i, dispatch_input_folder, weeks, seed, start_date, end_date, params, loads_charac, load_weekly_pattern)
+        load, load_forecasted = gen_loads.main(i, dispatch_input_folder, seed, params, loads_charac, load_weekly_pattern)
+
+        prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = gen_enr.main(i, dispatch_input_folder, seed,
+                                                                   params, prods_charac, solar_pattern, SMOOTHDIST)
+        # gen_dispatch.main(i, load_forecasted, prod_solar_wind_forecasted, dispatch_output_folder,
+        #                    seed, params, prods_charac)
         print('\n')
     return
 
 ### Test
-params, loads_charac, prods_charac, load_weekly_pattern, solar_pattern = read_configuration(start_date, end_date, INPUT_FOLDER, case)
-main(n_scenarios, start_date, end_date, params, DISPATCH_INPUT_FOLDER, WEEKS, loads_charac, load_weekly_pattern)
+params, loads_charac, prods_charac, load_weekly_pattern, solar_pattern = read_configuration(INPUT_FOLDER, case)
+main(n_scenarios, params, DISPATCH_INPUT_FOLDER, DISPATCH_OUTPUT_FOLDER, loads_charac, load_weekly_pattern)

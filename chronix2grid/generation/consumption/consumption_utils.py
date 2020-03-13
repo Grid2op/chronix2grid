@@ -38,7 +38,9 @@ def compute_residential(locations, Pmax, temperature_noise, params, weekly_patte
     # Compute seasonal pattern
     Nt_inter = int(params['T'] // params['dt'] + 1)
     t = np.linspace(0, params['T'], Nt_inter, endpoint=True)
-    start_min = int(pd.Timedelta(params['start_date'] - pd.to_datetime('2018/01/01', format='%Y-%m-%d')).total_seconds() // 60)
+    start_year = pd.to_datetime(str(params['start_date'].year) + '/01/01', format='%Y-%m-%d')
+    # start_min = int(pd.Timedelta(params['start_date'] - pd.to_datetime('2018/01/01', format='%Y-%m-%d')).total_seconds() // 60)
+    start_min = int(pd.Timedelta(params['start_date'] - start_year).total_seconds() // 60)
     seasonal_pattern = 5.5/7 + 1.5/7*np.cos((2*np.pi/(365*24*60))*(t-30*24*60 - start_min))
 
     # Get weekly pattern
@@ -228,6 +230,7 @@ def interpolate_noise(computation_noise, params, locations, time_scale):
 
 def create_csv(dict_, path, reordering=True, noise=None, shift=False, with_pdb=False):
     df = pd.DataFrame.from_dict(dict_)
+    df.set_index('datetime', inplace = True)
     if reordering:
         value = []
         for name in list(df):
@@ -241,7 +244,9 @@ def create_csv(dict_, path, reordering=True, noise=None, shift=False, with_pdb=F
         df = df.fillna(0)
     # if with_pdb:
     #     pdb.set_trace()
-    df.to_csv(path, index=False, sep=';', float_format='%.1f')
+    df.to_csv(path, index=True, sep=',', float_format='%.1f')
+
+    return df
 
 def natural_keys(text):
     return int([ c for c in re.split('(\d+)', text) ][1])
