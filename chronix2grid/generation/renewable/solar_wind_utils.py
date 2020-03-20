@@ -280,6 +280,8 @@ def generate_coarse_noise(params, data_type):
 def create_csv(dict_, path, reordering=True, noise=None, shift=False, with_pdb=False):
     df = pd.DataFrame.from_dict(dict_)
     df.set_index('datetime', inplace=True)
+    df = df.sort_index(ascending=True)
+    df = df.head(len(df)-1)
     if reordering:
         value = []
         for name in list(df):

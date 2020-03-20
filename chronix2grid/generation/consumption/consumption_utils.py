@@ -231,6 +231,8 @@ def interpolate_noise(computation_noise, params, locations, time_scale):
 def create_csv(dict_, path, reordering=True, noise=None, shift=False, with_pdb=False):
     df = pd.DataFrame.from_dict(dict_)
     df.set_index('datetime', inplace = True)
+    df = df.sort_index(ascending=True)
+    df = df.head(len(df) - 1) # Last value is lonely for another day
     if reordering:
         value = []
         for name in list(df):

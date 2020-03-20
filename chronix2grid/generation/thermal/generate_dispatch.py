@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 
 # Libraries developed for this module
-import consumption.consumption_utils as conso
+import generation.consumption.consumption_utils as conso
 
 
 def main(i, load_forecasted, prod_solar_wind_forecasted, destination_folder, seed, params, prods_charac):

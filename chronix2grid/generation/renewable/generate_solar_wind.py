@@ -6,10 +6,10 @@ import pandas as pd
 import numpy as np
 
 # Libraries developed for this module
-import renewable.solar_wind_utils as swutils
+import generation.renewable.solar_wind_utils as swutils
 
 
-def main(i, destination_folder, seed, params, prods_charac, solar_pattern, smoothdist):
+def main(i, destination_folder, seed, params, prods_charac, solar_pattern):
     """
     This is the solar and wind production generation function, it allows you to generate consumption chronics based on
     production nodes characteristics and on a solar typical yearly production patterns.
@@ -32,6 +32,7 @@ def main(i, destination_folder, seed, params, prods_charac, solar_pattern, smoot
     """
 
     np.random.seed(seed)
+    smoothdist = params['smoothdist']
 
     # Define datetime indices
     datetime_index = pd.date_range(

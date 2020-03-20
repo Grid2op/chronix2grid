@@ -8,15 +8,37 @@ from pathlib import Path
 from matplotlib import pyplot as plt
 #from entropy import spectral_entropy
 
+import plotly.graph_objects as go
+import plotly.offline as pltly
+import cufflinks as cf
+from plotly.subplots import make_subplots
+
 
 class EconomicDispatchValidator:
 
-    def __init__(self, consumption, ref_dispatch, synthetic_dispatch, prods_charac=None, loads_charac=None, prices=None):
+    def __init__(self, consumption, ref_dispatch, synthetic_dispatch, year, num_scenario, prods_charac=None, loads_charac=None, prices=None):
 
         # Create Class variables
         self.consumption = consumption
         self.ref_dispatch = ref_dispatch
         self.syn_dispatch = synthetic_dispatch
+        self.num_scenario = 'Scenario_'+str(num_scenario)
+        self.year = year
+
+        # Create repo if necessary for plot saving
+        self.image_repo = 'kpi/images/'+str(self.year)
+        if not os.path.exists(self.image_repo):
+            os.mkdir(self.image_repo)
+
+        self.image_repo += '/' + self.num_scenario
+        if not os.path.exists(self.image_repo):
+            os.mkdir(self.image_repo)
+            os.mkdir(os.path.join(self.image_repo,'dispatch_view'))
+            os.mkdir(os.path.join(self.image_repo, 'wind_kpi'))
+            os.mkdir(os.path.join(self.image_repo, 'wind_load_kpi'))
+            os.mkdir(os.path.join(self.image_repo, 'solar_kpi'))
+            os.mkdir(os.path.join(self.image_repo, 'nuclear_kpi'))
+            os.mkdir(os.path.join(self.image_repo, 'hydro_kpi'))
         
         # Reindex to avoid problems
         # self.consumption.index.rename('Time', inplace=True)
@@ -54,7 +76,7 @@ class EconomicDispatchValidator:
         # Json to save all KPIs
         self.output = {}
 
-    def _plot_heatmap(self, corr, title, path_png=None, save_png=False):
+    def _plot_heatmap(self, corr, title, path_png=None, save_png=True):
         
         ax = sns.heatmap(corr, 
                         fmt='.1f',
@@ -78,6 +100,21 @@ class EconomicDispatchValidator:
             figure = ax.get_figure()    
             figure.savefig(path_png)
 
+    def plot_barcharts(self, df_ref, df_syn, save_plots = True, path_name_ref = None, path_name_syn = None, title_component = ''):
+        # Plot results
+        fig, axes = plt.subplots(1, 2, figsize=(17, 5))
+        sns.barplot(df_ref.index, df_ref, ax=axes[0])
+        sns.barplot(df_syn.index, df_syn, ax=axes[1])
+        axes[0].set_title('Reference '+title_component, size = 9)
+        axes[1].set_title('Synthetic '+title_component, size = 9)
+
+        if save_plots:
+            # Save plot as pnd
+            extent0 = axes[0].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+            extent1 = axes[1].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+            fig.savefig(path_name_ref, bbox_inches=extent0.expanded(1.3, 1.3))
+            fig.savefig(path_name_syn, bbox_inches=extent1.expanded(1.3, 1.3))
+
     def _pairwise_corr_different_dfs(self, df1, df2):
 
         n_col_df1 = df1.shape[1]
@@ -90,8 +127,72 @@ class EconomicDispatchValidator:
         corr_wind = pd.DataFrame(tmp_corr, index=df1.columns, columns=df2.columns)
 
         return corr_wind.round(self.precision)
-    
-    def __hydro_in_prices(self, 
+
+    def add_trace_in_subplot(self, fig, x=None, y=None,
+                             in_row=1, in_col=1, stacked=None, name = None):
+        """
+        Add invididual time series to the subplot
+        """
+        fig.add_trace(go.Scatter(x=x, y=y, stackgroup=stacked, name = name),
+                      row=in_row, col=in_col)
+
+    def plot_carriers_pw(self, curve = 'synthetic' ,stacked=True, max_col_splot=2, save_html = True, wind_solar_only = False):
+        if curve == 'synthetic':
+            prod_p = self.syn_dispatch.copy()
+        elif curve == 'reference':
+            prod_p = self.ref_dispatch.copy()
+        # Initialize full gen dataframe
+        df_mw = pd.DataFrame()
+
+        # Num unique carriers
+        if wind_solar_only:
+            unique_carriers = ['solar','wind']
+        else:
+            unique_carriers = self.prod_charac['type'].unique().tolist()
+
+        # Initialize the plot
+        rows = int(np.ceil(len(unique_carriers) / max_col_splot))
+        fig = make_subplots(rows=rows,
+                            cols=max_col_splot,
+                            subplot_titles=unique_carriers)
+
+        # Visualize stacked plots?
+        if stacked:
+            stacked_method = 'one'
+        else:
+            stacked_method = None
+
+        x = prod_p.index
+        row = col = 1
+        for carrier in unique_carriers:
+            # Get the gen names per carrier
+            carrier_filter = self.prod_charac['type'].isin([carrier])
+            gen_names = self.prod_charac.loc[carrier_filter]['name'].tolist()
+
+            # Agregate me per carrier in dt
+            tmp_df_mw = prod_p[gen_names].sum(axis=1)
+            df_mw = pd.concat([df_mw, tmp_df_mw], axis=1)
+
+            for gen in gen_names:
+                # Add trace per carrier in same axes
+                self.add_trace_in_subplot(fig, x=x, y=prod_p[gen],
+                                     in_row=row, in_col=col, stacked=stacked_method, name = gen)
+
+                # Once all ts have been added, create a new subplot
+            col += 1
+            if col > max_col_splot:
+                col = 1
+                row += 1
+
+        # Rename df_mw columns
+        df_mw.columns = unique_carriers
+
+        if save_html:
+            fig.write_html(os.path.join(self.image_repo,'dispatch_view',str(curve)+'_prod_per_carrier.html'))
+        return fig, df_mw
+
+
+    def __hydro_in_prices(self,
                           norm_mw, 
                           upper_quantile, 
                           lower_quantile,
@@ -147,9 +248,10 @@ class EconomicDispatchValidator:
         # other months with 0 MW)
         hydro_mw_month = hydro_mw.copy()
         hydro_mw_month['month'] = self.months
-        mw_per_month = hydro_mw_month.groupby('month').sum(axis=0).round(self.precision)
+        mw_per_month = hydro_mw_month.groupby('month').mean().round(self.precision)
         
         return mw_per_month
+
         
     def hydro_kpi(self, 
                   upper_quantile = 0.95, 
@@ -215,7 +317,20 @@ class EconomicDispatchValidator:
                                                                          lower_quantile,
                                                                          above_norm_cap,
                                                                          below_norm_cap)
-        
+
+        self.plot_barcharts(stat_ref_high_price, stat_syn_high_price, save_plots=True,
+                            path_name_ref=os.path.join(self.image_repo,'hydro_kpi','ref_high_price.png'),
+                            path_name_syn=os.path.join(self.image_repo,'hydro_kpi','syn_high_price.png'),
+                       title_component='% of time production exceed '+str(above_norm_cap)+
+                                       '*Pmax when prices are high (above quantile '+str(upper_quantile*100)+')')
+
+        self.plot_barcharts(stat_ref_low_price, stat_syn_low_price, save_plots=True,
+                            path_name_ref=os.path.join(self.image_repo,'hydro_kpi','ref_low_price.png'),
+                            path_name_syn=os.path.join(self.image_repo,'hydro_kpi','syn_low_price.png'),
+                            title_component='% of time production is below ' + str(below_norm_cap) +
+                                            '*Pmax when prices are low (under quantile ' + str(
+                                lower_quantile * 100) + ')')
+
         # Write results
         # -- + -- + --
         self.output['Hydro'] = {'high_price_for_ref': stat_ref_high_price.to_dict(),
@@ -229,6 +344,11 @@ class EconomicDispatchValidator:
         
         # Seasonal for synthetic data
         syn_agg_mw_per_month = self.__hydro_seasonal(hydro_syn)
+
+        self.plot_barcharts(ref_agg_mw_per_month.sum(axis = 1), syn_agg_mw_per_month.sum(axis = 1), save_plots=True,
+                            path_name_ref=os.path.join(self.image_repo,'hydro_kpi','ref_hydro_per_month.png'),
+                            path_name_syn=os.path.join(self.image_repo,'hydro_kpi','syn_hydro_per_month.png'),
+                            title_component='hydro mean production per month for all units')
 
         # Write results
         # -- + -- + --
@@ -262,7 +382,7 @@ class EconomicDispatchValidator:
     #
     #     return entropy_per_month
         
-    def __wind_metric_distrib(self, wind_df):
+    def __wind_metric_distrib(self, wind_df, save_plots = True):
         
         '''
         Return:
@@ -286,10 +406,11 @@ class EconomicDispatchValidator:
         # Set index as month value
         kurtosis_per_month.index = kurtosis_per_month.index.month
         kurtosis_per_month.index.rename('month', inplace=True)
+
                                          
         return skewness_per_month, kurtosis_per_month
         
-    def wind_kpi(self, save_plots=False):
+    def wind_kpi(self, save_plots=True):
 
         '''
         Return:
@@ -313,7 +434,7 @@ class EconomicDispatchValidator:
         wind_syn = self.syn_dispatch[wind_names]
     
         # Compute correlation for all elements between both dataframes
-        corr_wind = self._pairwise_corr_different_dfs(wind_ref, wind_syn)
+        corr_wind = self._pairwise_corr_different_dfs(wind_syn, wind_syn)
         
         # Write results json output
         # -- + -- + -- + -- + -- + 
@@ -321,20 +442,29 @@ class EconomicDispatchValidator:
         
         # Second KPI
         # Measure non linearity of time series
-        chaoticness_ref = self.__wind_entropy(wind_ref)
-        chaoticness_syn = self.__wind_entropy(wind_syn)
-        
-        # Write results 
-        # -- + -- + --
-        self.output['wind_kpi'] = {'non_linearity_reference': chaoticness_ref.to_dict(),
-                                   'non_linearity_synthetic': chaoticness_syn.to_dict(),
-                                   }
+        # chaoticness_ref = self.__wind_entropy(wind_ref)
+        # chaoticness_syn = self.__wind_entropy(wind_syn)
+        #
+        # # Write results
+        # # -- + -- + --
+        # self.output['wind_kpi'] = {'non_linearity_reference': chaoticness_ref.to_dict(),
+        #                            'non_linearity_synthetic': chaoticness_syn.to_dict(),
+        #                            }
         
         # Third KPI
         # Meaure the simmetry of wind distribution
         skewness_ref, kurtosis_ref = self.__wind_metric_distrib(wind_ref)
         skewness_syn, kurtosis_syn = self.__wind_metric_distrib(wind_syn)
-        
+
+        self.plot_barcharts(skewness_ref.sum(axis=1), skewness_syn.sum(axis=1), save_plots=True,
+                            path_name_ref=os.path.join(self.image_repo,'wind_kpi','ref_skewness.png'),
+                            path_name_syn=os.path.join(self.image_repo,'wind_kpi','syn_skewness.png'),
+                            title_component='skewness per month')
+        self.plot_barcharts(kurtosis_ref.sum(axis=1), kurtosis_syn.sum(axis=1), save_plots=True,
+                            path_name_ref=os.path.join(self.image_repo, 'wind_kpi', 'ref_kurtosis.png'),
+                            path_name_syn=os.path.join(self.image_repo, 'wind_kpi', 'syn_kurtosis.png'),
+                            title_component='kurtosis per month')
+
         # Write results 
         # -- + -- + --
         self.output['wind_kpi'] = {'skewness_reference': skewness_ref.to_dict(),
@@ -355,20 +485,19 @@ class EconomicDispatchValidator:
         sns.heatmap(corr_wind, annot = True, linewidths=.5, ax=axes[0])
         sns.distplot(agg_ref_wind, ax=axes[1])
         sns.distplot(agg_syn_wind, ax=axes[2])
-        axes[1].set_title('Reference Distribution')
-        axes[2].set_title('Synthetic Distribution')
+        axes[1].set_title('Reference Distribution of agregate wind production')
+        axes[2].set_title('Synthetic Distribution of agregate wind production')
 
         if save_plots:
             # Save plot as pnd
             extent0 = axes[0].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
             extent1 = axes[1].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
             extent2 = axes[2].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-            fig.savefig('images/wind_kpi/win_corr_heatmap.png', bbox_inches=extent0.expanded(1.6, 1.6))
-            fig.savefig('images/wind_kpi/ref_histogram.png', bbox_inches=extent1.expanded(1.4, 1.4))
-            fig.savefig('images/wind_kpi/syn_histogram.png', bbox_inches=extent2.expanded(1.4, 1.4))
+            fig.savefig(os.path.join(self.image_repo,'wind_kpi','syn_wind_corr_heatmap.png'), bbox_inches=extent0.expanded(1.6, 1.6))
+            fig.savefig(os.path.join(self.image_repo,'wind_kpi','ref_histogram.png'), bbox_inches=extent1.expanded(1.3, 1.3))
+            fig.savefig(os.path.join(self.image_repo,'wind_kpi','syn_histogram.png'), bbox_inches=extent2.expanded(1.3, 1.3))
 
         return corr_wind, \
-               chaoticness_ref, chaoticness_syn, \
                skewness_ref, skewness_syn, \
                kurtosis_ref, kurtosis_syn
 
@@ -427,11 +556,13 @@ class EconomicDispatchValidator:
         # Per day, we are interested to get x quantile only when
         # generators are producing energy
         solar_q_perday = solar_df.replace(0, np.nan).resample('D').quantile(cloud_quantile)
-        
+
         # Measure cloudiness: we compare the quantile values per
         # day with a long them x quantile truncated it a factor
-        cloudiness = solar_q_perday <= (solar_q * factor_cloud)
-        
+        # cloudiness = solar_q_perday <= (solar_q * factor_cloud)
+        thresholds = solar_q * factor_cloud
+        cloudiness = pd.DataFrame({col: solar_q_perday[col]<=thresholds[col] for col in solar_q_perday.columns})
+
         # # Add month column to get some particular stats
         # # Add months to solar cloudiness measure df
         # month = cloudiness.index.month.to_frame()
@@ -454,8 +585,8 @@ class EconomicDispatchValidator:
         return percen_cloud.round(self.precision)
         
     def solar_kpi(self, 
-                  cloud_quantile=0.95, 
-                  cond_below_cloud=0.57,
+                  cloud_quantile=0.95,
+                  cond_below_cloud=0.57, save_plots = True,
                   **kwargs):
 
         '''
@@ -499,7 +630,7 @@ class EconomicDispatchValidator:
         
         percen_moderate (dict):     Dictionary per solar unit that contains the number of times in
                                     percentage and per month a specific solar unit has overcome a pre-defined
-                                    moderate qunantile given the ref dispatch.
+                                    moderate quantile given the ref dispatch.
 
         percen_severe (dict):       Dictionary per solar unit that contains the number of times in
                                     percentage and per month a specific solar unit has overcome a pre-defined
@@ -511,14 +642,35 @@ class EconomicDispatchValidator:
         solar_filter = self.prod_charac.type.isin(['solar'])
         solar_names = self.prod_charac.name.loc[solar_filter].values
 
-        # From data, extract only wind time series
+        # From data, extract only solar time series
         solar_ref = self.ref_dispatch[solar_names]
         solar_syn = self.syn_dispatch[solar_names]
+
+        agg_ref_wind = solar_ref.sum(axis = 1)
+        agg_syn_wind = solar_syn.sum(axis = 1)
 
         # First KPI
         # -- + -- +
         # Get correlation matrix (10 x 10)
-        corr_solar = self._pairwise_corr_different_dfs(solar_ref, solar_syn)
+        corr_solar = self._pairwise_corr_different_dfs(solar_syn, solar_syn)
+
+        # Plot and save it
+        fig, axes = plt.subplots(1, 3, figsize=(17, 5))
+        sns.heatmap(corr_solar, annot=True, linewidths=.5, ax=axes[0])
+        sns.distplot(agg_ref_wind, ax=axes[1])
+        sns.distplot(agg_syn_wind, ax=axes[2])
+        axes[1].set_title('Reference Distribution of agregate solar production')
+        axes[2].set_title('Synthetic Distribution of agregate solar production')
+
+        if save_plots:
+            # Save plot as pnd
+            extent0 = axes[0].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+            extent1 = axes[1].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+            extent2 = axes[2].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+            fig.savefig(os.path.join(self.image_repo,'solar_kpi','syn_solar_corr_heatmap.png'), bbox_inches=extent0.expanded(1.6, 1.6))
+            fig.savefig(os.path.join(self.image_repo,'solar_kpi','ref_histogram.png'), bbox_inches=extent1.expanded(1.3, 1.3))
+            fig.savefig(os.path.join(self.image_repo,'solar_kpi','syn_histogram.png'), bbox_inches=extent2.expanded(1.3, 1.3))
+
 
         # Write its value
         # -- + -- + -- +
@@ -542,10 +694,24 @@ class EconomicDispatchValidator:
         params = {'monthly_pattern': monthly_pattern, 'hours': hours}
         
         solar_night_ref = self.__solar_at_night(solar_ref, params=params)
-        
+
         # Get percentage solar productions for synthetic data
         solar_night_syn = self.__solar_at_night(solar_syn, params=params)
-        
+
+        # Compute mean of generators
+        solar_night_syn_mean = pd.DataFrame({key: [solar_night_syn[key].mean()] for key in solar_night_syn.keys()})
+        solar_night_syn_mean = solar_night_syn_mean.sum(axis = 0)
+
+        solar_night_ref_mean = pd.DataFrame({key: [solar_night_ref[key].mean()] for key in solar_night_ref.keys()})
+        solar_night_ref_mean = solar_night_ref_mean.sum(axis=0)
+
+        # Plot and save it average per season
+        self.plot_barcharts(solar_night_ref_mean, solar_night_syn_mean, save_plots=True,
+                            path_name_ref=os.path.join(self.image_repo,'solar_kpi','ref_solar_at_night.png'),
+                            path_name_syn=os.path.join(self.image_repo,'solar_kpi','syn_solar_at_night.png'),
+                            title_component='Mean % of production at night per season')
+
+
         # Write output
         # -- + -- + --
         self.output['solar_kpi'] = {'season_solar_at_night_reference': solar_night_ref,
@@ -565,7 +731,12 @@ class EconomicDispatchValidator:
         cloudiness_syn = self.__solar_cloudiness(solar_syn,
                                                  cloud_quantile=cloud_quantile,
                                                  factor_cloud=cond_below_cloud)
-        
+
+        self.plot_barcharts(cloudiness_ref.sum(axis=1), cloudiness_syn.sum(axis=1), save_plots=True,
+                            path_name_ref=os.path.join(self.image_repo,'solar_kpi','ref_cloudiness.png'),
+                            path_name_syn=os.path.join(self.image_repo,'solar_kpi','syn_cloudiness.png'),
+                            title_component='Cloudiness per month (number of daily quantile '+str(cloud_quantile)+' below '+str(round(cond_below_cloud*100))+
+                                            ' % of general quantile '+str(cloud_quantile)+')')
         # # Write its value
         # # -- + -- + -- +
         self.output['solar_kpi'] = {'cloudiness_reference': cloudiness_ref.to_dict(),
@@ -573,6 +744,7 @@ class EconomicDispatchValidator:
                                     }
 
         return corr_solar, solar_night_ref, solar_night_syn, cloudiness_ref, cloudiness_syn
+
 
     def wind_load_kpi(self):
 
@@ -609,25 +781,25 @@ class EconomicDispatchValidator:
         plt.figure(figsize=(18,4))
         self._plot_heatmap(corr_rel[0], 
                            'Correlation Wind Load Region R1',
-                           path_png='images/wind_load_kpi/corr_wind_load_R1.png',
-                           save_png=False)
+                           path_png=os.path.join(self.image_repo,'wind_load_kpi','syn_corr_wind_load_R1.png'),
+                           save_png=True)
         
         plt.figure(figsize=(18,4))
         self._plot_heatmap(corr_rel[1], 
                            'Correlation Wind Load Region R2',
-                           path_png='images/wind_load_kpi/corr_wind_load_R2.png',
-                           save_png=False)
+                           path_png=os.path.join(self.image_repo,'wind_load_kpi','syn_corr_wind_load_R2.png'),
+                           save_png=True)
 
         plt.figure(figsize=(12,3))
         self._plot_heatmap(corr_rel[2], 
                            'Correlation Wind Load Region R3',
-                            path_png='images/wind_load_kpi/corr_wind_load_R3.png',
-                            save_png=False)
+                            path_png=os.path.join(self.image_repo,'wind_load_kpi','syn_corr_wind_load_R3.png'),
+                            save_png=True)
 
 
         return corr_rel[0], corr_rel[1], corr_rel[2]
 
-    def nuclear_kpi(self, save_plots=False):
+    def nuclear_kpi(self, save_plots=True):
 
         """
         Return:
@@ -655,7 +827,7 @@ class EconomicDispatchValidator:
             # Save plot as pnd
             extent0 = axes[0].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
             extent1 = axes[1].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-            fig.savefig('images/nuclear_kpi/ref_dispatch_histogram.png', bbox_inches=extent0.expanded(1.3, 1.3))
-            fig.savefig('images/nuclear_kpi/syn_dispatch_histogram.png', bbox_inches=extent1.expanded(1.3, 1.3))
+            fig.savefig(os.path.join(self.image_repo,'nuclear_kpi','ref_dispatch_histogram.png'), bbox_inches=extent0.expanded(1.3, 1.3))
+            fig.savefig(os.path.join(self.image_repo,'nuclear_kpi','syn_dispatch_histogram.png'), bbox_inches=extent1.expanded(1.3, 1.3))
 
         return None

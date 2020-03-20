@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 
 # Libraries developed for this module
-import consumption.consumption_utils as conso
+import generation.consumption.consumption_utils as conso
 
 
 def main(i, destination_folder, seed, params, loads_charac, load_weekly_pattern):
