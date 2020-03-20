@@ -9,19 +9,20 @@ import generation.generate_chronics as gen
 import generation.kpi_preprocessing as preproc
 import kpi.main as kpis
 
-### CONSTANTES QUI NE CHANGENT PAS A PRIORI
+### CONSTANTES
 INPUT_FOLDER = 'generation/input'
 OUTPUT_FOLDER = 'generation/output'
 CASE = 'case118_l2rpn_2020'
 KPI_INPUT_FOLDER = 'kpi/input'
+IMAGES_FOLDER = 'kpi/images'
 COMPARISON = 'eco2mix'
 
-### CONFIG LAUNCH IN generation/input/case118_l2rpn_2020/params.json
+### CONFIG LAUNCH IN generation/<INPUT_FOLDER>/<CASE>/params.json
 # Warning: only dates and floats in params.json
 
 
 ### CHOIX DES PHASES A CALCULER
-GENERATION_CHRONIQUES = True    # Il manque la partie dispatch. A integrer dans generation/thermal une fois Camilo prêt
+GENERATION_CHRONIQUES = False    # Il manque la partie dispatch. A integrer dans generation/thermal une fois Camilo prêt
 COMPUTE_KPI_ENR_ONLY = True     # Pour visualiser des KPIs sur solar et wind en attendant le dispatch
 COMPUTE_ALL_KPI = False
 KPI_TIMESTEP = '30min'
@@ -47,7 +48,7 @@ if COMPUTE_KPI_ENR_ONLY:
         os.mkdir(KPI_INPUT_FOLDER)
     for i in range(n_scenarios):
         preproc.kpi_format_production(year, i, INPUT_FOLDER, KPI_INPUT_FOLDER, KPI_TIMESTEP, thermal = False)
-        kpis.main(year, CASE, i, wind_solar_only, comparison=COMPARISON)
+        kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, IMAGES_FOLDER, year, CASE, i, wind_solar_only, comparison=COMPARISON)
 
 elif COMPUTE_ALL_KPI:
     # Get and format monthly optimized chronics
@@ -55,6 +56,6 @@ elif COMPUTE_ALL_KPI:
     if not os.path.exists(KPI_INPUT_FOLDER):
         os.mkdir(KPI_INPUT_FOLDER)
     for i in range(n_scenarios):
-        preproc.kpi_format_production(year, i, OUTPUT_FOLDER, KPI_INPUT_FOLDER, KPI_TIMESTEP, thermal = True)
-        kpis.main(year, CASE, i, wind_solar_only, comparison=COMPARISON)
+        preproc.kpi_format_production(year, i, OUTPUT_FOLDER, KPI_INPUT_FOLDER, IMAGES_FOLDER, KPI_TIMESTEP, thermal = True)
+        kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, year, CASE, i, wind_solar_only, comparison=COMPARISON)
 
