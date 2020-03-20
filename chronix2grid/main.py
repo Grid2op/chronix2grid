@@ -22,7 +22,7 @@ COMPARISON = 'eco2mix'
 
 
 ### CHOIX DES PHASES A CALCULER
-GENERATION_CHRONIQUES = False    # Il manque la partie dispatch. A integrer dans generation/thermal une fois Camilo prêt
+GENERATION_CHRONIQUES = True    # Il manque la partie dispatch. A integrer dans generation/thermal une fois Camilo prêt
 COMPUTE_KPI_ENR_ONLY = True     # Pour visualiser des KPIs sur solar et wind en attendant le dispatch
 COMPUTE_ALL_KPI = False
 KPI_TIMESTEP = '30min'
