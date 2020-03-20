@@ -13,20 +13,20 @@ from kpi.deterministic.kpis import EconomicDispatchValidator
 
 
 
-def main(year, case, scenario_num, wind_solar_only, comparison = 'eco2mix'):
+def main(kpi_input_folder, generation_input_folder, images_repo, year, case, scenario_num, wind_solar_only, comparison = 'eco2mix'):
     parser = argparse.ArgumentParser(description='Synthetic power system time series generation')
 
     parser.add_argument('-i', '--syn_dispatch',
-                        default='kpi/input/' + str(year) + '/Scenario_' + str(scenario_num) + '/prod_p.csv',
+                        default=kpi_input_folder+'/' + str(year) + '/Scenario_' + str(scenario_num) + '/prod_p.csv',
                         type=str,
                         help='Specify csv that is a result of a synthetic dispatch for IEEE 118 grid')
 
     parser.add_argument('-r', '--ref_dispatch',
-                        default='kpi/input/' + str(year) + '/Scenario_' + str(scenario_num) + '/prod_p.csv',
+                        default=kpi_input_folder+'/' + str(year) + '/Scenario_' + str(scenario_num) + '/prod_p.csv',
                         type=str, help='CSV path refence dispatch')
 
     parser.add_argument('-c', '--ref_consumption',
-                        default='kpi/input/' + str(year) + '/Scenario_' + str(scenario_num) + '/load_p.csv',
+                        default=kpi_input_folder+'/' + str(year) + '/Scenario_' + str(scenario_num) + '/load_p.csv',
                         type=str, help='CSV path consumption dispatch')
 
     parser.add_argument('-d', '--destination', default='./',
@@ -39,8 +39,8 @@ def main(year, case, scenario_num, wind_solar_only, comparison = 'eco2mix'):
     print('=====================================================================================================================================')
 
     # Load grid charac
-    prods_charac = pd.read_csv(os.path.abspath('generation/input/'+case+'/prods_charac.csv'), sep=';')
-    loads_charac = pd.read_csv(os.path.abspath('generation/input/'+case+'/loads_charac.csv'), sep=';')
+    prods_charac = pd.read_csv(os.path.abspath(generation_input_folder+'/'+case+'/prods_charac.csv'), sep=';')
+    loads_charac = pd.read_csv(os.path.abspath(generation_input_folder+'/'+case+'/loads_charac.csv'), sep=';')
 
     # Read csv
     if comparison == 'eco2mix':
@@ -66,7 +66,7 @@ def main(year, case, scenario_num, wind_solar_only, comparison = 'eco2mix'):
     
     # Load agg price profile
     if not wind_solar_only:
-        prices = pd.read_csv(os.path.abspath('kpi/input/'+str(year)+'+/Scenario_'+str(scenario_num)+'/prices.csv'), sep = ';')
+        prices = pd.read_csv(os.path.abspath(kpi_input_folder+'/'+str(year)+'+/Scenario_'+str(scenario_num)+'/prices.csv'), sep = ';')
         prices['Time'] = pd.to_datetime(prices['Time'])
         prices.set_index('Time', drop=True, inplace=True)
 
@@ -78,6 +78,7 @@ def main(year, case, scenario_num, wind_solar_only, comparison = 'eco2mix'):
                                                        syn_dispatch,
                                                        year,
                                                        scenario_num,
+                                                       images_repo,
                                                        prods_charac=prods_charac,
                                                        loads_charac=loads_charac,
                                                        prices=prices)
@@ -90,6 +91,7 @@ def main(year, case, scenario_num, wind_solar_only, comparison = 'eco2mix'):
                                                        syn_dispatch,
                                                        year,
                                                        scenario_num,
+                                                       images_repo,
                                                        prods_charac=prods_charac,
                                                        loads_charac=loads_charac)
 
@@ -107,7 +109,16 @@ def main(year, case, scenario_num, wind_solar_only, comparison = 'eco2mix'):
     dispatch_validator.wind_kpi()
 
     # Get Solar KPI
-    dispatch_validator.solar_kpi()
+    hours = {'summer': ('06:00', '23:00'),
+             'fall': ('06:00', '23:00'),
+             'winter': ('06:00', '23:00'),
+             'spring': ('06:00', '23:00')}
+    monthly_pattern = {'summer': [6, 7, 8],
+                       'fall': [9, 10, 11],
+                       'winter': [12, 1, 2],
+                       'spring': [2, 3, 4, 5]}
+    dispatch_validator.solar_kpi(monthly_pattern = monthly_pattern, hours = hours)
+    # dispatch_validator.solar_kpi()
 
     # Wind - Solar KPI
     dispatch_validator.wind_load_kpi()

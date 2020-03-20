@@ -16,7 +16,7 @@ from plotly.subplots import make_subplots
 
 class EconomicDispatchValidator:
 
-    def __init__(self, consumption, ref_dispatch, synthetic_dispatch, year, num_scenario, prods_charac=None, loads_charac=None, prices=None):
+    def __init__(self, consumption, ref_dispatch, synthetic_dispatch, year, num_scenario, images_repo, prods_charac=None, loads_charac=None, prices=None):
 
         # Create Class variables
         self.consumption = consumption
@@ -26,7 +26,7 @@ class EconomicDispatchValidator:
         self.year = year
 
         # Create repo if necessary for plot saving
-        self.image_repo = 'kpi/images/'+str(self.year)
+        self.image_repo = images_repo+'/'+str(self.year)
         if not os.path.exists(self.image_repo):
             os.mkdir(self.image_repo)
 
@@ -689,10 +689,12 @@ class EconomicDispatchValidator:
                      'fall': ('08:00', '18:00'),
                      'winter': ('09:30', '16:30'),
                      'spring': ('08:00', '18:00')}
-        
+            params = {'monthly_pattern': monthly_pattern, 'hours': hours}
+
+        else:
+            params = kwargs
+
         # Get percentage solar productions for reference data
-        params = {'monthly_pattern': monthly_pattern, 'hours': hours}
-        
         solar_night_ref = self.__solar_at_night(solar_ref, params=params)
 
         # Get percentage solar productions for synthetic data

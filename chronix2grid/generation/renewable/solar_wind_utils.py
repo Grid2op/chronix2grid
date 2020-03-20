@@ -34,8 +34,11 @@ def compute_wind_series(locations, Pmax, long_noise, medium_noise, short_noise, 
     seasonal_pattern = np.cos((2 * np.pi / (365 * 24 * 60)) * (t - 30 * 24 * 60 - start_min))
 
     # Combine signals
-    signal = (0.7 + 0.3 * seasonal_pattern) * (0.3 + 0.3 * medium_scale_signal + 0.3 * long_scale_signal)
-    signal += 0.04 * short_scale_signal
+    std_short_wind_noise = float(params['std_short_wind_noise'])
+    std_medium_wind_noise = float(params['std_medium_wind_noise'])
+    std_long_wind_noise = float(params['std_long_wind_noise'])
+    signal = (0.7 + 0.3 * seasonal_pattern) * (0.3 + std_medium_wind_noise * medium_scale_signal + std_long_wind_noise * long_scale_signal)
+    signal += std_short_wind_noise * short_scale_signal
     signal = 1e-1 * np.exp(4 * signal)
     # signal += np.random.uniform(0, SMOOTHDIST/Pmax, signal.shape)
     signal += np.random.uniform(0, smoothdist, signal.shape)
@@ -83,7 +86,8 @@ def compute_solar_series(locations, Pmax, solar_noise, params, solar_pattern, sm
     solar_pattern = compute_solar_pattern(params, solar_pattern)
 
     # Compute solar time series
-    signal = solar_pattern*(0.75+0.25*final_noise)
+    std_solar_noise = float(params['std_solar_noise'])
+    signal = solar_pattern*(0.75+std_solar_noise*final_noise)
     signal += np.random.uniform(0, smoothdist/Pmax, signal.shape)
     # signal[signal > 1] = 1
     signal[signal < 0.] = 0.

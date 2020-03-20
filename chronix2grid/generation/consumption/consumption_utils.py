@@ -45,8 +45,8 @@ def compute_residential(locations, Pmax, temperature_noise, params, weekly_patte
 
     # Get weekly pattern
     weekly_pattern = compute_load_pattern(params, weekly_pattern, index)
-
-    residential_series = Pmax * weekly_pattern * (0.06*temperature_signal + seasonal_pattern)
+    std_temperature_noise = params['std_temperature_noise']
+    residential_series = Pmax * weekly_pattern * (std_temperature_noise*temperature_signal + seasonal_pattern)
 
     return residential_series
 

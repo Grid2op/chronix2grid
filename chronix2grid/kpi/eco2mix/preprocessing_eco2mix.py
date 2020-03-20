@@ -1,5 +1,4 @@
 import os
-import xlrd
 import pandas as pd
 
 def format_for_kpi(repo_in, timestep, prods_charac):

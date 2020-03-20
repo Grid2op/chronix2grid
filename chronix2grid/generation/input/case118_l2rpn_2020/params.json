@@ -21,5 +21,10 @@
   "weeks": 52,
   "number_scenarios": 2,
   "temperature_corr": 400,
-  "smoothdist": 0.001
+  "smoothdist": 0.001,
+  "std_temperature_noise": 0.06,
+  "std_solar_noise": 0.25,
+  "std_short_wind_noise": 0.04,
+  "std_medium_wind_noise": 0.3,
+  "std_long_wind_noise": 0.3
 }
