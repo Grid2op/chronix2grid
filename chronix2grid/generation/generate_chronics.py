@@ -12,7 +12,6 @@ from datetime import timedelta
 import generation.consumption.generate_load as gen_loads
 import generation.renewable.generate_solar_wind as gen_enr
 import generation.thermal.generate_dispatch as gen_dispatch
-from generation.kpi_preprocessing import kpi_format_production
 
 
 # ======================================================================================================================
