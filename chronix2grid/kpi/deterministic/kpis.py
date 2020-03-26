@@ -1,5 +1,6 @@
 import os
 import argparse
+
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -19,6 +20,7 @@ class EconomicDispatchValidator:
     def __init__(self, consumption, ref_dispatch, synthetic_dispatch, year, num_scenario, images_repo, prods_charac=None, loads_charac=None, prices=None):
 
         # Create Class variables
+
         self.consumption = consumption
         self.ref_dispatch = ref_dispatch
         self.syn_dispatch = synthetic_dispatch
@@ -100,7 +102,7 @@ class EconomicDispatchValidator:
             figure = ax.get_figure()    
             figure.savefig(path_png)
 
-    def plot_barcharts(self, df_ref, df_syn, save_plots = True, path_name_ref = None, path_name_syn = None, title_component = ''):
+    def plot_barcharts(self, df_ref, df_syn, save_plots = True, path_name = '', title_component = ''):
         # Plot results
         fig, axes = plt.subplots(1, 2, figsize=(17, 5))
         sns.barplot(df_ref.index, df_ref, ax=axes[0])
@@ -109,11 +111,43 @@ class EconomicDispatchValidator:
         axes[1].set_title('Synthetic '+title_component, size = 9)
 
         if save_plots:
-            # Save plot as pnd
-            extent0 = axes[0].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-            extent1 = axes[1].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-            fig.savefig(path_name_ref, bbox_inches=extent0.expanded(1.3, 1.3))
-            fig.savefig(path_name_syn, bbox_inches=extent1.expanded(1.3, 1.3))
+            fig.savefig(path_name)
+            # Save separately ref and syn plots
+            # extent0 = axes[0].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+            # extent1 = axes[1].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+            # fig.savefig(path_name_ref, bbox_inches=extent0.expanded(1.3, 1.3))
+            # fig.savefig(path_name_syn, bbox_inches=extent1.expanded(1.3, 1.3))
+
+    def energy_mix(self, save_plots = True):
+
+
+        # Sum of production per generator type
+        ref_prod_per_gen = self.ref_dispatch.sum(axis = 0)
+        ref_prod_per_gen = pd.DataFrame({"Prod": ref_prod_per_gen.values, "name":ref_prod_per_gen.index})
+        ref_prod_per_gen = ref_prod_per_gen.merge(self.prod_charac[["name","type"]], how = 'left',
+                                                  on = 'name')
+        ref_prod_per_gen = ref_prod_per_gen.groupby('type').sum()
+        ref_prod_per_gen = ref_prod_per_gen.sort_index()
+
+        syn_prod_per_gen = self.syn_dispatch.sum(axis=0)
+        syn_prod_per_gen = pd.DataFrame({"Prod": syn_prod_per_gen.values, "name": syn_prod_per_gen.index})
+        syn_prod_per_gen = syn_prod_per_gen.merge(self.prod_charac[["name", "type"]], how='left',
+                                                  on='name')
+        syn_prod_per_gen = syn_prod_per_gen.groupby('type').sum()
+        syn_prod_per_gen = syn_prod_per_gen.sort_index()
+
+        # Carrier values for label
+        labels = ref_prod_per_gen.index.unique()
+
+        # Distribution of prod
+        fig, axes = plt.subplots(1, 2, figsize=(17, 5))
+        axes[0].pie(ref_prod_per_gen, labels=labels, autopct='%1.1f%%')
+        axes[1].pie(syn_prod_per_gen, labels=labels, autopct='%1.1f%%')
+        axes[0].set_title('Reference Energy Mix')
+        axes[1].set_title('Synthetic Energy Mix')
+        if save_plots:
+            # Save plot as png
+            fig.savefig(os.path.join(self.image_repo, 'dispatch_view', 'energy_mix.png'))
 
     def _pairwise_corr_different_dfs(self, df1, df2):
 
@@ -319,14 +353,12 @@ class EconomicDispatchValidator:
                                                                          below_norm_cap)
 
         self.plot_barcharts(stat_ref_high_price, stat_syn_high_price, save_plots=True,
-                            path_name_ref=os.path.join(self.image_repo,'hydro_kpi','ref_high_price.png'),
-                            path_name_syn=os.path.join(self.image_repo,'hydro_kpi','syn_high_price.png'),
+                            path_name=os.path.join(self.image_repo,'hydro_kpi','high_price.png'),
                        title_component='% of time production exceed '+str(above_norm_cap)+
                                        '*Pmax when prices are high (above quantile '+str(upper_quantile*100)+')')
 
         self.plot_barcharts(stat_ref_low_price, stat_syn_low_price, save_plots=True,
-                            path_name_ref=os.path.join(self.image_repo,'hydro_kpi','ref_low_price.png'),
-                            path_name_syn=os.path.join(self.image_repo,'hydro_kpi','syn_low_price.png'),
+                            path_name=os.path.join(self.image_repo,'hydro_kpi','low_price.png'),
                             title_component='% of time production is below ' + str(below_norm_cap) +
                                             '*Pmax when prices are low (under quantile ' + str(
                                 lower_quantile * 100) + ')')
@@ -346,8 +378,7 @@ class EconomicDispatchValidator:
         syn_agg_mw_per_month = self.__hydro_seasonal(hydro_syn)
 
         self.plot_barcharts(ref_agg_mw_per_month.sum(axis = 1), syn_agg_mw_per_month.sum(axis = 1), save_plots=True,
-                            path_name_ref=os.path.join(self.image_repo,'hydro_kpi','ref_hydro_per_month.png'),
-                            path_name_syn=os.path.join(self.image_repo,'hydro_kpi','syn_hydro_per_month.png'),
+                            path_name=os.path.join(self.image_repo,'hydro_kpi','hydro_per_month.png'),
                             title_component='hydro mean production per month for all units')
 
         # Write results
@@ -434,11 +465,12 @@ class EconomicDispatchValidator:
         wind_syn = self.syn_dispatch[wind_names]
     
         # Compute correlation for all elements between both dataframes
-        corr_wind = self._pairwise_corr_different_dfs(wind_syn, wind_syn)
+        ref_corr_wind = self._pairwise_corr_different_dfs(wind_ref, wind_ref)
+        syn_corr_wind = self._pairwise_corr_different_dfs(wind_syn, wind_syn)
         
         # Write results json output
         # -- + -- + -- + -- + -- + 
-        self.output['wind_kpi'] = {'corr_wind': corr_wind.to_dict()}
+        self.output['wind_kpi'] = {'corr_wind': syn_corr_wind.to_dict()}
         
         # Second KPI
         # Measure non linearity of time series
@@ -457,12 +489,10 @@ class EconomicDispatchValidator:
         skewness_syn, kurtosis_syn = self.__wind_metric_distrib(wind_syn)
 
         self.plot_barcharts(skewness_ref.sum(axis=1), skewness_syn.sum(axis=1), save_plots=True,
-                            path_name_ref=os.path.join(self.image_repo,'wind_kpi','ref_skewness.png'),
-                            path_name_syn=os.path.join(self.image_repo,'wind_kpi','syn_skewness.png'),
+                            path_name=os.path.join(self.image_repo,'wind_kpi','skewness.png'),
                             title_component='skewness per month')
         self.plot_barcharts(kurtosis_ref.sum(axis=1), kurtosis_syn.sum(axis=1), save_plots=True,
-                            path_name_ref=os.path.join(self.image_repo, 'wind_kpi', 'ref_kurtosis.png'),
-                            path_name_syn=os.path.join(self.image_repo, 'wind_kpi', 'syn_kurtosis.png'),
+                            path_name=os.path.join(self.image_repo, 'wind_kpi', 'kurtosis.png'),
                             title_component='kurtosis per month')
 
         # Write results 
@@ -481,23 +511,24 @@ class EconomicDispatchValidator:
         agg_syn_wind = wind_syn.sum(axis=1)
 
         # Plot results
-        fig, axes = plt.subplots(1, 3, figsize=(17,5))
-        sns.heatmap(corr_wind, annot = True, linewidths=.5, ax=axes[0])
-        sns.distplot(agg_ref_wind, ax=axes[1])
-        sns.distplot(agg_syn_wind, ax=axes[2])
-        axes[1].set_title('Reference Distribution of agregate wind production')
-        axes[2].set_title('Synthetic Distribution of agregate wind production')
-
+        # Correlation heatmaps
+        fig, axes = plt.subplots(1, 2, figsize=(17,5))
+        sns.heatmap(ref_corr_wind, annot=True, linewidths=.5, ax=axes[0])
+        sns.heatmap(syn_corr_wind, annot = True, linewidths=.5, ax=axes[1])
         if save_plots:
-            # Save plot as pnd
-            extent0 = axes[0].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-            extent1 = axes[1].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-            extent2 = axes[2].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-            fig.savefig(os.path.join(self.image_repo,'wind_kpi','syn_wind_corr_heatmap.png'), bbox_inches=extent0.expanded(1.6, 1.6))
-            fig.savefig(os.path.join(self.image_repo,'wind_kpi','ref_histogram.png'), bbox_inches=extent1.expanded(1.3, 1.3))
-            fig.savefig(os.path.join(self.image_repo,'wind_kpi','syn_histogram.png'), bbox_inches=extent2.expanded(1.3, 1.3))
+            fig.savefig(os.path.join(self.image_repo, 'wind_kpi', 'wind_corr_heatmap.png'))
 
-        return corr_wind, \
+        # Distribution of prod
+        fig, axes = plt.subplots(1, 2, figsize=(17, 5))
+        sns.distplot(agg_ref_wind, ax=axes[0])
+        sns.distplot(agg_syn_wind, ax=axes[1])
+        axes[0].set_title('Reference Distribution of agregate wind production')
+        axes[1].set_title('Synthetic Distribution of agregate wind production')
+        if save_plots:
+            # Save plot as png
+            fig.savefig(os.path.join(self.image_repo,'wind_kpi','histogram.png'))
+
+        return syn_corr_wind, \
                skewness_ref, skewness_syn, \
                kurtosis_ref, kurtosis_syn
 
@@ -646,35 +677,37 @@ class EconomicDispatchValidator:
         solar_ref = self.ref_dispatch[solar_names]
         solar_syn = self.syn_dispatch[solar_names]
 
-        agg_ref_wind = solar_ref.sum(axis = 1)
-        agg_syn_wind = solar_syn.sum(axis = 1)
+        agg_ref_solar = solar_ref.sum(axis = 1)
+        agg_syn_solar = solar_syn.sum(axis = 1)
 
         # First KPI
         # -- + -- +
         # Get correlation matrix (10 x 10)
-        corr_solar = self._pairwise_corr_different_dfs(solar_syn, solar_syn)
+        ref_corr_solar = self._pairwise_corr_different_dfs(solar_ref, solar_ref)
+        syn_corr_solar = self._pairwise_corr_different_dfs(solar_syn, solar_syn)
 
-        # Plot and save it
-        fig, axes = plt.subplots(1, 3, figsize=(17, 5))
-        sns.heatmap(corr_solar, annot=True, linewidths=.5, ax=axes[0])
-        sns.distplot(agg_ref_wind, ax=axes[1])
-        sns.distplot(agg_syn_wind, ax=axes[2])
-        axes[1].set_title('Reference Distribution of agregate solar production')
-        axes[2].set_title('Synthetic Distribution of agregate solar production')
-
+        # Plot results
+        # Correlation heatmaps
+        fig, axes = plt.subplots(1, 2, figsize=(17, 5))
+        sns.heatmap(ref_corr_solar, annot=True, linewidths=.5, ax=axes[0])
+        sns.heatmap(syn_corr_solar, annot=True, linewidths=.5, ax=axes[1])
         if save_plots:
-            # Save plot as pnd
-            extent0 = axes[0].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-            extent1 = axes[1].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-            extent2 = axes[2].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-            fig.savefig(os.path.join(self.image_repo,'solar_kpi','syn_solar_corr_heatmap.png'), bbox_inches=extent0.expanded(1.6, 1.6))
-            fig.savefig(os.path.join(self.image_repo,'solar_kpi','ref_histogram.png'), bbox_inches=extent1.expanded(1.3, 1.3))
-            fig.savefig(os.path.join(self.image_repo,'solar_kpi','syn_histogram.png'), bbox_inches=extent2.expanded(1.3, 1.3))
+            fig.savefig(os.path.join(self.image_repo, 'solar_kpi', 'solar_corr_heatmap.png'))
+
+        # Distribution of prod
+        fig, axes = plt.subplots(1, 2, figsize=(17, 5))
+        sns.distplot(agg_ref_solar, ax=axes[0])
+        sns.distplot(agg_syn_solar, ax=axes[1])
+        axes[0].set_title('Reference Distribution of agregate solar production')
+        axes[1].set_title('Synthetic Distribution of agregate solar production')
+        if save_plots:
+            # Save plot as png
+            fig.savefig(os.path.join(self.image_repo, 'solar_kpi', 'histogram.png'))
 
 
         # Write its value
         # -- + -- + -- +
-        self.output['solar_kpi'] = {'solar_corr': corr_solar.to_dict()}
+        self.output['solar_kpi'] = {'solar_corr': syn_corr_solar.to_dict()}
         
         # Second KPI
         # -- + -- +
@@ -709,8 +742,7 @@ class EconomicDispatchValidator:
 
         # Plot and save it average per season
         self.plot_barcharts(solar_night_ref_mean, solar_night_syn_mean, save_plots=True,
-                            path_name_ref=os.path.join(self.image_repo,'solar_kpi','ref_solar_at_night.png'),
-                            path_name_syn=os.path.join(self.image_repo,'solar_kpi','syn_solar_at_night.png'),
+                            path_name=os.path.join(self.image_repo,'solar_kpi','solar_at_night.png'),
                             title_component='Mean % of production at night per season')
 
 
@@ -735,8 +767,7 @@ class EconomicDispatchValidator:
                                                  factor_cloud=cond_below_cloud)
 
         self.plot_barcharts(cloudiness_ref.sum(axis=1), cloudiness_syn.sum(axis=1), save_plots=True,
-                            path_name_ref=os.path.join(self.image_repo,'solar_kpi','ref_cloudiness.png'),
-                            path_name_syn=os.path.join(self.image_repo,'solar_kpi','syn_cloudiness.png'),
+                            path_name=os.path.join(self.image_repo,'solar_kpi','cloudiness.png'),
                             title_component='Cloudiness per month (number of daily quantile '+str(cloud_quantile)+' below '+str(round(cond_below_cloud*100))+
                                             ' % of general quantile '+str(cloud_quantile)+')')
         # # Write its value
@@ -745,7 +776,7 @@ class EconomicDispatchValidator:
                                     'cloudiness_synthetic': cloudiness_syn.to_dict()
                                     }
 
-        return corr_solar, solar_night_ref, solar_night_syn, cloudiness_ref, cloudiness_syn
+        return syn_corr_solar, solar_night_ref, solar_night_syn, cloudiness_ref, cloudiness_syn
 
 
     def wind_load_kpi(self):
@@ -818,18 +849,44 @@ class EconomicDispatchValidator:
         nuclear_ref = self.ref_dispatch[nuclear_names]
         nuclear_syn = self.syn_dispatch[nuclear_names]
 
-        # Plot results
-        fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-        axes[0].hist(nuclear_ref.values, bins=100)
-        axes[1].hist(nuclear_syn.values, bins=100)
-        axes[0].set_title('Nuclear Reference Distribution')
-        axes[1].set_title('Nuclear Synthetic Distribution')
+        agg_nuclear_ref = nuclear_ref.sum(axis = 1)
+        agg_nuclear_syn = nuclear_syn.sum(axis = 1)
 
+
+        # Distribution of prod
+        fig, axes = plt.subplots(1, 2, figsize=(17, 5))
+        axes[0].hist(agg_nuclear_ref, bins = 100, alpha = 1)
+        axes[1].hist(agg_nuclear_syn, bins = 100, alpha = 1)
+        axes[0].set_title('Reference Distribution of agregate nuclear production')
+        axes[1].set_title('Synthetic Distribution of agregate nuclear production')
         if save_plots:
-            # Save plot as pnd
-            extent0 = axes[0].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-            extent1 = axes[1].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-            fig.savefig(os.path.join(self.image_repo,'nuclear_kpi','ref_dispatch_histogram.png'), bbox_inches=extent0.expanded(1.3, 1.3))
-            fig.savefig(os.path.join(self.image_repo,'nuclear_kpi','syn_dispatch_histogram.png'), bbox_inches=extent1.expanded(1.3, 1.3))
+            # Save plot as png
+            fig.savefig(os.path.join(self.image_repo, 'nuclear_kpi', 'production_distribution.png'))
+
+        ## Nuclear lag distribution
+        nuclear_lag_ref = agg_nuclear_ref.diff()
+        nuclear_lag_syn = agg_nuclear_syn.diff()
+
+        fig, axes = plt.subplots(1, 2, figsize=(17, 5))
+        axes[0].hist(nuclear_lag_ref.values, bins=100, alpha=1)
+        axes[1].hist(nuclear_lag_syn.values, bins=100, alpha=1)
+        axes[0].set_title('Reference Distribution of agregate nuclear production')
+        axes[1].set_title('Synthetic Distribution of agregate nuclear production')
+        if save_plots:
+            # Save plot as png
+            fig.savefig(os.path.join(self.image_repo, 'nuclear_kpi', 'lag_distribution.png'))
+
+
+        ## Monthly maintenance percentage time
+        maintenance_ref = agg_nuclear_ref.resample('1M').agg(lambda x: x[x==0.].count()/x.count())
+        maintenance_syn = agg_nuclear_syn.resample('1M').agg(lambda x: x[x==0.].count()/x.count())
+
+        maintenance_ref.index = maintenance_ref.index.month
+        maintenance_syn.index = maintenance_syn.index.month
+
+
+        self.plot_barcharts(maintenance_ref, maintenance_syn, save_plots=save_plots,
+                            path_name=os.path.join(self.image_repo, 'nuclear_kpi', 'maintenance_percentage_of_time_per_month.png'),
+                            title_component='% of time in maintenance at night per month')
 
         return None

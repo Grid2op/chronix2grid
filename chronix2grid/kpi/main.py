@@ -1,4 +1,5 @@
 import argparse
+import warnings
 import os
 import json
 import pandas as pd
@@ -13,12 +14,14 @@ from kpi.deterministic.kpis import EconomicDispatchValidator
 
 
 
-def main(kpi_input_folder, generation_input_folder, images_repo, year, case, n_scenarios, wind_solar_only):
+def main(kpi_input_folder, generation_input_folder, generation_output_folder, images_repo, year, case, n_scenarios, wind_solar_only, params):
 
 
     print('=====================================================================================================================================')
     print('================================================= KPI GENERATION  ===================================================================')
     print('=====================================================================================================================================')
+
+    warnings.filterwarnings("ignore")
 
     # Get grid charac
     prods_charac = pd.read_csv(os.path.abspath(generation_input_folder+'/'+case+'/prods_charac.csv'), sep=';')
@@ -26,14 +29,28 @@ def main(kpi_input_folder, generation_input_folder, images_repo, year, case, n_s
 
     for scenario_num in range(n_scenarios):
         print('Scenario '+str(scenario_num)+'...')
-        # Get reference and synthetic dispatch and loads
-        ref_dispatch, ref_consumption, syn_dispatch, syn_consumption, monthly_pattern, hours = pivot_format(generation_input_folder,
-                                                                                                        kpi_input_folder,
-                                                                                                        year,
-                                                                                                        scenario_num,
-                                                                                                        prods_charac,
-                                                                                                        loads_charac,
-                                                                                                        wind_solar_only)
+        if wind_solar_only:
+            # Get reference and synthetic dispatch and loads
+            ref_dispatch, ref_consumption, syn_dispatch, syn_consumption, monthly_pattern, hours = pivot_format(generation_input_folder,
+                                                                                                            kpi_input_folder,
+                                                                                                            year,
+                                                                                                            scenario_num,
+                                                                                                            prods_charac,
+                                                                                                            loads_charac,
+                                                                                                            wind_solar_only,
+                                                                                                                params)
+        else:
+            # Get reference and synthetic dispatch and loads
+            ref_dispatch, ref_consumption, syn_dispatch, syn_consumption, monthly_pattern, hours, prices = pivot_format(
+                                                                                                generation_output_folder,
+                                                                                                kpi_input_folder,
+                                                                                                year,
+                                                                                                scenario_num,
+                                                                                                prods_charac,
+                                                                                                loads_charac,
+                                                                                                wind_solar_only,
+                                                                                                params)
+
 
         # -- + -- + ---
         # DONT FORGET TO ADD THE CONSTRAINT THE REF DISPATCH IT'S ONLY
@@ -42,12 +59,18 @@ def main(kpi_input_folder, generation_input_folder, images_repo, year, case, n_s
 
         # Set same index as ref dispatch to avoid
         # problem when working in posterior KPI's
+
+        # =================== Temporaire A SUPPRIMER ==================================== !!!!!!!!!!!!!!!
+        ref_dispatch = ref_dispatch.head(len(syn_dispatch))
+        syn_consumption = syn_consumption.head(len(syn_dispatch))
+        # =============================================================================== !!!!!!!!!!!!!!!
+
         syn_dispatch.index = ref_dispatch.index
         syn_consumption.index = ref_dispatch.index
 
         # Load agg price profile
         if not wind_solar_only:
-            prices = pd.read_csv(os.path.abspath(kpi_input_folder+'/'+str(year)+'+/Scenario_'+str(scenario_num)+'/prices.csv'), sep = ';')
+            # prices = pd.read_csv(os.path.abspath(kpi_input_folder+'/'+str(year)+'+/Scenario_'+str(scenario_num)+'/prices.csv'), sep = ';')
             prices['Time'] = pd.to_datetime(prices['Time'])
             prices.set_index('Time', drop=True, inplace=True)
 
@@ -63,6 +86,8 @@ def main(kpi_input_folder, generation_input_folder, images_repo, year, case, n_s
                                                            prods_charac=prods_charac,
                                                            loads_charac=loads_charac,
                                                            prices=prices)
+            dispatch_validator.energy_mix()
+
         else:
             # Start Economic dispatch validator
             # -- + -- + -- + -- + -- + -- + --
@@ -81,10 +106,10 @@ def main(kpi_input_folder, generation_input_folder, images_repo, year, case, n_s
             max_col = 1
         else:
             max_col = 2
-        dispatch_validator.plot_carriers_pw(curve='reference', stacked=True, max_col_splot=max_col, save_html=True,
-                                            wind_solar_only=wind_solar_only)
-        dispatch_validator.plot_carriers_pw(curve='synthetic', stacked=True, max_col_splot=max_col, save_html=True,
-                                            wind_solar_only=wind_solar_only)
+        # dispatch_validator.plot_carriers_pw(curve='reference', stacked=True, max_col_splot=max_col, save_html=True,
+        #                                     wind_solar_only=wind_solar_only)
+        # dispatch_validator.plot_carriers_pw(curve='synthetic', stacked=True, max_col_splot=max_col, save_html=True,
+        #                                     wind_solar_only=wind_solar_only)
 
         # Get Hydro KPI
         if not wind_solar_only:
@@ -94,14 +119,6 @@ def main(kpi_input_folder, generation_input_folder, images_repo, year, case, n_s
         dispatch_validator.wind_kpi()
 
         # Get Solar KPI
-        hours = {'summer': ('06:00', '23:00'),
-                 'fall': ('06:00', '23:00'),
-                 'winter': ('06:00', '23:00'),
-                 'spring': ('06:00', '23:00')}
-        monthly_pattern = {'summer': [6, 7, 8],
-                           'fall': [9, 10, 11],
-                           'winter': [12, 1, 2],
-                           'spring': [2, 3, 4, 5]}
         dispatch_validator.solar_kpi(monthly_pattern = monthly_pattern, hours = hours)
         # dispatch_validator.solar_kpi()
 

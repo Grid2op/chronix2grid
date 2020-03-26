@@ -9,11 +9,11 @@ import generation.generate_chronics as gen
 import kpi.main as kpis
 
 ### CONSTANT
-INPUT_FOLDER = 'generation/input'
+INPUT_FOLDER = 'generation/input_Nico'
 OUTPUT_FOLDER = 'generation/output'
 CASE = 'case118_l2rpn_2020'
-KPI_INPUT_FOLDER = 'kpi/input'
-IMAGES_FOLDER = 'kpi/images'
+KPI_INPUT_FOLDER = 'kpi/input_Nico'
+IMAGES_FOLDER = 'kpi/images_Nico'
 
 ### LAUNCH CONFIGURATION
 # Chronic generation parameters in <INPUT_FOLDER>/<CASE>/params.json
@@ -22,9 +22,9 @@ IMAGES_FOLDER = 'kpi/images'
 
 
 ### COMPUTATION PHASES
-GENERATION_CHRONICS = True    # Il manque la partie dispatch. A integrer dans generation/thermal une fois Camilo prêt
-COMPUTE_KPI_ENR_ONLY = True     # Pour visualiser des KPIs sur solar et wind en attendant le dispatch
-COMPUTE_ALL_KPI = False         # En attendant que le dispatch soit prêt
+GENERATION_CHRONICS = False    # Il manque la partie dispatch. A integrer dans generation/thermal une fois Camilo prêt
+COMPUTE_KPI_ENR_ONLY = False     # Pour visualiser des KPIs sur solar et wind en attendant le dispatch
+COMPUTE_ALL_KPI = True         # En attendant que le dispatch soit prêt
 
 
 
@@ -45,12 +45,12 @@ if COMPUTE_KPI_ENR_ONLY:
     wind_solar_only = True
     if not os.path.exists(KPI_INPUT_FOLDER):
         os.mkdir(KPI_INPUT_FOLDER)
-    kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, IMAGES_FOLDER, year, CASE, n_scenarios, wind_solar_only)
+    kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, OUTPUT_FOLDER, IMAGES_FOLDER, year, CASE, n_scenarios, wind_solar_only, params)
 
 elif COMPUTE_ALL_KPI:
     # Get and format monthly optimized chronics
     wind_solar_only = False
     if not os.path.exists(KPI_INPUT_FOLDER):
         os.mkdir(KPI_INPUT_FOLDER)
-    kpis.main(KPI_INPUT_FOLDER, OUTPUT_FOLDER, IMAGES_FOLDER, year, CASE, n_scenarios, wind_solar_only)
+    kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, OUTPUT_FOLDER, IMAGES_FOLDER, year, CASE, n_scenarios, wind_solar_only, params)
 

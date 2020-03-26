@@ -1,4 +1,5 @@
 import os
+import sys
 import pandas as pd
 
 
@@ -24,12 +25,21 @@ def eco2mix_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, year)
     # Time formatting
     df['Space'] = ' '
     df['Time'] = df['Date']+df['Space']+df['Heures']
-    df['Time'] = pd.to_datetime(df['Time'])
+    df['Time'] = pd.to_datetime(df['Time'], infer_datetime_format=True)
     df.set_index('Time', drop=False, inplace=True)
 
     # Production formatting
     for carrier_out in corresp_carrier.keys():
         df[carrier_out] = df[corresp_carrier[carrier_out]].sum(axis = 1)
+
+    # # Temporary
+    # tmp = df[['solar']].copy()
+    # tmp = tmp.resample('1H').first()
+    # array = tmp['solar'].to_numpy()
+    # print(tmp)
+    # print(array)
+    # file = open(r'D:\RTE\Challenge\1 - Développement\ChroniX2Grid\chronix2grid\generation\input_Nico\solar_pattern.npy', 'wb')
+    # tmp.save(file, array)
 
     # Equitable repartition on usecase generators
     for carrier in gens.keys():
@@ -55,6 +65,44 @@ def eco2mix_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, year)
 
     return df, conso
 
+def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac, year, params):
+    repo_in_solar = os.path.join(kpi_input_folder, 'renewableninja', 'solar_case118_' + str(year) + '.csv')
+    ninja_solar = pd.read_csv(repo_in_solar, sep=';', encoding='latin1', decimal='.')
+    repo_in_wind = os.path.join(kpi_input_folder, 'renewableninja', 'wind_case118_' + str(year) + '.csv')
+    ninja_wind = pd.read_csv(repo_in_wind, sep=';', encoding='latin1', decimal='.')
+    timestep_ninja = 60 # Pas de temps une heure dans l'extraction renewable ninja
+    ninja = pd.concat([ninja_solar, ninja_wind], axis = 1)
+
+    # Time column to add !
+    datetime_index = pd.date_range(
+        start=params['start_date'],
+        end=params['end_date'],
+        freq=str(timestep_ninja) + 'min')
+    datetime_index = datetime_index[:len(datetime_index)-1]
+
+    # Resample
+    ninja.index = datetime_index
+    if int(timestep[:2]) < 60:
+        print('Erreur: Renewable ninja requires timestep >60 min to compute KPI. Please change timestep in paramsKPI.json')
+        sys.exit()
+    ninja = ninja.resample(timestep).first()
+    ninja['Time'] = ninja.index
+
+    # Columns of zeros for non wind and solar generators
+    gens= prods_charac[~(prods_charac['type'].isin(['solar','wind']))]['name'].values
+    for gen in gens:
+        ninja[gen] = 0.
+
+    # Temporary fake load
+    # Load computation
+    loads = loads_charac['name'].unique()
+    agg_conso = ninja.sum(axis=1).values
+
+    # Equitable repartition on loads nodes
+    conso = pd.DataFrame({'Time': ninja['Time']})
+    for col in loads:
+        conso[col] = agg_conso / len(loads)
+    return ninja, conso
 
 def chronics_to_kpi(year, n_scenario, repo_in, timestep, thermal = True):
 
@@ -110,3 +158,4 @@ def chronics_to_kpi(year, n_scenario, repo_in, timestep, thermal = True):
         return prod_p, load_p
     if thermal:
         return prod_p, load_p, price
+
