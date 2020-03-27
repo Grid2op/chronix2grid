@@ -153,6 +153,10 @@ def chronics_to_kpi(year, n_scenario, repo_in, timestep, thermal = True):
     prod_p.set_index('Time', drop=False, inplace=True)
     prod_p = prod_p.resample(timestep).first()
 
+    price['Time'] = pd.to_datetime(price['Time'])
+    price.set_index('Time', drop=True, inplace=True)
+    price = price.resample(timestep).first()
+
 
     if not thermal:
         return prod_p, load_p

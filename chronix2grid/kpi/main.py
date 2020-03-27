@@ -63,6 +63,8 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
         # =================== Temporaire A SUPPRIMER ==================================== !!!!!!!!!!!!!!!
         ref_dispatch = ref_dispatch.head(len(syn_dispatch))
         syn_consumption = syn_consumption.head(len(syn_dispatch))
+        if not wind_solar_only:
+            prices = prices.head(len(syn_dispatch))
         # =============================================================================== !!!!!!!!!!!!!!!
 
         syn_dispatch.index = ref_dispatch.index
@@ -70,9 +72,6 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
 
         # Load agg price profile
         if not wind_solar_only:
-            # prices = pd.read_csv(os.path.abspath(kpi_input_folder+'/'+str(year)+'+/Scenario_'+str(scenario_num)+'/prices.csv'), sep = ';')
-            prices['Time'] = pd.to_datetime(prices['Time'])
-            prices.set_index('Time', drop=True, inplace=True)
 
             # Start Economic dispatch validator
             # -- + -- + -- + -- + -- + -- + --
@@ -106,34 +105,48 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
             max_col = 1
         else:
             max_col = 2
-        # dispatch_validator.plot_carriers_pw(curve='reference', stacked=True, max_col_splot=max_col, save_html=True,
-        #                                     wind_solar_only=wind_solar_only)
-        # dispatch_validator.plot_carriers_pw(curve='synthetic', stacked=True, max_col_splot=max_col, save_html=True,
-        #                                     wind_solar_only=wind_solar_only)
+        dispatch_validator.plot_carriers_pw(curve='reference', stacked=True, max_col_splot=max_col, save_html=True,
+                                            wind_solar_only=wind_solar_only)
+        dispatch_validator.plot_carriers_pw(curve='synthetic', stacked=True, max_col_splot=max_col, save_html=True,
+                                            wind_solar_only=wind_solar_only)
 
-        # Get Hydro KPI
+        # Get Load KPI
+        dispatch_validator.load_kpi()
+
+        # These KPI only if dispatch has been made
         if not wind_solar_only:
+            # Get Hydro KPI
             dispatch_validator.hydro_kpi()
+
+            # Get Nuclear KPI
+            dispatch_validator.nuclear_kpi()
+
+            # Get Thermal KPI
+            dispatch_validator.thermal_kpi()
 
         # Get Wind KPI
         dispatch_validator.wind_kpi()
 
         # Get Solar KPI
         dispatch_validator.solar_kpi(monthly_pattern = monthly_pattern, hours = hours)
-        # dispatch_validator.solar_kpi()
 
         # Wind - Solar KPI
         dispatch_validator.wind_load_kpi()
 
-        # Get Nuclear KPI
-        if not wind_solar_only:
-            dispatch_validator.nuclear_kpi()
 
         # Write json output file
         # -- + -- + -- + -- + --
-        # print ('(2) Generating json output file...')
-        # with open(os.path.join(args.destination, 'ec_validator_output.txt'), 'w') as json_f:
-        #     json.dump(dispatch_validator.output, json_f)
+        print ('(2) Generating json output file...')
+
+        kpi_output_folder = os.path.join('kpi/output',str(year))
+        if not os.path.exists(kpi_output_folder):
+            os.mkdir(kpi_output_folder)
+        kpi_output_folder = os.path.join(kpi_output_folder,'Scenario_' + str(scenario_num))
+        if not os.path.exists(kpi_output_folder):
+            os.mkdir(kpi_output_folder)
+
+        with open(os.path.join(kpi_output_folder,'ec_validator_output.json'), 'w') as json_f:
+            json.dump(dispatch_validator.output, json_f)
 
         print ('-Done-\n')
         

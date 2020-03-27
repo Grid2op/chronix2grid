@@ -41,6 +41,8 @@ class EconomicDispatchValidator:
             os.mkdir(os.path.join(self.image_repo, 'solar_kpi'))
             os.mkdir(os.path.join(self.image_repo, 'nuclear_kpi'))
             os.mkdir(os.path.join(self.image_repo, 'hydro_kpi'))
+            os.mkdir(os.path.join(self.image_repo, 'thermal_kpi'))
+            os.mkdir(os.path.join(self.image_repo, 'load_kpi'))
         
         # Reindex to avoid problems
         # self.consumption.index.rename('Time', inplace=True)
@@ -78,6 +80,7 @@ class EconomicDispatchValidator:
         # Json to save all KPIs
         self.output = {}
 
+
     def _plot_heatmap(self, corr, title, path_png=None, save_png=True):
         
         ax = sns.heatmap(corr, 
@@ -112,11 +115,7 @@ class EconomicDispatchValidator:
 
         if save_plots:
             fig.savefig(path_name)
-            # Save separately ref and syn plots
-            # extent0 = axes[0].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-            # extent1 = axes[1].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-            # fig.savefig(path_name_ref, bbox_inches=extent0.expanded(1.3, 1.3))
-            # fig.savefig(path_name_syn, bbox_inches=extent1.expanded(1.3, 1.3))
+
 
     def energy_mix(self, save_plots = True):
 
@@ -240,33 +239,35 @@ class EconomicDispatchValidator:
         n_units = norm_mw.shape[1]
         
         # Get the price at upper/lower quantile
-        eu_upper_quantile = self.prices.quantile(upper_quantile)
-        eu_lower_quantile = self.prices.quantile(lower_quantile)
-        
+        eu_upper_quantile = self.prices.quantile(upper_quantile).values[0]
+        eu_lower_quantile = self.prices.quantile(lower_quantile).values[0]
+
+
         # Test if units are above/below normalized capacity
-        is_gens_above_cap =  norm_mw.ge(eu_upper_quantile, axis=1)
-        is_gens_below_cap =  norm_mw.le(eu_lower_quantile, axis=1)
-        
+        is_gens_above_cap =  norm_mw.ge(above_norm_cap, axis=1)
+        is_gens_below_cap =  norm_mw.le(below_norm_cap, axis=1)
+
         # Test if prices are greater/lower than defined quantiles
-        is_price_above_q = self.prices > eu_upper_quantile
-        is_price_below_q = self.prices < eu_lower_quantile
-        
+        is_price_above_q = self.prices >= eu_upper_quantile
+        is_price_below_q = self.prices <= eu_lower_quantile
+
         # Stacking price bool condition for all hydro units along
         # the columns and rename them as units names
         is_price_above_q_gens = is_price_above_q[['price'] * n_units]
         is_price_above_q_gens.columns = norm_mw.columns
-        
+
         is_price_below_q_gens = is_price_below_q[['price'] * n_units]
         is_price_below_q_gens.columns = norm_mw.columns
         
         # Match occurence of price high and full gen disaptch
         high_price_kpi = 100 * (is_price_above_q_gens & is_gens_above_cap).sum(axis=0) \
                         / is_price_above_q_gens.sum(axis=0)
-                        
+
+
         # Match occurence when price is lower and almost no dispatch
         low_price_kpi = 100 * (is_price_below_q_gens & is_gens_below_cap).sum(axis=0) \
                         / is_price_below_q_gens.sum(axis=0)
-        
+
         return high_price_kpi.round(self.precision), low_price_kpi.round(self.precision)
                
     def __hydro_seasonal(self, hydro_mw):
@@ -288,10 +289,10 @@ class EconomicDispatchValidator:
 
         
     def hydro_kpi(self, 
-                  upper_quantile = 0.95, 
-                  lower_quantile = 0.05,
-                  above_norm_cap = 0.9,
-                  below_norm_cap = 0.1):
+                  upper_quantile = 0.9,
+                  lower_quantile = 0.1,
+                  above_norm_cap = 0.8,
+                  below_norm_cap = 0.2):
 
         '''
         Get 4 different Hydro KPI's based on the assumption the total costs
@@ -705,9 +706,6 @@ class EconomicDispatchValidator:
             fig.savefig(os.path.join(self.image_repo, 'solar_kpi', 'histogram.png'))
 
 
-        # Write its value
-        # -- + -- + -- +
-        self.output['solar_kpi'] = {'solar_corr': syn_corr_solar.to_dict()}
         
         # Second KPI
         # -- + -- +
@@ -746,11 +744,6 @@ class EconomicDispatchValidator:
                             title_component='Mean % of production at night per season')
 
 
-        # Write output
-        # -- + -- + --
-        self.output['solar_kpi'] = {'season_solar_at_night_reference': solar_night_ref,
-                                    'season_solar_at_night_synthetic': solar_night_syn,
-                                    }
 
         # Third KPI
         # -- + -- +
@@ -770,11 +763,19 @@ class EconomicDispatchValidator:
                             path_name=os.path.join(self.image_repo,'solar_kpi','cloudiness.png'),
                             title_component='Cloudiness per month (number of daily quantile '+str(cloud_quantile)+' below '+str(round(cond_below_cloud*100))+
                                             ' % of general quantile '+str(cloud_quantile)+')')
-        # # Write its value
-        # # -- + -- + -- +
-        self.output['solar_kpi'] = {'cloudiness_reference': cloudiness_ref.to_dict(),
-                                    'cloudiness_synthetic': cloudiness_syn.to_dict()
-                                    }
+
+
+        ## Fourth KPI: Correlation between ref and syn (agregates)
+        correl = round(agg_ref_solar.corr(agg_syn_solar),self.precision)
+
+        # Write output
+        # -- + -- + --
+        self.output['solar_kpi'] = {'solar_corr': syn_corr_solar.to_dict()}
+        self.output['solar_kpi']['cloudiness_reference'] = cloudiness_ref.to_dict()
+        self.output['solar_kpi']['cloudiness_synthetic'] = cloudiness_syn.to_dict()
+        self.output['solar_kpi']['season_solar_at_night_reference'] = solar_night_ref_mean.to_dict()
+        self.output['solar_kpi']['season_solar_at_night_synthetic'] = solar_night_syn_mean.to_dict()
+        self.output['solar_kpi']['correlation_ref_syn'] = correl
 
         return syn_corr_solar, solar_night_ref, solar_night_syn, cloudiness_ref, cloudiness_syn
 
@@ -881,8 +882,8 @@ class EconomicDispatchValidator:
         maintenance_ref = agg_nuclear_ref.resample('1M').agg(lambda x: x[x==0.].count()/x.count())
         maintenance_syn = agg_nuclear_syn.resample('1M').agg(lambda x: x[x==0.].count()/x.count())
 
-        maintenance_ref.index = maintenance_ref.index.month
-        maintenance_syn.index = maintenance_syn.index.month
+        maintenance_ref.index = maintenance_ref.index.month.set_names('Month')
+        maintenance_syn.index = maintenance_syn.index.month.set_names('Month')
 
 
         self.plot_barcharts(maintenance_ref, maintenance_syn, save_plots=save_plots,
@@ -890,3 +891,140 @@ class EconomicDispatchValidator:
                             title_component='% of time in maintenance at night per month')
 
         return None
+
+    def thermal_kpi(self,
+                  upper_quantile=0.9,
+                  lower_quantile=0.1,
+                  above_norm_cap=0.8,
+                  below_norm_cap=0.2):
+
+        '''
+        Get 3 different Thermal KPI's based on the assumption the total costs
+        of the system follow same curve as the consumption.
+
+        Parameters:
+        ----------
+
+        upper_quantile (float): Quantile that define high prices.
+                                (Prices are considered high whether
+                                price(t) is greater than upper_quantile)
+        lower_quantile (float): Quantile that define lower prices
+                                (Prices are considered low whether
+                                price(t) is less than lower_quantile)
+
+        above_cap (float): Per unit (<1) criteria to establish high thermal dispatch
+        below_cap (float): Per unit (<1) criteria to establish low thermal dispatch
+
+        Returns:
+        --------
+
+        highPrice_kpi (dataframe): Percentage of time a generator is keeping 
+                                   operating above its predefined capacity
+
+        lowPrice_kpi (dataframe): Percentage of time a generator is keeping 
+                                   operating below its predefined capacity
+
+        mw_per_month (dataframe): Aggregated sum per month. Used to design
+                                  seasonal pattern in hydro plants.
+        '''
+
+        # Get Hydro names
+        thermal_filter = self.prod_charac.type.isin(['thermal'])
+        thermal_names = self.prod_charac.name.loc[thermal_filter].values
+
+        # Normalize MW according to the max value for
+        # the reference data and synthetic one
+        thermal_ref = self.ref_dispatch[thermal_names]
+        thermal_syn = self.syn_dispatch[thermal_names]
+
+        max_mw_ref = thermal_ref.max(axis=0)
+        max_mw_syn = thermal_syn.max(axis=0)
+
+        norm_mw_ref = thermal_ref / max_mw_ref
+        norm_mw_syn = thermal_syn / max_mw_syn
+
+        # Stats for reference data
+        stat_ref_high_price, stat_ref_low_price = self.__hydro_in_prices(norm_mw_ref,
+                                                                         upper_quantile,
+                                                                         lower_quantile,
+                                                                         above_norm_cap,
+                                                                         below_norm_cap)
+
+        # Stats for synthetic data
+        stat_syn_high_price, stat_syn_low_price = self.__hydro_in_prices(norm_mw_syn,
+                                                                         upper_quantile,
+                                                                         lower_quantile,
+                                                                         above_norm_cap,
+                                                                         below_norm_cap)
+
+        self.plot_barcharts(stat_ref_high_price, stat_syn_high_price, save_plots=True,
+                            path_name=os.path.join(self.image_repo, 'thermal_kpi', 'high_price.png'),
+                            title_component='% of time production exceed ' + str(above_norm_cap) +
+                                            '*Pmax when prices are high (above quantile ' + str(
+                                upper_quantile * 100) + ')')
+
+        self.plot_barcharts(stat_ref_low_price, stat_syn_low_price, save_plots=True,
+                            path_name=os.path.join(self.image_repo, 'thermal_kpi', 'low_price.png'),
+                            title_component='% of time production is below ' + str(below_norm_cap) +
+                                            '*Pmax when prices are low (under quantile ' + str(
+                                lower_quantile * 100) + ')')
+
+
+        # Seasonal for reference data
+        ref_agg_mw_per_month = self.__hydro_seasonal(thermal_ref)
+
+        # Seasonal for synthetic data
+        syn_agg_mw_per_month = self.__hydro_seasonal(thermal_syn)
+
+        self.plot_barcharts(ref_agg_mw_per_month.sum(axis=1), syn_agg_mw_per_month.sum(axis=1), save_plots=True,
+                            path_name=os.path.join(self.image_repo, 'thermal_kpi', 'thermal_per_month.png'),
+                            title_component='Thermal mean production per month for all units')
+
+
+        ## Load Correlation of synthetic dispatch
+        agg_thermal_syn = thermal_syn.sum(axis = 1)
+        correl = round(agg_thermal_syn.corr(self.agg_conso), self.precision)
+
+
+        # Write results
+        # -- + -- + --
+
+        self.output['thermal_kpi'] = {'high_price_for_ref': stat_ref_high_price.to_dict(),
+                                      'low_price_for_ref': stat_ref_low_price.to_dict(),
+                                      'high_price_for_syn': stat_syn_high_price.to_dict(),
+                                      'low_price_for_syn': stat_syn_low_price.to_dict(),
+                                      'syn_load_correlation': correl,
+                                      'seasonal_month_for_ref': ref_agg_mw_per_month.to_dict(),
+                                      'seasonal_month_for_syn': syn_agg_mw_per_month.to_dict()
+                                      }
+
+
+        return stat_ref_high_price, stat_ref_low_price, ref_agg_mw_per_month, \
+               stat_syn_high_price, stat_syn_low_price, syn_agg_mw_per_month
+
+    def load_kpi(self, save_plots = True):
+        
+        # Normalized conso by day of week
+        conso_day = self.agg_conso.copy()
+        conso_day.index = [date.isoweekday() for date in conso_day.index]
+        conso_day = conso_day.groupby(conso_day.index).sum() / conso_day.sum()
+        conso_day.index = conso_day.index.set_names('Day_of_week')
+
+        # Normalized conso by week of year
+        conso_week = self.agg_conso.copy()
+        conso_week.index = [date.week for date in conso_week.index]
+        conso_week = conso_week.groupby(conso_week.index).sum() / conso_week.sum()
+        conso_week.index = conso_week.index.set_names('Week_of_year')
+
+        # Plot results
+        fig, axes = plt.subplots(1, 2, figsize=(17, 5))
+        sns.barplot(conso_day.index, conso_day, ax=axes[0])
+        sns.barplot(conso_week.index, conso_week, ax=axes[1])
+        axes[0].set_title('Normalized load per day of week', size=9)
+        axes[1].set_title('Normalized load per week of year', size=9)
+
+        if save_plots:
+            fig.savefig(os.path.join(self.image_repo,'load_kpi','seasonality.png'))
+
+
+        return
