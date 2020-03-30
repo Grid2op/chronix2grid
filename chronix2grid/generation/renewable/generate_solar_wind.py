@@ -111,5 +111,9 @@ def main(i, destination_folder, seed, params, prods_charac, solar_pattern):
     prod_wind = swutils.create_csv(wind_series, os.path.join(scenario_destination_path, 'wind_p.csv.bz2'),
                                     reordering=True,
                                     noise=params['planned_std'])
+
+    prod_p = swutils.create_csv(prods_series, os.path.join(scenario_destination_path, 'prod_p.csv.bz2'),
+                                   reordering=True,
+                                   noise=params['planned_std'])
     
     return prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted

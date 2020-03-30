@@ -24,8 +24,13 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
     warnings.filterwarnings("ignore")
 
     # Get grid charac
-    prods_charac = pd.read_csv(os.path.abspath(generation_input_folder+'/'+case+'/prods_charac.csv'), sep=';')
-    loads_charac = pd.read_csv(os.path.abspath(generation_input_folder+'/'+case+'/loads_charac.csv'), sep=';')
+    try:
+        prods_charac = pd.read_csv(os.path.abspath(generation_input_folder+'/'+case+'/prods_charac.csv'), sep=',')
+        names = prods_charac['name']
+        loads_charac = pd.read_csv(os.path.abspath(generation_input_folder+'/'+case+'/loads_charac.csv'), sep=',')
+    except:
+        prods_charac = pd.read_csv(os.path.abspath(generation_input_folder + '/' + case + '/prods_charac.csv'), sep=';')
+        loads_charac = pd.read_csv(os.path.abspath(generation_input_folder + '/' + case + '/loads_charac.csv'), sep=';')
 
     for scenario_num in range(n_scenarios):
         print('Scenario '+str(scenario_num)+'...')
@@ -61,10 +66,15 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
         # problem when working in posterior KPI's
 
         # =================== Temporaire A SUPPRIMER ==================================== !!!!!!!!!!!!!!!
-        ref_dispatch = ref_dispatch.head(len(syn_dispatch))
+        if len(ref_dispatch) > len(syn_dispatch):
+            ref_dispatch = ref_dispatch.head(len(syn_dispatch))
+            if not wind_solar_only:
+                prices = prices.head(len(syn_dispatch))
+        elif len(ref_dispatch) < len(syn_dispatch):
+            syn_dispatch = syn_dispatch.head(len(ref_dispatch))
+            if not wind_solar_only:
+                prices = prices.head(len(ref_dispatch))
         syn_consumption = syn_consumption.head(len(syn_dispatch))
-        if not wind_solar_only:
-            prices = prices.head(len(syn_dispatch))
         # =============================================================================== !!!!!!!!!!!!!!!
 
         syn_dispatch.index = ref_dispatch.index

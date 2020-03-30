@@ -66,6 +66,7 @@ def eco2mix_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, year)
     return df, conso
 
 def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac, year, params):
+    print("Importing and formatting data downloaded from Renewable Ninja API")
     repo_in_solar = os.path.join(kpi_input_folder, 'renewableninja', 'solar_case118_' + str(year) + '.csv')
     ninja_solar = pd.read_csv(repo_in_solar, sep=';', encoding='latin1', decimal='.')
     repo_in_wind = os.path.join(kpi_input_folder, 'renewableninja', 'wind_case118_' + str(year) + '.csv')
@@ -131,13 +132,13 @@ def chronics_to_kpi(year, n_scenario, repo_in, timestep, thermal = True):
     else:
         print('Year '+str(year))
         folder = os.path.join(repo_in, 'dispatch', str(year), 'Scenario_' + str(n_scenario))
-        solar_p = pd.read_csv(os.path.join(folder, 'solar_p.csv.bz2'), sep=',', decimal='.')
+        solar_p = pd.read_csv(os.path.join(folder, 'solar_p.csv.bz2'), sep=';', decimal='.')
 
-        wind_p = pd.read_csv(os.path.join(folder, 'wind_p.csv.bz2'), sep=',', decimal='.')
+        wind_p = pd.read_csv(os.path.join(folder, 'wind_p.csv.bz2'), sep=';', decimal='.')
         wind_p.drop(columns = ['datetime'],inplace = True)
 
 
-        load_p = pd.read_csv(os.path.join(folder, 'load_p.csv.bz2'), sep=',', decimal='.')
+        load_p = pd.read_csv(os.path.join(folder, 'load_p.csv.bz2'), sep=';', decimal='.')
 
         prod_p = pd.concat([solar_p, wind_p], axis=1)
 
@@ -153,13 +154,11 @@ def chronics_to_kpi(year, n_scenario, repo_in, timestep, thermal = True):
     prod_p.set_index('Time', drop=False, inplace=True)
     prod_p = prod_p.resample(timestep).first()
 
-    price['Time'] = pd.to_datetime(price['Time'])
-    price.set_index('Time', drop=True, inplace=True)
-    price = price.resample(timestep).first()
-
-
     if not thermal:
         return prod_p, load_p
     if thermal:
+        price['Time'] = pd.to_datetime(price['Time'])
+        price.set_index('Time', drop=True, inplace=True)
+        price = price.resample(timestep).first()
         return prod_p, load_p, price
 

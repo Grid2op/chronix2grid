@@ -1,0 +1,10 @@
+--> OPF mode: month - Analyzing month # 1
+WARNING:pypsa.linopf:Unit commitment is not yet completely implemented for optimising without pyomo. Thus minimum up time, minimum down time, start up costs, shut down costs will be ignored.
+INFO:pypsa.linopf:Prepare linear problem
+INFO:pypsa.linopf:Total preparation time: 8.61s
+INFO:pypsa.linopf:Solve linear problem using Cbc solver
+terminate called after throwing an instance of 'std::bad_alloc'
+  what():  std::bad_alloc
+WARNING:pypsa.linopf:Optimization failed with status warning and termination condition other
+Not convergenced......
+

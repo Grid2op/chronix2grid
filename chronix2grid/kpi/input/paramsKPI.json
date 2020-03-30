@@ -1,6 +1,6 @@
 {
-  "comparison": "eco2mix",
-  "timestep": "30min",
+  "comparison": "renewable_ninja",
+  "timestep": "60min",
   "night_hours": {
     "summer": ["06:00", "23:00"],
     "fall": ["06:00", "23:00"],

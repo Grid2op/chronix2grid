@@ -41,18 +41,25 @@ def read_configuration(input_folder, case):
 
     # Import loads_charac.csv and prods_charac.csv
     print('Importing loads and prods parameters ...')
-    loads_charac = pd.read_csv(os.path.join(input_folder, case, 'loads_charac.csv'), sep = ';')
-    prods_charac = pd.read_csv(os.path.join(input_folder, case, 'prods_charac.csv'), sep = ';')
+    try:
+        loads_charac = pd.read_csv(os.path.join(input_folder, case, 'loads_charac.csv'), sep = ',')
+        names = loads_charac['name']
+        prods_charac = pd.read_csv(os.path.join(input_folder, case, 'prods_charac.csv'), sep = ',')
+        lines = pd.read_csv(os.path.join(input_folder, case, 'lines_names.csv'), sep=',')
+    except:
+        loads_charac = pd.read_csv(os.path.join(input_folder, case, 'loads_charac.csv'), sep=';')
+        prods_charac = pd.read_csv(os.path.join(input_folder, case, 'prods_charac.csv'), sep=';')
+        lines = pd.read_csv(os.path.join(input_folder, case, 'lines_names.csv'), sep=';')
 
     # Importing weekly patterns
     load_weekly_pattern = pd.read_csv(os.path.join(input_folder, 'patterns', 'load_weekly_pattern.csv'))
     solar_pattern = np.load(os.path.join(input_folder, 'patterns', 'solar_pattern.npy'))
 
-    return year, n_scenarios, params, loads_charac, prods_charac, load_weekly_pattern, solar_pattern
+    return year, n_scenarios, params, loads_charac, prods_charac, load_weekly_pattern, solar_pattern, lines
 
 
 # Call generation scripts n_scenario times with dedicated random seeds
-def main(year, n_scenarios, params, input_folder, output_folder, prods_charac, loads_charac, solar_pattern, load_weekly_pattern):
+def main(year, n_scenarios, params, input_folder, output_folder, prods_charac, loads_charac, lines, solar_pattern, load_weekly_pattern):
     print('=====================================================================================================================================')
     print('============================================== CHRONICS GENERATION ==================================================================')
     print('=====================================================================================================================================')
@@ -78,10 +85,11 @@ def main(year, n_scenarios, params, input_folder, output_folder, prods_charac, l
         print("================ Generating scenario number "+str(i)+" ================")
         load, load_forecasted = gen_loads.main(i, dispatch_input_folder, seed, params, loads_charac, load_weekly_pattern)
 
-        prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = gen_enr.main(i, dispatch_input_folder, seed,
-                                                                   params, prods_charac, solar_pattern)
-        # gen_dispatch.main(i, load_forecasted, prod_solar_wind_forecasted, dispatch_output_folder,
-        #                    seed, params, prods_charac)
+        prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = gen_enr.main(i, dispatch_input_folder, seed,params, prods_charac, solar_pattern)
+
+
+        gen_dispatch.main(i, load, prod_solar, prod_wind, out_folder, seed, params,
+                          prods_charac, lines, compute_hazards = True)
         print('\n')
     return
 

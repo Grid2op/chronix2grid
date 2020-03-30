@@ -871,8 +871,8 @@ class EconomicDispatchValidator:
         fig, axes = plt.subplots(1, 2, figsize=(17, 5))
         axes[0].hist(nuclear_lag_ref.values, bins=100, alpha=1)
         axes[1].hist(nuclear_lag_syn.values, bins=100, alpha=1)
-        axes[0].set_title('Reference Distribution of agregate nuclear production')
-        axes[1].set_title('Synthetic Distribution of agregate nuclear production')
+        axes[0].set_title('Reference Distribution of agregate nuclear ramps in production')
+        axes[1].set_title('Synthetic Distribution of agregate nuclear ramps in production')
         if save_plots:
             # Save plot as png
             fig.savefig(os.path.join(self.image_repo, 'nuclear_kpi', 'lag_distribution.png'))
@@ -1006,7 +1006,7 @@ class EconomicDispatchValidator:
         
         # Normalized conso by day of week
         conso_day = self.agg_conso.copy()
-        conso_day.index = [date.isoweekday() for date in conso_day.index]
+        conso_day.index = [date.weekday() for date in conso_day.index]
         conso_day = conso_day.groupby(conso_day.index).sum() / conso_day.sum()
         conso_day.index = conso_day.index.set_names('Day_of_week')
 

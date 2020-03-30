@@ -246,7 +246,7 @@ def create_csv(dict_, path, reordering=True, noise=None, shift=False, with_pdb=F
         df = df.fillna(0)
     # if with_pdb:
     #     pdb.set_trace()
-    df.to_csv(path, index=True, sep=',', float_format='%.1f')
+    df.to_csv(path, index=True, sep=';', float_format='%.1f')
 
     return df
 

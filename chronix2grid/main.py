@@ -9,11 +9,12 @@ import generation.generate_chronics as gen
 import kpi.main as kpis
 
 ### CONSTANT
-INPUT_FOLDER = 'generation/input_Nico'
+INPUT_FOLDER = 'generation/input'
 OUTPUT_FOLDER = 'generation/output'
-CASE = 'case118_l2rpn_2020'
-KPI_INPUT_FOLDER = 'kpi/input_Nico'
-IMAGES_FOLDER = 'kpi/images_Nico'
+#CASE = 'case118_l2rpn_2020'
+CASE = 'case118_l2rpn'
+KPI_INPUT_FOLDER = 'kpi/input'
+IMAGES_FOLDER = 'kpi/images'
 
 ### LAUNCH CONFIGURATION
 # Chronic generation parameters in <INPUT_FOLDER>/<CASE>/params.json
@@ -22,9 +23,9 @@ IMAGES_FOLDER = 'kpi/images_Nico'
 
 
 ### COMPUTATION PHASES
-GENERATION_CHRONICS = False    # Il manque la partie dispatch. A integrer dans generation/thermal une fois Camilo prêt
-COMPUTE_KPI_ENR_ONLY = False     # Pour visualiser des KPIs sur solar et wind en attendant le dispatch
-COMPUTE_ALL_KPI = True         # En attendant que le dispatch soit prêt
+GENERATION_CHRONICS = True    # Il manque la partie dispatch. A integrer dans generation/thermal une fois Camilo prêt
+COMPUTE_KPI_ENR_ONLY = True     # Pour visualiser des KPIs sur solar et wind en attendant le dispatch
+COMPUTE_ALL_KPI = False         # En attendant que le dispatch soit prêt
 
 
 
@@ -32,12 +33,12 @@ COMPUTE_ALL_KPI = True         # En attendant que le dispatch soit prêt
 ### PROPER COMPUTATION
 
 ## Reading parameters
-year, n_scenarios, params, loads_charac, prods_charac, load_weekly_pattern, solar_pattern = gen.read_configuration(
+year, n_scenarios, params, loads_charac, prods_charac, load_weekly_pattern, solar_pattern, lines = gen.read_configuration(
     INPUT_FOLDER, CASE)
 
 ## Chronic generation
 if GENERATION_CHRONICS:
-    gen.main(year, n_scenarios, params, INPUT_FOLDER, OUTPUT_FOLDER, prods_charac, loads_charac, solar_pattern, load_weekly_pattern)
+    gen.main(year, n_scenarios, params, INPUT_FOLDER, OUTPUT_FOLDER, prods_charac, loads_charac, lines, solar_pattern, load_weekly_pattern)
 
 ## KPI formatting and computing
 if COMPUTE_KPI_ENR_ONLY:
