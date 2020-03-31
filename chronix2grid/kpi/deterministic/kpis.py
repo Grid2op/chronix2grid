@@ -105,8 +105,12 @@ class EconomicDispatchValidator:
             figure = ax.get_figure()    
             figure.savefig(path_png)
 
-    def plot_barcharts(self, df_ref, df_syn, save_plots = True, path_name = '', title_component = ''):
+    def plot_barcharts(self, df_ref, df_syn, save_plots = True, path_name = '', title_component = '', normalized = True):
         # Plot results
+        if normalized:
+            df_ref = df_ref/df_ref.max()
+            df_syn = df_syn / df_syn.max()
+
         fig, axes = plt.subplots(1, 2, figsize=(17, 5))
         sns.barplot(df_ref.index, df_ref, ax=axes[0])
         sns.barplot(df_syn.index, df_syn, ax=axes[1])
@@ -356,13 +360,14 @@ class EconomicDispatchValidator:
         self.plot_barcharts(stat_ref_high_price, stat_syn_high_price, save_plots=True,
                             path_name=os.path.join(self.image_repo,'hydro_kpi','high_price.png'),
                        title_component='% of time production exceed '+str(above_norm_cap)+
-                                       '*Pmax when prices are high (above quantile '+str(upper_quantile*100)+')')
+                                       '*Pmax when prices are high (above quantile '+str(upper_quantile*100)+')',
+                            normalized = False)
 
         self.plot_barcharts(stat_ref_low_price, stat_syn_low_price, save_plots=True,
                             path_name=os.path.join(self.image_repo,'hydro_kpi','low_price.png'),
                             title_component='% of time production is below ' + str(below_norm_cap) +
                                             '*Pmax when prices are low (under quantile ' + str(
-                                lower_quantile * 100) + ')')
+                                lower_quantile * 100) + ')', normalized = False)
 
         # Write results
         # -- + -- + --
@@ -380,7 +385,7 @@ class EconomicDispatchValidator:
 
         self.plot_barcharts(ref_agg_mw_per_month.sum(axis = 1), syn_agg_mw_per_month.sum(axis = 1), save_plots=True,
                             path_name=os.path.join(self.image_repo,'hydro_kpi','hydro_per_month.png'),
-                            title_component='hydro mean production per month for all units')
+                            title_component='hydro mean production per month (% of max) for all units')
 
         # Write results
         # -- + -- + --
@@ -491,10 +496,10 @@ class EconomicDispatchValidator:
 
         self.plot_barcharts(skewness_ref.sum(axis=1), skewness_syn.sum(axis=1), save_plots=True,
                             path_name=os.path.join(self.image_repo,'wind_kpi','skewness.png'),
-                            title_component='skewness per month')
+                            title_component='skewness per month', normalized=False)
         self.plot_barcharts(kurtosis_ref.sum(axis=1), kurtosis_syn.sum(axis=1), save_plots=True,
                             path_name=os.path.join(self.image_repo, 'wind_kpi', 'kurtosis.png'),
-                            title_component='kurtosis per month')
+                            title_component='kurtosis per month', normalized=False)
 
         # Write results 
         # -- + -- + --
@@ -741,7 +746,7 @@ class EconomicDispatchValidator:
         # Plot and save it average per season
         self.plot_barcharts(solar_night_ref_mean, solar_night_syn_mean, save_plots=True,
                             path_name=os.path.join(self.image_repo,'solar_kpi','solar_at_night.png'),
-                            title_component='Mean % of production at night per season')
+                            title_component='Mean % of production at night per season', normalized = False)
 
 
 
@@ -762,7 +767,7 @@ class EconomicDispatchValidator:
         self.plot_barcharts(cloudiness_ref.sum(axis=1), cloudiness_syn.sum(axis=1), save_plots=True,
                             path_name=os.path.join(self.image_repo,'solar_kpi','cloudiness.png'),
                             title_component='Cloudiness per month (number of daily quantile '+str(cloud_quantile)+' below '+str(round(cond_below_cloud*100))+
-                                            ' % of general quantile '+str(cloud_quantile)+')')
+                                            ' % of general quantile '+str(cloud_quantile)+')', normalized = False)
 
 
         ## Fourth KPI: Correlation between ref and syn (agregates)
@@ -888,7 +893,7 @@ class EconomicDispatchValidator:
 
         self.plot_barcharts(maintenance_ref, maintenance_syn, save_plots=save_plots,
                             path_name=os.path.join(self.image_repo, 'nuclear_kpi', 'maintenance_percentage_of_time_per_month.png'),
-                            title_component='% of time in maintenance at night per month')
+                            title_component='% of time in maintenance per month', normalized = False)
 
         return None
 
@@ -961,13 +966,13 @@ class EconomicDispatchValidator:
                             path_name=os.path.join(self.image_repo, 'thermal_kpi', 'high_price.png'),
                             title_component='% of time production exceed ' + str(above_norm_cap) +
                                             '*Pmax when prices are high (above quantile ' + str(
-                                upper_quantile * 100) + ')')
+                                upper_quantile * 100) + ')', normalized = False)
 
         self.plot_barcharts(stat_ref_low_price, stat_syn_low_price, save_plots=True,
                             path_name=os.path.join(self.image_repo, 'thermal_kpi', 'low_price.png'),
                             title_component='% of time production is below ' + str(below_norm_cap) +
                                             '*Pmax when prices are low (under quantile ' + str(
-                                lower_quantile * 100) + ')')
+                                lower_quantile * 100) + ')', normalized = False)
 
 
         # Seasonal for reference data
@@ -978,7 +983,7 @@ class EconomicDispatchValidator:
 
         self.plot_barcharts(ref_agg_mw_per_month.sum(axis=1), syn_agg_mw_per_month.sum(axis=1), save_plots=True,
                             path_name=os.path.join(self.image_repo, 'thermal_kpi', 'thermal_per_month.png'),
-                            title_component='Thermal mean production per month for all units')
+                            title_component='Thermal mean production (% of max) per month for all units')
 
 
         ## Load Correlation of synthetic dispatch
@@ -1007,13 +1012,13 @@ class EconomicDispatchValidator:
         # Normalized conso by day of week
         conso_day = self.agg_conso.copy()
         conso_day.index = [date.weekday() for date in conso_day.index]
-        conso_day = conso_day.groupby(conso_day.index).sum() / conso_day.sum()
+        conso_day = conso_day.groupby(conso_day.index).sum() / conso_day.max()
         conso_day.index = conso_day.index.set_names('Day_of_week')
 
         # Normalized conso by week of year
         conso_week = self.agg_conso.copy()
         conso_week.index = [date.week for date in conso_week.index]
-        conso_week = conso_week.groupby(conso_week.index).sum() / conso_week.sum()
+        conso_week = conso_week.groupby(conso_week.index).sum() / conso_week.max()
         conso_week.index = conso_week.index.set_names('Week_of_year')
 
         # Plot results
