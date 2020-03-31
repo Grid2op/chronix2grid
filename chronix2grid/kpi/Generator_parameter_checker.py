@@ -65,20 +65,37 @@ def EnergyMix_AprioriChecker(env118_withoutchron,Target_EM_percentage, PeakLoad,
 
 
     Capacity=pd.concat([Target_EM_percentage, CapacityPerType, CapacityMix, CapacityFactor], axis=1)
-    Capacity['revised_pmax']=np.round((Capacity['pmax'].values/Capacity['capacity_factor'].values*100)*10)/10
-    print("\n revised capacities after taking into account capacity factor")
-    print(Capacity)
+    #Capacity['revised_pmax']=np.round((Capacity['pmax'].values/Capacity['capacity_factor'].values*100)*10)/10
+    #print("\n revised capacities after taking into account capacity factor")
+    #print(Capacity)
 
 
     # Finally thermal should be scaled so that nuclear + thermal deals with peak demand. 
     # Peak Demand below is 4200MW
 
     # In[142]:
+    
+    EnergyAPriori=Capacity['pmax']/100*Capacity['capacity_factor']
+    EnergyAPriori
 
-    Capacity['revised_pmax']['thermal']=PeakLoad-Capacity['revised_pmax']['nuclear']
-    Capacity['revised_pmax']['thermal']=PeakLoad-Capacity['revised_pmax']['nuclear']
+    MaxMixEnergyNoThermal=EnergyAPriori/EnergyAPriori.sum()*100
+    MaxMixEnergyNoThermal
+
+    thermalMix=Target_EM_percentage.loc['thermal'].values
+    MaxMixEnergyWithThermal=MaxMixEnergyNoThermal*(1-thermalMix/100)
+    MaxMixEnergyWithThermal['thermal']=thermalMix
+
+    Capacity['Apriori_energy_mix_noThermal']=np.round(MaxMixEnergyNoThermal*10)/10
+    Capacity['Apriori_energy_mix_Thermal']=np.round(MaxMixEnergyWithThermal*10)/10
+
+    #Capacity['revised_pmax']['thermal']=PeakLoad-Capacity['revised_pmax']['nuclear']
+    #Capacity['revised_pmax']['thermal']=PeakLoad-Capacity['revised_pmax']['nuclear']
     print("\n revised thermal capacity")
     print(Capacity)
+    
+    
+    error=np.abs(Capacity['target_energy_mix']-Capacity['Apriori_energy_mix_Thermal']).sum()
+    print('Warning: the differences in your target energy mix and you energy mix a priori are: ' + str(error)+'%')
 
     return Capacity
 
@@ -114,8 +131,8 @@ def Ramps_Pmax_Pmin_APrioriCheckers(env118_withoutchron,Capacity, chronics_path_
     for subpath in fileList:
         # Load consumption and prod
         this_path = os.path.join(chronics_path_gen, subpath)
-        load_p = pd.read_csv(os.path.join(this_path, 'load_p.csv.bz2'), sep = ';', index_col = 0)
-        prod_p = pd.read_csv(os.path.join(this_path, 'prod_p.csv.bz2'), sep = ';', index_col = 0)
+        load_p = pd.read_csv(os.path.join(this_path, 'load_p.csv.bz2'), sep = ';')
+        prod_p = pd.read_csv(os.path.join(this_path, 'prod_p.csv.bz2'), sep = ';')
 
        # Retrieve wind and solar from prod_p (Balthazar's generator)
         prod_p_wind = prod_p[[el for i, el in enumerate(env118_withoutchron.name_gen) if env118_withoutchron.gen_type[i] in ["wind"]]]
@@ -154,7 +171,7 @@ def Ramps_Pmax_Pmin_APrioriCheckers(env118_withoutchron,Capacity, chronics_path_
     print('\n the wind share is '+str(WindShare))
     print('the wind share was expected to be '+str(Capacity['target_energy_mix']['wind']))
     print('the solar share is '+str(SolarShare))
-    print('the wind share was expected to be '+str(Capacity['target_energy_mix']['solar']))
+    print('the solar share was expected to be '+str(Capacity['target_energy_mix']['solar']))
 
 
     # In[154]:
@@ -211,12 +228,12 @@ def Ramps_Pmax_Pmin_APrioriCheckers(env118_withoutchron,Capacity, chronics_path_
     # In[178]:
 
 
-    isNuclearPmaxInTrouble=(df_stats['Load_net']['min']<Capacity['revised_pmax']['nuclear'])
+    isNuclearPmaxInTrouble=(df_stats['Load_net']['min']<Capacity['pmax']['nuclear'])
     isNuclearRampInTrouble=(df_stats_ramps['Load_net']['max']>Ramps_genType_df['rampDown']['nuclear'])
     isNuclearInTrouble=(isNuclearPmaxInTrouble and isNuclearRampInTrouble)
 
     print('\n the min net load is '+str(df_stats['Load_net']['min']))
-    print('the nuclear capacity is '+str(Capacity['revised_pmax']['nuclear']))
+    print('the nuclear capacity is '+str(Capacity['pmax']['nuclear']))
     print('the max net load decrease '+str(df_stats_ramps['Load_net']['max']))
     print('the nuclear max ramp Down is '+str(Ramps_genType_df['rampDown']['nuclear']))
     print('are we in trouble for nuclear:'+ str(isNuclearInTrouble))
