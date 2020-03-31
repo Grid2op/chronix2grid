@@ -166,7 +166,7 @@ def Ramps_Pmax_Pmin_APrioriCheckers(env118_withoutchron,Capacity, chronics_path_
     TotalSolar=Solar_df.sum().sum()
 
     WindShare=np.round((TotalWind/TotalLoad*100)*10)/10
-    SolarShare=np.round((TotalSolar/TotalLoad)*100)/10
+    SolarShare=np.round((TotalSolar/TotalLoad*100)*10)/10
 
     print('\n the wind share is '+str(WindShare))
     print('the wind share was expected to be '+str(Capacity['target_energy_mix']['wind']))
