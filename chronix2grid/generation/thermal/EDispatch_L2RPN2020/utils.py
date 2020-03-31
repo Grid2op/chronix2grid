@@ -1,10 +1,10 @@
-import pandas as pd
-import numpy as np
-import calendar
-import os
 import sys
+from enum import Enum
+
+import numpy as np
+import pandas as pd
 import pypsa
-from datetime import datetime, timedelta
+
 
 # def format_dates(year, month):
 #     # Get last of for every month
@@ -15,6 +15,17 @@ from datetime import datetime, timedelta
 #     FROM_DATE = datetime.strptime(from_date, '%Y-%m-%d %H:%M')
 #     END_DATE = datetime.strptime(end_date, '%Y-%m-%d %H:%M')
 #     return FROM_DATE, END_DATE
+
+
+class RampMode(Enum):
+    """
+    Encodes the level of complexity of the ramp constraints to apply for
+    the economic dispatch
+    """
+    easy = 0
+    medium = 1
+    hard = 2
+
 
 def get_params(num, params):
     snaps = params['snapshots']
@@ -109,6 +120,51 @@ def reformat_gen_constraints(gen_constraints, params, new_snaps):
         # Resampled to desired step run opf
         gen_constraints.update({k: gen_constraints[k].loc[resampled_snapshots]})
     return gen_constraints
+
+
+def filter_ramps(net, mode):
+    """
+    Apply filters on ramp constraints, corresponding to different levels of
+    complexity of the economic dispatch.
+    Parameters
+    ----------
+    net: pypsa.Network
+        The instance to modify
+    mode: RampMode
+        The level of difficulty to use for ramps
+
+    Returns
+    -------
+    The modified pypsa.Network instance
+    """
+    hydro_names = net.generators[net.generators.carrier == 'hydro'].index.tolist()
+    thermal_names = net.generators[net.generators.carrier == 'thermal'].index.tolist()
+
+    if mode == RampMode.medium:
+        net = remove_ramps(net, thermal_names)
+    if mode == RampMode.easy:
+        net = remove_ramps(net, hydro_names + thermal_names)
+
+    return net
+
+
+def remove_ramps(net, gen_names):
+    """
+    Remove de ramp constraints for the gen_names generators.
+    Parameters
+    ----------
+    net: pypsa.Network
+        The instance to modify
+    gen_names: list
+        List of generator names for which ramp constraints are removed
+
+    Returns
+    -------
+    The modified pypsa.Network instance
+    """
+    net.generators.loc[gen_names, ['ramp_limit_up', 'ramp_limit_down']] = 1
+    return net
+
 
 def adapt_gen_prop(net, every_min, grid_params=5):
     """Scale gen ramps up/down according to step_opf_min param
