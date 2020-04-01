@@ -35,14 +35,7 @@ def read_configuration(input_folder, case):
 
     # date and time parameters
     year = params['start_date'].year
-    # if int(params['weeks']) == 52 and year%4 == 0 and year%100!=0:
-    #     bissextile = 2
-    # elif int(params['weeks']) == 52:
-    #     bissextile = 1
-    # else:
-    #     bissextile = 0
-    bissextile = 0
-    params['end_date'] = params['start_date'] + timedelta(days=7 * int(params['weeks']))+timedelta(days=bissextile)
+    params['end_date'] = params['start_date'] + timedelta(days=7 * int(params['weeks']))+timedelta(days=2)
     params['T'] = int(pd.Timedelta(params['end_date'] - params['start_date']).total_seconds() // (60))
     Nt_inter = int(params['T'] // params['dt'] + 1)
 
