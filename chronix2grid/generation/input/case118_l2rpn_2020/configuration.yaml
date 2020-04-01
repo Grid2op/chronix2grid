@@ -1,0 +1,10 @@
+hard_overflow_coefficient: 1.5
+loadflow_backend: pypower
+loadflow_mode: AC
+max_number_loads_game_over: 0
+max_number_prods_game_over: 1
+max_seconds_per_timestep: 1.0
+n_timesteps_consecutive_soft_overflow_breaks: 4
+n_timesteps_hard_overflow_is_broken: 28
+n_timesteps_horizon_maintenance: 20
+n_timesteps_soft_overflow_is_broken: 28
