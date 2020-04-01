@@ -149,8 +149,9 @@ def Ramps_Pmax_Pmin_APrioriCheckers(env118_withoutchron,Capacity, chronics_path_
         total_renew = pd.concat([total_p_wind, total_p_solar], axis=1).sum(axis=1)    
 
         # Compensate the reactive part in loads
-        load_ = load_p.copy() * (1 + losses_pct/100)
-        load_ = load_.sum(axis=1)
+        #load_ = load_p.copy() * (1 + losses_pct/100)
+        load_ = load_p.sum(axis=1)
+        load_ = load_*(1 + losses_pct/100)
 
         # Demand for OPF (total - renewable)
         agg_load_without_renew = (load_ - total_renew).to_frame()
