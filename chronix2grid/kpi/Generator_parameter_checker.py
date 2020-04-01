@@ -2,7 +2,7 @@ import pandas as pd
 import os
 import numpy as np
 
-def EnergyMix_AprioriChecker(env118_withoutchron,Target_EM_percentage, PeakLoad,CapacityFactor ):
+def EnergyMix_AprioriChecker(env118_withoutchron,Target_EM_percentage, PeakLoad, AverageLoad, CapacityFactor ):
     # # Check the Energy Mix apriori
 
     # ### Target Energy mix 
@@ -85,16 +85,22 @@ def EnergyMix_AprioriChecker(env118_withoutchron,Target_EM_percentage, PeakLoad,
     MaxMixEnergyWithThermal=MaxMixEnergyNoThermal*(1-thermalMix/100)
     MaxMixEnergyWithThermal['thermal']=thermalMix
 
-    Capacity['Apriori_energy_mix_noThermal']=np.round(MaxMixEnergyNoThermal*10)/10
-    Capacity['Apriori_energy_mix_Thermal']=np.round(MaxMixEnergyWithThermal*10)/10
+    Capacity['Apriori_energy_mix']=Capacity['capacity_factor']*Capacity['pmax']/AverageLoad
+    
+    MixShareNoThermal=Capacity['Apriori_energy_mix'].sum()
+    if (MixShareNoThermal>=100):
+        Capacity['Apriori_energy_mix']['hydro']=Capacity['Apriori_energy_mix']['hydro']-(MixShareNoThermal-100)
+        Capacity['Apriori_energy_mix']['thermal']=0
+    else:
+        Capacity['Apriori_energy_mix']['thermal']=100-MixShareNoThermal
 
-    #Capacity['revised_pmax']['thermal']=PeakLoad-Capacity['revised_pmax']['nuclear']
-    #Capacity['revised_pmax']['thermal']=PeakLoad-Capacity['revised_pmax']['nuclear']
+    Capacity['revised_pmax']=Capacity['target_energy_mix']/Capacity['Apriori_energy_mix']*Capacity['pmax']
+    Capacity['revised_pmax']['thermal']=PeakLoad-Capacity['revised_pmax']['nuclear']
     print("\n revised thermal capacity")
     print(Capacity)
     
     
-    error=np.abs(Capacity['target_energy_mix']-Capacity['Apriori_energy_mix_Thermal']).sum()
+    error=np.abs(Capacity['target_energy_mix']-Capacity['Apriori_energy_mix']).sum()
     print('Warning: the differences in your target energy mix and you energy mix a priori are: ' + str(error)+'%')
 
     return Capacity
@@ -159,7 +165,9 @@ def Ramps_Pmax_Pmin_APrioriCheckers(env118_withoutchron,Capacity, chronics_path_
 
     # In[153]:
 
-
+    MaxSolar=Solar_df.max().max()
+    MaxWind=Wind_df.max().max()
+    
     #Energy Mix
     TotalLoad=Load_df.sum().sum()
     TotalWind=Wind_df.sum().sum()
@@ -268,3 +276,48 @@ def Ramps_Pmax_Pmin_APrioriCheckers(env118_withoutchron,Capacity, chronics_path_
     #Load_net.iplot(kind='scatter', filename='cufflinks/cf-simple-line')
 
     return [isThermalInTrouble,isNuclearInTrouble,IsRampUpInTrouble,IsRampDownInTrouble]
+
+
+def Aposteriori_renewableCapacityFactor_Checkers(env118_withoutchron,Capacity, chronics_path_gen):
+    
+    Wind_df=pd.DataFrame()
+    Solar_df=pd.DataFrame()
+
+    fileList=[f for f in os.listdir(chronics_path_gen) if not f.startswith('.')]
+    for subpath in fileList:
+        # Load consumption and prod
+        this_path = os.path.join(chronics_path_gen, subpath)
+        prod_p = pd.read_csv(os.path.join(this_path, 'prod_p.csv.bz2'), sep = ';')
+
+       # Retrieve wind and solar from prod_p (Balthazar's generator)
+        prod_p_wind = prod_p[[el for i, el in enumerate(env118_withoutchron.name_gen) if env118_withoutchron.gen_type[i] in ["wind"]]]
+        total_p_wind=prod_p_wind.sum(axis=1)
+        prod_p_solar = prod_p[[el for i, el in enumerate(env118_withoutchron.name_gen) if env118_withoutchron.gen_type[i] in ["solar"]]]
+        total_p_solar=prod_p_solar.sum(axis=1) 
+
+        # Demand for OPF (total - renewable)
+        
+        Wind_df[subpath]=total_p_wind
+        Solar_df[subpath]=total_p_solar
+        
+    MaxSolar=Solar_df.max().max()
+    MaxWind=Wind_df.max().max()
+    
+    solarCapacityFactor=Solar_df.mean().mean()/Capacity['pmax']['solar']#MaxSolar
+    windCapacityFactor=Wind_df.mean().mean()/Capacity['pmax']['wind']#MaxWind
+    
+    print('\n the max wind production '+str(MaxWind))
+    print('\n the expected max wind production was '+str(Capacity['pmax']['wind']))
+    print('\n the max solar production '+str(MaxSolar))
+    print('\n the expected max solar production was '+str(Capacity['pmax']['solar']))
+
+
+    print('\n the solar capacity factor is: '+str(solarCapacityFactor))
+    
+    print('\n the expected solar capacity factor was: '+str(Capacity['capacity_factor']['solar']))
+    
+    print('\n the wind capacity factor is: '+str(windCapacityFactor))
+    
+    print('\n the expected wind capacity factor was: '+str(Capacity['capacity_factor']['wind']))
+    
+    return [solarCapacityFactor,windCapacityFactor]
