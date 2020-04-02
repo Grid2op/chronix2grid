@@ -133,3 +133,6 @@ dmypy.json
 .idea/
 
 Pipfile.lock
+
+# Ignore DS_Store
+.DS_Store
