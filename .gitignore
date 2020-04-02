@@ -131,3 +131,5 @@ dmypy.json
 # ide
 *.iml
 .idea/
+
+.DS_Store
