@@ -45,15 +45,16 @@ def main_run_disptach(pypsa_net,
 
     start = time.time()
     results = []
+    termination_conditions = []
     gen_const_2_opf = dict.fromkeys(gen_constraints)
     for snaps in grouped_snapshots:
         # Select partial load and gen contraints
         load_2_opf = load_.loc[snaps]
         gen_const_2_opf.update({k: v.loc[snaps] for k, v in gen_constraints_.items()})
         # Run opf function
-        results.append(run_opf(pypsa_net, load_2_opf, gen_const_2_opf, params))
-        print(
-            '-- opf succeeded    >Please check always => Objective value (should be greater than zero!')
+        dispatch, termination_condition = run_opf(pypsa_net, load_2_opf, gen_const_2_opf, params)
+        results.append(dispatch)
+        termination_conditions.append(termination_condition)
 
     # Unpack individual dispatchs
     opf_prod = pd.DataFrame()
@@ -74,7 +75,7 @@ def main_run_disptach(pypsa_net,
     # print('OPF Done......')
     print('Total time {} min'.format(round((end - start) / 60, 2)))
 
-    return prod_p_with_noise
+    return prod_p_with_noise, termination_conditions
 
 
 # Vars to set up...

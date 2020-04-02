@@ -242,13 +242,15 @@ def run_opf(net, demand, gen_constraints, params):
     # Prepare grid for OPF
     net = prepare_net_for_opf(net, demand, gen_constraints)
     # Run Linear OPF
-    rel = net.lopf(net.snapshots, pyomo=False, solver_name='cbc')
-    if rel[1] != 'optimal': 
-        print ('** OPF failed to find a solution **')
-        sys.exit()
+    status, termination_condition = net.lopf(net.snapshots, pyomo=False, solver_name='cbc')
+    if status != 'ok':
+        print('** OPF failed to find an optimal solution **')
+    else:
+        print(
+            '-- opf succeeded    >Please check always => Objective value (should be greater than zero!')
     # Get the values
     dispatch = net.generators_t.p.copy()
-    return dispatch
+    return dispatch, termination_condition
 
 def add_noise_gen(dispatch, gen_cap, noise_factor=None):
     """Add noise to dispatch result
