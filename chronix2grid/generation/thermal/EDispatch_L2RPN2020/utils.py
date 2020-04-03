@@ -22,6 +22,7 @@ class RampMode(Enum):
     Encodes the level of complexity of the ramp constraints to apply for
     the economic dispatch
     """
+    none = -1
     easy = 0
     medium = 1
     hard = 2
@@ -139,11 +140,14 @@ def filter_ramps(net, mode):
     """
     hydro_names = net.generators[net.generators.carrier == 'hydro'].index.tolist()
     thermal_names = net.generators[net.generators.carrier == 'thermal'].index.tolist()
+    nuclear_names = net.generators[net.generators.carrier == 'nuclear'].index.tolist()
 
     if mode == RampMode.medium:
         net = remove_ramps(net, thermal_names)
     if mode == RampMode.easy:
         net = remove_ramps(net, hydro_names + thermal_names)
+    if mode == RampMode.none:
+        net = remove_ramps(net, nuclear_names + hydro_names + thermal_names)
 
     return net
 
