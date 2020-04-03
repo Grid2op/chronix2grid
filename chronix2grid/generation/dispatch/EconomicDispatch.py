@@ -69,7 +69,7 @@ class Dispatch(pypsa.Network):
             if generator in self.generators.index:
                 self.generators.loc[generator, 'ramp_limit_up'] = \
                     self._env.gen_max_ramp_up[i] / self._env.gen_pmax[i]
-                self.generators.loc[generator, 'ramp_down_up'] = \
+                self.generators.loc[generator, 'ramp_limit_down'] = \
                     self._env.gen_max_ramp_down[i] / self._env.gen_pmax[i]
 
     def read_hydro_guide_curves(self, hydro_file_path):
@@ -191,16 +191,24 @@ if __name__ == "__main__":
     import os
     import grid2op
     from grid2op.ChronicsHandler import ChangeNothing
+    import chronix2grid.generation.thermal.EDispatch_L2RPN2020.run_economic_dispatch as run_economic_dispatch
 
     INPUT_FOLDER = 'chronix2grid/generation/input'
-    CASE = 'case118_l2rpn'
+    CASE = 'case118_l2rpn_bup'
     path_grid = os.path.join(INPUT_FOLDER, CASE)
+
+    losses_pct = 3.0
 
     env118_blank = grid2op.make(
         "blank",
         grid_path=os.path.join(path_grid, "L2RPN_2020_case118_redesigned.json"),
         chronics_class=ChangeNothing,
     )
+    params = {'snapshots': [],
+              'step_opf_min': 5,
+              'mode_opf': 'day',
+              'reactive_comp': 1.025,
+              }
     chronics_path_gen = os.path.join(INPUT_FOLDER, "dispatch", str(2012))
     this_path = os.path.join(chronics_path_gen, 'Scenario_0')
     dispatch = Dispatch.from_gri2op_env(env118_blank)
@@ -209,7 +217,19 @@ if __name__ == "__main__":
                                         os.path.join(this_path, 'prod_p.csv.bz2'))
     dispatch.make_hydro_constraints_from_res_load_scenario()
     net_by_carrier = dispatch.simplify_net()
+    agg_load_without_renew = dispatch.net_load(losses_pct, name=dispatch.loads.index[0])
 
+    # Prepare gen constraints for EDispatch module
+    hydro_constraints = {'p_max_pu': dispatch._max_hydro_pu.copy(),
+                         'p_min_pu': dispatch._min_hydro_pu.copy()}
+
+    opf_dispatch, term_conditions = dispatch.run(
+        agg_load_without_renew,
+        params=params,
+        gen_constraints=hydro_constraints,
+        ramp_mode=run_economic_dispatch.RampMode.easy,
+        by_carrier=False  # True to run the dispatch only aggregated generators by carrier
+    )
 
 
 

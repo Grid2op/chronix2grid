@@ -166,7 +166,7 @@ def remove_ramps(net, gen_names):
     -------
     The modified pypsa.Network instance
     """
-    net.generators.loc[gen_names, ['ramp_limit_up', 'ramp_limit_down']] = 1
+    net.generators.loc[gen_names, ['ramp_limit_up', 'ramp_limit_down']] = np.nan
     return net
 
 
