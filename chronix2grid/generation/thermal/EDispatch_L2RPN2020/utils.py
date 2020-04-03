@@ -22,6 +22,7 @@ class RampMode(Enum):
     Encodes the level of complexity of the ramp constraints to apply for
     the economic dispatch
     """
+    none = -1
     easy = 0
     medium = 1
     hard = 2
@@ -139,11 +140,14 @@ def filter_ramps(net, mode):
     """
     hydro_names = net.generators[net.generators.carrier == 'hydro'].index.tolist()
     thermal_names = net.generators[net.generators.carrier == 'thermal'].index.tolist()
+    nuclear_names = net.generators[net.generators.carrier == 'nuclear'].index.tolist()
 
     if mode == RampMode.medium:
         net = remove_ramps(net, thermal_names)
     if mode == RampMode.easy:
         net = remove_ramps(net, hydro_names + thermal_names)
+    if mode == RampMode.none:
+        net = remove_ramps(net, nuclear_names + hydro_names + thermal_names)
 
     return net
 
@@ -162,7 +166,7 @@ def remove_ramps(net, gen_names):
     -------
     The modified pypsa.Network instance
     """
-    net.generators.loc[gen_names, ['ramp_limit_up', 'ramp_limit_down']] = 1
+    net.generators.loc[gen_names, ['ramp_limit_up', 'ramp_limit_down']] = np.nan
     return net
 
 
@@ -242,13 +246,15 @@ def run_opf(net, demand, gen_constraints, params):
     # Prepare grid for OPF
     net = prepare_net_for_opf(net, demand, gen_constraints)
     # Run Linear OPF
-    rel = net.lopf(net.snapshots, pyomo=False, solver_name='cbc')
-    if rel[1] != 'optimal': 
-        print ('** OPF failed to find a solution **')
-        sys.exit()
+    status, termination_condition = net.lopf(net.snapshots, pyomo=False, solver_name='cbc')
+    if status != 'ok':
+        print('** OPF failed to find an optimal solution **')
+    else:
+        print(
+            '-- opf succeeded    >Please check always => Objective value (should be greater than zero!')
     # Get the values
     dispatch = net.generators_t.p.copy()
-    return dispatch
+    return dispatch, termination_condition
 
 def add_noise_gen(dispatch, gen_cap, noise_factor=None):
     """Add noise to dispatch result
