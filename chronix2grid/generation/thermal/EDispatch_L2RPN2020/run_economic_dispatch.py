@@ -36,6 +36,10 @@ def main_run_disptach(pypsa_net,
     load_, gen_constraints_ = preprocess_input_data(load, gen_constraints, params)
 
     pypsa_net = filter_ramps(pypsa_net, ramp_mode)
+    
+    print('filter ok?')
+    print(pypsa_net.generators[['ramp_limit_down','ramp_limit_up']])
+
     # Scale gen properties (ramps up/down)
     pypsa_net = adapt_gen_prop(pypsa_net, params['step_opf_min'])
 
@@ -52,6 +56,8 @@ def main_run_disptach(pypsa_net,
         load_2_opf = load_.loc[snaps]
         gen_const_2_opf.update({k: v.loc[snaps] for k, v in gen_constraints_.items()})
         # Run opf function
+        
+        
         dispatch, termination_condition = run_opf(pypsa_net, load_2_opf, gen_const_2_opf, params)
         results.append(dispatch)
         termination_conditions.append(termination_condition)

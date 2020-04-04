@@ -164,6 +164,11 @@ class Dispatch(pypsa.Network):
         simplified_net._hydro_file_path = self._hydro_file_path
         simplified_net._min_hydro_pu = self._min_hydro_pu
         simplified_net._max_hydro_pu = self._max_hydro_pu
+        
+        print('simplified dispatch by carrier')
+        df_Full_ramp=pd.DataFrame({'full_ramp':simplified_net.generators['p_nom']*simplified_net.generators['ramp_limit_up']})
+
+        print(pd.concat([simplified_net.generators[['p_nom', 'ramp_limit_up', 'ramp_limit_down', 'marginal_cost']],df_Full_ramp],axis=1))
         return simplified_net
 
     def run(self, load, params, gen_constraints=None,

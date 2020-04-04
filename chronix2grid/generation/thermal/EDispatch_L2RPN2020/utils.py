@@ -142,11 +142,18 @@ def filter_ramps(net, mode):
     thermal_names = net.generators[net.generators.carrier == 'thermal'].index.tolist()
     nuclear_names = net.generators[net.generators.carrier == 'nuclear'].index.tolist()
 
-    if mode == RampMode.medium:
+    #Enum not wortking well for equality on potentially two different Enum objects. See here. So test equality on .value
+    print('checking filters')
+    print('checking str(mode == RampMode.none)')
+    print('is Rampmode none:' + str(mode == RampMode.none))
+    print('checking str(mode.value == RampMode.none.value)')
+    print('is Rampmode none:' + str(mode.value == RampMode.none.value))
+    
+    if mode.value == RampMode.medium.value:
         net = remove_ramps(net, thermal_names)
-    if mode == RampMode.easy:
+    if mode.value == RampMode.easy.value:
         net = remove_ramps(net, hydro_names + thermal_names)
-    if mode == RampMode.none:
+    if mode.value == RampMode.none.value:
         net = remove_ramps(net, nuclear_names + hydro_names + thermal_names)
 
     return net
