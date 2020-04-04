@@ -200,9 +200,9 @@ def adapt_gen_prop(net, every_min, grid_params=5):
 
 def get_indivitual_snapshots_per_mode(idx, mode):  
     # Define all posibilities mode
-    periods = {'day': idx.groupby(idx.day).values(),
-               'week': idx.groupby(idx.week).values(),
-               'month': idx.groupby(idx.month).values()
+    periods = {'day': idx.groupby(idx.strftime('%d/%m/%Y')).values(),#dayofyear rather than day. Because otherwise you group days for every months, and this 'stack' is bad for the opf asit introduces discontinuities
+               'week': idx.groupby(idx.strftime('%W/%Y')).values(),
+               'month': idx.groupby(idx.strftime('%m/%Y')).values()
     }
     return periods[mode]
 
