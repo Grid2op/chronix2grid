@@ -9,7 +9,7 @@ import numpy as np
 import generation.renewable.solar_wind_utils as swutils
 
 
-def main(i, destination_folder, seed, params, prods_charac, solar_pattern):
+def main(i, destination_folder, seed, params, prods_charac, solar_pattern, write_results = True):
     """
     This is the solar and wind production generation function, it allows you to generate consumption chronics based on
     production nodes characteristics and on a solar typical yearly production patterns.
@@ -96,24 +96,24 @@ def main(i, destination_folder, seed, params, prods_charac, solar_pattern):
     prod_solar_forecasted = swutils.create_csv(solar_series, os.path.join(scenario_destination_path, 'solar_p_forecasted.csv.bz2'),
                   reordering=True,
                   shift=True,
-                  with_pdb=True)
+                  with_pdb=True, write_results = write_results)
 
     prod_solar = swutils.create_csv(solar_series, os.path.join(scenario_destination_path, 'solar_p.csv.bz2'),
                   reordering=True,
-                  noise=params['planned_std'])
+                  noise=params['planned_std'], write_results = write_results)
 
     prod_wind_forecasted = swutils.create_csv(wind_series,
                                                os.path.join(scenario_destination_path, 'wind_p_forecasted.csv.bz2'),
                                                reordering=True,
                                                shift=True,
-                                               with_pdb=True)
+                                               with_pdb=True, write_results = write_results)
 
     prod_wind = swutils.create_csv(wind_series, os.path.join(scenario_destination_path, 'wind_p.csv.bz2'),
                                     reordering=True,
-                                    noise=params['planned_std'])
+                                    noise=params['planned_std'], write_results = write_results)
 
     prod_p = swutils.create_csv(prods_series, os.path.join(scenario_destination_path, 'prod_p.csv.bz2'),
                                    reordering=True,
-                                   noise=params['planned_std'])
+                                   noise=params['planned_std'], write_results = write_results)
     
     return prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted
