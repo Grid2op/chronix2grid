@@ -1,20 +1,17 @@
-import sys
+import argparse
 import os
 import time
-import argparse
-import pandas as pd
-import numpy as np
-import pypsa
-from datetime import datetime, timedelta
 
-from .utils import update_gen_constrains, update_params
+import pandas as pd
+import pypsa
+
+from .utils import add_noise_gen
+from .utils import get_grouped_snapshots
+from .utils import interpolate_dispatch
+from .utils import preprocess_input_data
 from .utils import preprocess_net, filter_ramps, RampMode
 from .utils import run_opf
-from .utils import get_grouped_snapshots
-from .utils import add_noise_gen
-from .utils import reformat_gen_constraints
-from .utils import preprocess_input_data
-from .utils import interpolate_dispatch
+from .utils import update_gen_constrains, update_params
 
 
 def main_run_disptach(pypsa_net, 
@@ -36,12 +33,12 @@ def main_run_disptach(pypsa_net,
     load_, gen_constraints_ = preprocess_input_data(load, gen_constraints, params)
     tot_snap = load_.index
 
-    print ('Filter generators ramps up/down')
+    print('Filter generators ramps up/down')
     # Preprocess pypsa net ramps according to
     # the level specified
     pypsa_net = filter_ramps(pypsa_net, ramp_mode)
 
-    print ('Adapting PyPSA grid with parameters..')
+    print('Adapting PyPSA grid with parameters..')
     # Preprocess net parameters:
     #   - Change ramps according to params step_opf_min (assuming original 
     #     values are normalizing for every 5 minutes)
@@ -99,7 +96,7 @@ def main_run_disptach(pypsa_net,
     print('Total time {} min'.format(round((end - start)/60, 2)))
     print('OPF Done......')
 
-    return prod_p_with_noise
+    return prod_p_with_noise, termination_conditions
 
 # In case to launch by the terminal
 # ++  ++  ++  ++  ++  ++  ++  ++  +
