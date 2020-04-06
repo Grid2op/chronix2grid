@@ -163,8 +163,8 @@ class Dispatch(pypsa.Network):
                 ramp_limit_down=params.loc['sum', 'ramp_down_mw'] / params.loc['sum', 'p_nom'],
             )
         simplified_net._hydro_file_path = self._hydro_file_path
-        simplified_net._min_hydro_pu = self._min_hydro_pu
-        simplified_net._max_hydro_pu = self._max_hydro_pu
+        simplified_net._min_hydro_pu = self._min_hydro_pu.iloc[:, 0]
+        simplified_net._max_hydro_pu = self._max_hydro_pu.iloc[:, 0]
         return simplified_net
 
     def run(self, load, params, gen_constraints=None,
