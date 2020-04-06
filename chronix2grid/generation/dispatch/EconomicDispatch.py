@@ -7,8 +7,9 @@ import pandas as pd
 import plotly.express as px
 import pypsa
 
+from chronix2grid.generation.dispatch.utils import RampMode
 from chronix2grid.generation.thermal.EDispatch_L2RPN2020.run_economic_dispatch import (
-    RampMode, main_run_disptach)
+    main_run_disptach)
 
 
 class Dispatch(pypsa.Network):
@@ -88,7 +89,7 @@ class Dispatch(pypsa.Network):
 
         self._hydro_file_path = hydro_file_path
 
-    def read_load_and_res_scenario(self, load_path_file, prod_path_file):
+    def read_load_and_res_scenario(self, load_path_file, prod_path_file, scenario_name):
         if self._env is None:
             raise Exception('This method can only be applied when Dispatch has been'
                             'instantiated from a grid2op Environment.')
@@ -98,8 +99,8 @@ class Dispatch(pypsa.Network):
             solar=[name for i, name in enumerate(self._env.name_gen)
                    if self._env.gen_type[i] == 'solar']
         )
-        self._res_load_scenario = ResLoadScenario(load_path_file, prod_path_file,
-                                                  res_names)
+        self._res_load_scenario = ChroniXScenario(load_path_file, prod_path_file,
+                                                  res_names, scenario_name=scenario_name)
 
     def make_hydro_constraints_from_res_load_scenario(self):
         if self._res_load_scenario is None or self._hydro_file_path is None:
@@ -139,7 +140,6 @@ class Dispatch(pypsa.Network):
             caract_gen, x='p_nom', y='ramp_limit_up', color='carrier',
             hover_data=['name']
         )
-        fig.show()
         return fig
 
     def simplify_net(self):
@@ -180,19 +180,23 @@ class Dispatch(pypsa.Network):
 
     def run(self, load, params, gen_constraints=None,
                      ramp_mode=RampMode.hard, by_carrier=False):
-        res = main_run_disptach(self if not by_carrier else self.simplify_net(),
-                                 load, params, gen_constraints, ramp_mode)
+        prods_dispatch, terminal_conditions = main_run_disptach(
+            self if not by_carrier else self.simplify_net(),
+            load, params, gen_constraints, ramp_mode)
+        self._res_load_scenario.prods_dispatch = prods_dispatch
         self.reset_ramps_from_grid2op_env()
-        return res
+        return self._res_load_scenario, terminal_conditions
 
 
-class ResLoadScenario:
-    def __init__(self, load_path_file, prod_path_file, res_names):
+class ChroniXScenario:
+    def __init__(self, load_path_file, prod_path_file, res_names, scenario_name):
         self.loads = pd.read_csv(load_path_file, sep=';', index_col=0, parse_dates=True)
         prods = pd.read_csv(prod_path_file, sep=';', index_col=0, parse_dates=True)
         self.wind_p = prods[res_names['wind']]
         self.solar_p = prods[res_names['solar']]
         self.total_res = pd.concat([self.wind_p, self.solar_p], axis=1).sum(axis=1)
+        self.prods_dispatch = None  # Will receive the results of the dispatch
+        self.name = scenario_name
 
     def net_load(self, losses_pct, name):
         load_minus_losses = self.loads.sum(axis=1) * (1 + losses_pct/100)
