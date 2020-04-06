@@ -9,7 +9,7 @@ import numpy as np
 import generation.consumption.consumption_utils as conso
 
 
-def main(i, destination_folder, seed, params, loads_charac, load_weekly_pattern):
+def main(i, destination_folder, seed, params, loads_charac, load_weekly_pattern, write_results = True):
     """
     This is the load generation function, it allows you to generate consumption chronics based on demand nodes characteristics and on weekly demand patterns.
 
@@ -54,10 +54,10 @@ def main(i, destination_folder, seed, params, loads_charac, load_weekly_pattern)
         os.mkdir(scenario_destination_path)
     load_forecasted = conso.create_csv(loads_series, os.path.join(scenario_destination_path, 'load_p_forecasted.csv.bz2'),
                   reordering=True,
-                  shift=True)
+                  shift=True, write_results = write_results)
     load = conso.create_csv(loads_series, os.path.join(scenario_destination_path, 'load_p.csv.bz2'),
                   reordering=True,
-                  noise=params['planned_std'])
+                  noise=params['planned_std'], write_results = write_results)
     
     return load, load_forecasted
 

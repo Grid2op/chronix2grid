@@ -20,11 +20,14 @@ IMAGES_FOLDER = 'kpi/images'
 # Chronic generation parameters in <INPUT_FOLDER>/<CASE>/params.json
 # Warning: only dates and floats in params.json
 # KPI calculation parameters in <KPI_INPUT_FOLDER>/paramsKPI.json
+start_date = "2012-01-01"
+weeks = 4
+n_scenarios = 1
 
 
 ### COMPUTATION PHASES
 GENERATION_CHRONICS = True    # Il manque la partie dispatch. A integrer dans generation/thermal une fois Camilo prêt
-COMPUTE_KPI_ENR_ONLY = True     # Pour visualiser des KPIs sur solar et wind en attendant le dispatch
+COMPUTE_KPI_ENR_ONLY = False     # Pour visualiser des KPIs sur solar et wind en attendant le dispatch
 COMPUTE_ALL_KPI = False         # En attendant que le dispatch soit prêt
 
 
@@ -33,8 +36,8 @@ COMPUTE_ALL_KPI = False         # En attendant que le dispatch soit prêt
 ### PROPER COMPUTATION
 
 ## Reading parameters
-year, n_scenarios, params, loads_charac, prods_charac, load_weekly_pattern, solar_pattern, lines = gen.read_configuration(
-    INPUT_FOLDER, CASE)
+year, params, loads_charac, prods_charac, load_weekly_pattern, solar_pattern, lines = gen.read_configuration(
+    INPUT_FOLDER, CASE, start_date, weeks)
 
 ## Chronic generation
 if GENERATION_CHRONICS:

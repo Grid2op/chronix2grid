@@ -281,7 +281,7 @@ def generate_coarse_noise(params, data_type):
 
     return output
 
-def create_csv(dict_, path, reordering=True, noise=None, shift=False, with_pdb=False):
+def create_csv(dict_, path, reordering=True, noise=None, shift=False, with_pdb=False, write_results = True):
     df = pd.DataFrame.from_dict(dict_)
     df.set_index('datetime', inplace=True)
     df = df.sort_index(ascending=True)
@@ -299,7 +299,8 @@ def create_csv(dict_, path, reordering=True, noise=None, shift=False, with_pdb=F
         df = df.fillna(0)
     # if with_pdb:
     #     pdb.set_trace()
-    df.to_csv(path, index=True, sep=';', float_format='%.1f')
+    if write_results:
+        df.to_csv(path, index=True, sep=';', float_format='%.1f')
 
     return df
     
