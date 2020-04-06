@@ -203,6 +203,7 @@ def Ramps_Pmax_Pmin_APrioriCheckers(env118_withoutchron,Capacity, chronics_path_
 
     print('\n the max load is '+str(df_stats['Load']['max']))
     print('the expected peak load was '+str(expected_PeakLoad))
+    print('\n the max net load is '+str(df_stats['Load_net']['max']))
 
     toleranceThreshold=0.02
     isThermalInTrouble=(abs(expected_PeakLoad-df_stats['Load']['max'])/expected_PeakLoad > toleranceThreshold)

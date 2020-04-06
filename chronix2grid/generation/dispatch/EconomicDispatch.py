@@ -165,6 +165,17 @@ class Dispatch(pypsa.Network):
         simplified_net._hydro_file_path = self._hydro_file_path
         simplified_net._min_hydro_pu = self._min_hydro_pu.iloc[:, 0]
         simplified_net._max_hydro_pu = self._max_hydro_pu.iloc[:, 0]
+
+        print('simplified dispatch by carrier')
+        full_ramp = simplified_net.generators['p_nom'] * simplified_net.generators['ramp_limit_up']
+        df_full_ramp = pd.DataFrame({'full_ramp': full_ramp})
+
+        print(pd.concat(
+            [
+                simplified_net.generators[['p_nom', 'ramp_limit_up',
+                                           'ramp_limit_down', 'marginal_cost']],
+                df_full_ramp
+            ], axis=1))
         return simplified_net
 
     def run(self, load, params, gen_constraints=None,
@@ -206,33 +217,29 @@ if __name__ == "__main__":
         chronics_class=ChangeNothing,
     )
     params = {'snapshots': [],
-              'step_opf_min': 10,
+              'step_opf_min': 5,
               'mode_opf': 'day',
               'reactive_comp': 1.025,
               }
     chronics_path_gen = os.path.join(INPUT_FOLDER, "dispatch", str(2012))
     this_path = os.path.join(chronics_path_gen, 'Scenario_0')
     dispatch = Dispatch.from_gri2op_env(env118_blank)
-    dispatch.generators.loc[dispatch.generators.carrier == 'thermal',['p_nom']] = \
-        (dispatch.generators[dispatch.generators.carrier == 'thermal']['p_nom']/5).values
     dispatch.read_hydro_guide_curves(os.path.join(INPUT_FOLDER, 'patterns', 'hydro.csv'))
     dispatch.read_load_and_res_scenario(os.path.join(this_path, 'load_p.csv.bz2'),
                                         os.path.join(this_path, 'prod_p.csv.bz2'))
     dispatch.make_hydro_constraints_from_res_load_scenario()
-    # net_by_carrier = dispatch.simplify_net()
+    net_by_carrier = dispatch.simplify_net()
     agg_load_without_renew = dispatch.net_load(losses_pct, name=dispatch.loads.index[0])
 
     # Prepare gen constraints for EDispatch module
     hydro_constraints = {'p_max_pu': dispatch._max_hydro_pu.copy(),
                          'p_min_pu': dispatch._min_hydro_pu.copy()}
-    dispatch.generators[['ramp_limit_down', 'ramp_limit_up']] = 0.01
-    fig = dispatch.plot_ramps()
-    fig.write_html('ramps.html')
+
     opf_dispatch, term_conditions = dispatch.run(
         agg_load_without_renew,
         params=params,
         gen_constraints=hydro_constraints,
-        ramp_mode=run_economic_dispatch.RampMode.none,
+        ramp_mode=run_economic_dispatch.RampMode.easy,
         by_carrier=False  # True to run the dispatch only aggregated generators by carrier
     )
 
