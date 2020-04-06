@@ -7,25 +7,22 @@ import numpy as np
 import pypsa
 from datetime import datetime, timedelta
 
-from utils import update_gen_constrains, update_params
-from utils import preprocess_net
-from utils import run_opf
-from utils import get_grouped_snapshots
-from utils import add_noise_gen
-from utils import reformat_gen_constraints
-from utils import preprocess_input_data
-from utils import interpolate_dispatch
+from .utils import update_gen_constrains, update_params
+from .utils import preprocess_net, filter_ramps, RampMode
+from .utils import run_opf
+from .utils import get_grouped_snapshots
+from .utils import add_noise_gen
+from .utils import reformat_gen_constraints
+from .utils import preprocess_input_data
+from .utils import interpolate_dispatch
 
-# params={'snapshots': [],
-#         'step_opf_min': 5,
-#         'mode_opf': 'day',
-#         'reactive_comp': 1.025,
-#         }
 
 def main_run_disptach(pypsa_net, 
                       load,
                       gen_constraints={'p_max_pu': None, 'p_min_pu': None},
-                      params={}):
+                      params={},
+                      ramp_mode=RampMode.hard,
+                      ):
 
     # Update gen constrains dict with 
     # values passed by the users and params
@@ -39,6 +36,11 @@ def main_run_disptach(pypsa_net,
     load_, gen_constraints_ = preprocess_input_data(load, gen_constraints, params)
     tot_snap = load_.index
 
+    print ('Filter generators ramps up/down')
+    # Preprocess pypsa net ramps according to
+    # the level specified
+    pypsa_net = filter_ramps(pypsa_net, ramp_mode)
+
     print ('Adapting PyPSA grid with parameters..')
     # Preprocess net parameters:
     #   - Change ramps according to params step_opf_min (assuming original 
@@ -49,7 +51,7 @@ def main_run_disptach(pypsa_net,
 
     months = tot_snap.month.unique()
     start = time.time()
-    results = []
+    results, termination_conditions = [], []
     for month in months:
         # Get snapshots per month
         snap_per_month = tot_snap[tot_snap.month == month]
@@ -67,11 +69,14 @@ def main_run_disptach(pypsa_net,
             gen_max_pu_per_mode = g_max_pu_per_month.loc[snaps]
             gen_min_pu_per_mode = g_min_pu_per_month.loc[snaps]
             # Run opf given in specified mode
-            results.append(run_opf(pypsa_net, 
-                                   load_per_mode, 
-                                   gen_max_pu_per_mode, 
-                                   gen_min_pu_per_mode,
-                                   params,))
+            dispatch, termination_condition = run_opf(pypsa_net, 
+                                                      load_per_mode, 
+                                                      gen_max_pu_per_mode, 
+                                                      gen_min_pu_per_mode,
+                                                      params,
+                                                      )
+            results.append(dispatch)
+            termination_conditions.append(termination_condition)
 
     # Unpack individual dispatchs
     opf_prod = pd.DataFrame()
@@ -84,11 +89,11 @@ def main_run_disptach(pypsa_net,
     prod_p = opf_prod.copy()
     # Apply interpolation in case of step_opf_min greater than 5 min
     if params['step_opf_min'] > 5:
-        print ('\n => Interpolating dispatch to have 5 minutes resolution..')
+        print ('\n => Interpolating dispatch into 5 minutes resolution..')
         prod_p = interpolate_dispatch(prod_p)
     # Add noise to results
     gen_cap = pypsa_net.generators.p_nom
-    prod_p_with_noise = add_noise_gen(prod_p, gen_cap, noise_factor=0.001)
+    prod_p_with_noise = add_noise_gen(prod_p, gen_cap, noise_factor=0.0007)
 
     end = time.time()
     print('Total time {} min'.format(round((end - start)/60, 2)))

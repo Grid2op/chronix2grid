@@ -6,16 +6,66 @@ import sys
 import warnings
 import pypsa
 from datetime import datetime, timedelta
+from enum import Enum
 
-# def format_dates(year, month):
-#     # Get last of for every month
-#     end_day_month = calendar.monthrange(year, month)[1]
-#     from_date = f'{year}-{month}-01 00:00'
-#     end_date = f'{year}-{month}-{end_day_month} 23:55'
-#     # Convert them to datetime
-#     FROM_DATE = datetime.strptime(from_date, '%Y-%m-%d %H:%M')
-#     END_DATE = datetime.strptime(end_date, '%Y-%m-%d %H:%M')
-#     return FROM_DATE, END_DATE
+class RampMode(Enum):
+    """
+    Encodes the level of complexity of the ramp constraints to apply for
+    the economic dispatch
+    """
+    none = -1
+    easy = 0
+    medium = 1
+    hard = 2
+
+def filter_ramps(net, mode):
+    """
+    Apply filters on ramp constraints, corresponding to different levels of
+    complexity of the economic dispatch.
+    Parameters
+    ----------
+    net: pypsa.Network
+        The instance to modify
+    mode: RampMode
+        The level of difficulty to use for ramps
+    Returns
+    -------
+    The modified pypsa.Network instance
+    """
+    hydro_names = net.generators[net.generators.carrier == 'hydro'].index.tolist()
+    thermal_names = net.generators[net.generators.carrier == 'thermal'].index.tolist()
+    nuclear_names = net.generators[net.generators.carrier == 'nuclear'].index.tolist()
+
+    #Enum not wortking well for equality on potentially two different Enum objects. See here. So test equality on .value
+    print('checking filters')
+    print('checking str(mode == RampMode.none)')
+    print('is Rampmode none:' + str(mode == RampMode.none))
+    print('checking str(mode.value == RampMode.none.value)')
+    print('is Rampmode none:' + str(mode.value == RampMode.none.value))
+    
+    if mode.value == RampMode.medium.value:
+        net = remove_ramps(net, thermal_names)
+    if mode.value == RampMode.easy.value:
+        net = remove_ramps(net, hydro_names + thermal_names)
+    if mode.value == RampMode.none.value:
+        net = remove_ramps(net, nuclear_names + hydro_names + thermal_names)
+    return net
+
+def remove_ramps(net, gen_names):
+    """
+    Remove de ramp constraints for the gen_names generators.
+    Parameters
+    ----------
+    net: pypsa.Network
+        The instance to modify
+    gen_names: list
+        List of generator names for which ramp constraints are removed
+    Returns
+    -------
+    The modified pypsa.Network instance
+    """
+    net.generators.loc[gen_names, ['ramp_limit_up', 'ramp_limit_down']] = np.nan
+    return net
 
 def update_gen_constrains(gen_constraints_user):
     """Generator constraint passed by user
@@ -41,7 +91,7 @@ def update_params(num, params_user):
     Parameters
     ----------
     num : int
-        Shape axis 0 of input data
+        Total lenght of input data
     params_user : dict
         The dictionary contains the following params:
             snapshots     : temporary date range {YEAR 2007 - non leap} to be 
@@ -92,8 +142,8 @@ def preprocess_input_data(load, gen_constraints, params):
         Consumption to be filled in opf
     gen_constraints : dict
         Dictionary holding gen constraints:
-           - p_max_pu: df with all max gen constraints
-           - p_min_pu: df with all min gen constraints 
+           - p_max_pu: df with all max gen constraints in pu
+           - p_min_pu: df with all min gen constraints in pu
     params : dict
         OPF parameters
     
@@ -271,11 +321,12 @@ def run_opf(net, demand, gen_max, gen_min, params):
     net.generators_t.p_min_pu = pd.concat([gen_min], axis=1)
     # ++  ++  ++  ++
     # Run Linear OPF
-    rel = net.lopf(net.snapshots, pyomo=False, solver_name='cbc')
-    if rel[1] != 'optimal': 
-        print ('** OPF failed to find a solution **')
-        sys.exit()
-    return net.generators_t.p.copy()
+    status, termination_condition = net.lopf(net.snapshots, pyomo=False, solver_name='cbc')
+    if status != 'ok':
+        print('** OPF failed to find an optimal solution **')
+    else:
+        print('-- opf succeeded  >Objective value (should be greater than zero!')
+    return net.generators_t.p.copy(), termination_condition
 
 def add_noise_gen(dispatch, gen_cap, noise_factor):
     """ Add noise to opf dispatch to have more
