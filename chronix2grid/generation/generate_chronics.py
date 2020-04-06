@@ -87,10 +87,9 @@ def main(year, n_scenarios, params, input_folder, output_folder, prods_charac, l
     # Launch proper scenario generation
     for i, seed in enumerate(seeds):
         print("================ Generating scenario number "+str(i)+" ================")
-        load, load_forecasted = gen_loads.main(i, dispatch_input_folder, seed, params, loads_charac, load_weekly_pattern)
+        load, load_forecasted = gen_loads.main(i, dispatch_input_folder, seed, params, loads_charac, load_weekly_pattern, write_results = True)
 
-        prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = gen_enr.main(i, dispatch_input_folder, seed,params, prods_charac, solar_pattern)
-
+        prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = gen_enr.main(i, dispatch_input_folder, seed,params, prods_charac, solar_pattern, write_results = True)
 
         gen_dispatch.main(i, load, prod_solar, prod_wind, out_folder, seed, params,
                           prods_charac, lines, compute_hazards = True)
