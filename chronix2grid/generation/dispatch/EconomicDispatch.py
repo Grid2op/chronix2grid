@@ -2,6 +2,7 @@
 an economic dispatch based on RES and consumption time series"""
 
 import datetime as dt
+import os
 
 import pandas as pd
 import plotly.express as px
@@ -186,6 +187,24 @@ class Dispatch(pypsa.Network):
         self._res_load_scenario.prods_dispatch = prods_dispatch
         self.reset_ramps_from_grid2op_env()
         return self._res_load_scenario, terminal_conditions
+
+    def save_results(self, parent_folder_path):
+        full_opf_dispatch = pd.concat(
+            [self._res_load_scenario.prods_dispatch, self._res_load_scenario.wind_p,
+             self._res_load_scenario.solar_p],
+            axis=1
+        )
+        try:
+            full_opf_dispatch = full_opf_dispatch[self._env.name_gen].round(2)
+        except KeyError:
+            # Either we're trying to save results from a simplified dispatch or
+            # using the save function before instanciating an env.
+            pass
+        full_opf_dispatch.to_csv(
+            os.path.join(parent_folder_path, self._res_load_scenario.name,
+                         "prod_p.csv.bz2"),
+            sep=';', index=False
+        )
 
 
 class ChroniXScenario:
