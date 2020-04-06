@@ -133,3 +133,5 @@ dmypy.json
 .idea/
 
 .DS_Store
+.ChroniX2Grid/chronix2grid/generation/input/dispatch
+.ChroniX2Grid/chronix2grid/generation/output
