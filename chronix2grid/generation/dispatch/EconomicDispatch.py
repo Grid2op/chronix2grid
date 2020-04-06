@@ -43,6 +43,10 @@ class Dispatch(pypsa.Network):
                             'renewables scenario.')
         return self._res_load_scenario.net_load(losses_pct, name)
 
+    def nlargest_ramps(self, n, losses_pct):
+        ramps = self.net_load(losses_pct, "").diff()
+        return ramps.nlargest(n, ramps.columns[0])
+
     @classmethod
     def from_gri2op_env(cls, grid2op_env):
         net = cls()
