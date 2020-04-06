@@ -17,7 +17,7 @@ import generation.thermal.generate_dispatch as gen_dispatch
 # ======================================================================================================================
 ## Proper functions
 # Read data (independant of the number of scenarios)
-def read_configuration(input_folder, case):
+def read_configuration(input_folder, case, start_date, weeks):
     # Json parameters
     print('Importing parameters ...')
     json1_file = open(os.path.join(input_folder, case, 'params.json'))
@@ -29,13 +29,17 @@ def read_configuration(input_folder, case):
         except ValueError:
             params[key] = pd.to_datetime(value, format='%Y-%m-%d')
 
+
     # Get desired number of scenarios
-    n_scenarios = int(params['number_scenarios'])
+    #n_scenarios = int(params['number_scenarios'])
 
 
     # date and time parameters
-    year = params['start_date'].year
-    params['end_date'] = params['start_date'] + timedelta(days=7 * int(params['weeks']))+timedelta(days=2)
+    start_date = pd.to_datetime(start_date, format='%Y-%m-%d')
+    params['weeks'] = weeks
+    params['start_date'] = start_date
+    year = start_date.year
+    params['end_date'] = params['start_date'] + timedelta(days=7 * int(weeks))+timedelta(days=2)
     params['T'] = int(pd.Timedelta(params['end_date'] - params['start_date']).total_seconds() // (60))
     Nt_inter = int(params['T'] // params['dt'] + 1)
 
@@ -55,7 +59,7 @@ def read_configuration(input_folder, case):
     load_weekly_pattern = pd.read_csv(os.path.join(input_folder, 'patterns', 'load_weekly_pattern.csv'))
     solar_pattern = np.load(os.path.join(input_folder, 'patterns', 'solar_pattern.npy'))
 
-    return year, n_scenarios, params, loads_charac, prods_charac, load_weekly_pattern, solar_pattern, lines
+    return year, params, loads_charac, prods_charac, load_weekly_pattern, solar_pattern, lines
 
 
 # Call generation scripts n_scenario times with dedicated random seeds
