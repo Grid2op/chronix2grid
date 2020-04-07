@@ -3,7 +3,7 @@ import sys
 import pandas as pd
 
 
-def eco2mix_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, year):
+def eco2mix_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, year, params):
     repo_in = os.path.join(kpi_input_folder, 'eco2mix', 'eCO2mix_RTE_Annuel-Definitif_'+str(year)+'.csv')
 
     gens = {}
@@ -63,6 +63,12 @@ def eco2mix_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, year)
     for col in loads:
         conso[col] = agg_conso/len(loads)
 
+    # Equalize timeline with synthetic
+    start_date = params['start_date']
+    end_date = params['end_date']
+    df = df[(df.index >= start_date) & (df.index < end_date)]
+    conso = conso[(conso.index>=start_date)&(conso.index<end_date)]
+
     return df, conso
 
 def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac, year, params):
@@ -75,9 +81,11 @@ def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac
     ninja = pd.concat([ninja_solar, ninja_wind], axis = 1)
 
     # Time column to add !
+    start_date = pd.to_datetime(str(year)+'-01-01')
+    end_date = pd.to_datetime(str(year+1) + '-01-01')
     datetime_index = pd.date_range(
-        start=params['start_date'],
-        end=params['end_date'],
+        start=start_date,
+        end=end_date,
         freq=str(timestep_ninja) + 'min')
     datetime_index = datetime_index[:len(datetime_index)-1]
 
@@ -103,32 +111,60 @@ def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac
     conso = pd.DataFrame({'Time': ninja['Time']})
     for col in loads:
         conso[col] = agg_conso / len(loads)
+
+    # Equalize timeline with synthetic
+    start_date = params['start_date']
+    end_date = params['end_date']
+    ninja = ninja[(ninja.index >= start_date) & (ninja.index < end_date)]
+    conso = conso[(conso.index >= start_date) & (conso.index < end_date)]
+
     return ninja, conso
 
-def chronics_to_kpi(year, n_scenario, repo_in, timestep, thermal = True):
+def chronics_to_kpi(year, n_scenario, repo_in, timestep, params, thermal = True, monthly = False):
 
     print(" Formatting chronics for KPI")
 
     if thermal:
-        price = pd.DataFrame()
-        prod_p = pd.DataFrame()
-        load_p = pd.DataFrame()
 
-        for month in range(1, 13):
-            print('Month number ' + str(month))
+        if monthly:
+            price = pd.DataFrame()
+            prod_p = pd.DataFrame()
+            load_p = pd.DataFrame()
 
-            folder = os.path.join(repo_in, str(year), 'Scenario_'+str(n_scenario), str(year)+'_'+str(month))
-            prod_p_ = pd.read_csv(os.path.join(folder,'prod_p.csv.bz2'), sep = ';', decimal = '.')
-            load_p_ = pd.read_csv(os.path.join(folder,'load_p.csv.bz2'), sep = ';', decimal = '.')
-            price_ = pd.read_csv(os.path.join(folder,'price.csv'), sep = ';', decimal = '.')
+            for month in range(1, 13):
+                print('Month number ' + str(month))
 
-            for df in load_p_, prod_p_:
-                df.rename(columns = {'datetime':'Time'}, inplace = True)
+                folder = os.path.join(repo_in, str(year), 'Scenario_'+str(n_scenario), str(year)+'_'+str(month))
+                prod_p_ = pd.read_csv(os.path.join(folder,'prod_p.csv.bz2'), sep = ';', decimal = '.')
+                load_p_ = pd.read_csv(os.path.join(folder,'load_p.csv.bz2'), sep = ';', decimal = '.')
+                price_ = pd.read_csv(os.path.join(folder,'price.csv'), sep = ';', decimal = '.')
 
-            prod_p = prod_p.append(prod_p_)
-            load_p = load_p.append(load_p_)
-            price = price.append(price_)
-        price['Time'] = load_p['Time']
+                for df in load_p_, prod_p_:
+                    df.rename(columns = {'datetime':'Time'}, inplace = True)
+
+                prod_p = prod_p.append(prod_p_)
+                load_p = load_p.append(load_p_)
+                price = price.append(price_)
+            price['Time'] = load_p['Time']
+
+        else:
+            print('Year ' + str(year))
+            folder = os.path.join(repo_in, str(year), 'Scenario_' + str(n_scenario))
+            prod_p = pd.read_csv(os.path.join(folder, 'prod_p.csv.bz2'), sep=';', decimal='.')
+            load_p = pd.read_csv(os.path.join(folder, 'load_p.csv.bz2'), sep=';', decimal='.')
+            price = pd.read_csv(os.path.join(folder, 'price.csv'), sep=';', decimal='.')
+
+            # Rebuild of timeline
+            datetime_index = pd.date_range(
+                start=params['start_date'],
+                end=params['end_date'],
+                freq=str(params['dt']) + 'min')
+
+            prod_p['Time'] = datetime_index
+            load_p['Time'] = datetime_index
+            price['Time'] = datetime_index
+            #load_p.rename(columns={'datetime': 'Time'}, inplace=True)
+
     else:
         print('Year '+str(year))
         folder = os.path.join(repo_in, 'dispatch', str(year), 'Scenario_' + str(n_scenario))
