@@ -68,7 +68,7 @@ def update_gen_constrains(gen_constraints_user):
     gen_constraints.update(gen_constraints_user)
     return gen_constraints
 
-def update_params(num, params_user):
+def update_params(num, start_date, params_user):
     """ Function to update parameters dictionary to run
     Linear OPF
     
@@ -76,6 +76,8 @@ def update_params(num, params_user):
     ----------
     num : int
         Total lenght of input data
+    start_date : datetime
+        Starting date of the input data
     params_user : dict
         The dictionary contains the following params:
             snapshots     : temporary date range {YEAR 2007 - non leap} to be 
@@ -109,7 +111,7 @@ def update_params(num, params_user):
         raise RuntimeError("Please provide a valid opf mode (day, week, month")
     # Create temporary date range to be load to input data
     if snaps == []:
-        snapshots = pd.date_range(start=f'{2007}-01-01', periods=num, freq='5min')
+        snapshots = pd.date_range(start=start_date, periods=num, freq='5min')
         params.update({'snapshots': snapshots})
     return params
 
