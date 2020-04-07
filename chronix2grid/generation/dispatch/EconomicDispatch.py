@@ -115,8 +115,9 @@ class Dispatch(pypsa.Network):
         index_slice = self._res_load_scenario.loads.index.map(
            lambda x: (x.month, x.day, x.hour, x.minute, x.second)
         )
-        self._min_hydro_pu = self._min_hydro_pu.loc[index_slice, :]
-        self._max_hydro_pu = self._max_hydro_pu.loc[index_slice, :]
+
+        self._min_hydro_pu = self._min_hydro_pu.reindex(index_slice).fillna(method='ffill')
+        self._max_hydro_pu = self._max_hydro_pu.reindex(index_slice).fillna(method='ffill')
 
     def modify_marginal_costs(self, new_costs):
         """
@@ -245,7 +246,7 @@ if __name__ == "__main__":
     )
     params = {'snapshots': [],
               'step_opf_min': 5,
-              'mode_opf': 'day',
+              'mode_opf': 'week',
               'reactive_comp': 1.025,
               }
     chronics_path_gen = os.path.join(INPUT_FOLDER, "dispatch", str(2012))
@@ -253,7 +254,8 @@ if __name__ == "__main__":
     dispatch = Dispatch.from_gri2op_env(env118_blank)
     dispatch.read_hydro_guide_curves(os.path.join(INPUT_FOLDER, 'patterns', 'hydro.csv'))
     dispatch.read_load_and_res_scenario(os.path.join(this_path, 'load_p.csv.bz2'),
-                                        os.path.join(this_path, 'prod_p.csv.bz2'))
+                                        os.path.join(this_path, 'prod_p.csv.bz2'),
+                                        'Scenario_0')
     dispatch.make_hydro_constraints_from_res_load_scenario()
     net_by_carrier = dispatch.simplify_net()
     agg_load_without_renew = dispatch.net_load(losses_pct, name=dispatch.loads.index[0])
@@ -269,6 +271,10 @@ if __name__ == "__main__":
         ramp_mode=run_economic_dispatch.RampMode.easy,
         by_carrier=False  # True to run the dispatch only aggregated generators by carrier
     )
+
+    dispatch.save_results('.')
+    test = pd.read_csv('./Scenario_0/prod_p.csv.bz2', sep=";")
+
 
 
 
