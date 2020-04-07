@@ -19,7 +19,7 @@ def pivot_format(chronics_folder, kpi_input_folder, year, scenario_num, prods_ch
 
     # Format chosen benchmark
     if comparison == 'eco2mix':
-        ref_prod, ref_load = eco2mix_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, year)
+        ref_prod, ref_load = eco2mix_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, year, params)
     elif comparison == 'renewable_ninja':
         ref_prod, ref_load = renewableninja_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, year, params)
     else:
@@ -29,11 +29,11 @@ def pivot_format(chronics_folder, kpi_input_folder, year, scenario_num, prods_ch
     # Format generated chronics
 
     if wind_solar_only:
-        syn_prod, syn_load = chronics_to_kpi(year, scenario_num, chronics_folder, timestep,
-                                                     thermal=not wind_solar_only)
+        syn_prod, syn_load = chronics_to_kpi(year, scenario_num, chronics_folder, timestep, params,
+                                                     thermal=not wind_solar_only, monthly = False)
         return ref_prod, ref_load, syn_prod, syn_load, monthly_pattern, hours
     else:
-        syn_prod, syn_load, prices = chronics_to_kpi(year, scenario_num, chronics_folder, timestep,
+        syn_prod, syn_load, prices = chronics_to_kpi(year, scenario_num, chronics_folder, timestep, params,
                                              thermal=not wind_solar_only)
         return ref_prod, ref_load, syn_prod, syn_load, monthly_pattern, hours, prices
 

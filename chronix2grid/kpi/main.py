@@ -34,6 +34,8 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
 
     for scenario_num in range(n_scenarios):
         print('Scenario '+str(scenario_num)+'...')
+        if params['weeks'] != 52:
+            print('Warning: KPI are incomplete. Computation has been made on '+str(params['weeks'])+' weeks, but are meant to be computed on 52 weeks')
         if wind_solar_only:
             # Get reference and synthetic dispatch and loads
             ref_dispatch, ref_consumption, syn_dispatch, syn_consumption, monthly_pattern, hours = pivot_format(generation_input_folder,
@@ -65,17 +67,6 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
         # Set same index as ref dispatch to avoid
         # problem when working in posterior KPI's
 
-        # =================== Temporaire A SUPPRIMER ==================================== !!!!!!!!!!!!!!!
-        if len(ref_dispatch) > len(syn_dispatch):
-            ref_dispatch = ref_dispatch.head(len(syn_dispatch))
-            if not wind_solar_only:
-                prices = prices.head(len(syn_dispatch))
-        elif len(ref_dispatch) < len(syn_dispatch):
-            syn_dispatch = syn_dispatch.head(len(ref_dispatch))
-            if not wind_solar_only:
-                prices = prices.head(len(ref_dispatch))
-        syn_consumption = syn_consumption.head(len(syn_dispatch))
-        # =============================================================================== !!!!!!!!!!!!!!!
 
         syn_dispatch.index = ref_dispatch.index
         syn_consumption.index = ref_dispatch.index
