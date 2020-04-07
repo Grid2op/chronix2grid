@@ -49,7 +49,7 @@ def main_run_disptach(pypsa_net,
 
     months = tot_snap.month.unique()
     start = time.time()
-    results, termination_conditions = [], []
+    results, termination_conditions, marginal_prices = [], [], []
     for month in months:
         # Get snapshots per month
         snap_per_month = tot_snap[tot_snap.month == month]
@@ -67,28 +67,32 @@ def main_run_disptach(pypsa_net,
             gen_max_pu_per_mode = g_max_pu_per_month.loc[snaps]
             gen_min_pu_per_mode = g_min_pu_per_month.loc[snaps]
             # Run opf given in specified mode
-            dispatch, termination_condition = run_opf(pypsa_net, 
-                                                      load_per_mode, 
-                                                      gen_max_pu_per_mode, 
-                                                      gen_min_pu_per_mode,
-                                                      params,
-                                                      )
+            dispatch, termination_condition, marginal_price = run_opf(
+                pypsa_net, load_per_mode, gen_max_pu_per_mode,
+                gen_min_pu_per_mode, params)
+
             results.append(dispatch)
             termination_conditions.append(termination_condition)
+            marginal_prices.append(marginal_price)
 
-    # Unpack individual dispatchs
+    # Unpack individual dispatchs and prices
     opf_prod = pd.DataFrame()
-    for df in results:
-        opf_prod = pd.concat([opf_prod, df], axis=0)
+    opf_prices = pd.DataFrame()
+    for df_prod, df_prices in zip(results, marginal_prices):
+        opf_prod = pd.concat([opf_prod, df_prod], axis=0)
+        opf_prices = pd.concat([opf_prices, df_prices], axis=0)
 
     # Sort by datetime
     opf_prod.sort_index(inplace=True)
+    opf_prices.sort_index(inplace=True)
     # Create complete prod_p dataframe and interpolate missing rows
     prod_p = opf_prod.copy()
+    prices = opf_prices.copy()
     # Apply interpolation in case of step_opf_min greater than 5 min
     if params['step_opf_min'] > 5:
         print ('\n => Interpolating dispatch into 5 minutes resolution..')
         prod_p = interpolate_dispatch(prod_p)
+        prices = interpolate_dispatch(prices)
     # Add noise to results
     gen_cap = pypsa_net.generators.p_nom
     prod_p_with_noise = add_noise_gen(prod_p, gen_cap, noise_factor=0.0007)
@@ -97,7 +101,7 @@ def main_run_disptach(pypsa_net,
     print('Total time {} min'.format(round((end - start)/60, 2)))
     print('OPF Done......')
 
-    return prod_p_with_noise, termination_conditions
+    return prod_p_with_noise, termination_conditions, prices
 
 # In case to launch by the terminal
 # ++  ++  ++  ++  ++  ++  ++  ++  +
