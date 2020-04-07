@@ -313,13 +313,7 @@ def run_opf(net, demand, gen_max, gen_min, params):
     else:
         print('-- opf succeeded  >Objective value (should be greater than zero!')
 
-    # Get the prices of the marginal generator at each timestep
-    marginal_costs = net.generators.marginal_cost
-    marginal_prices = net.generators_t.p.apply(
-        lambda row: marginal_costs[row[row > 0].index].max(),
-        axis=1)
-
-    return net.generators_t.p.copy(), termination_condition, marginal_prices
+    return net.generators_t.p.copy(), termination_condition
 
 def add_noise_gen(dispatch, gen_cap, noise_factor):
     """ Add noise to opf dispatch to have more
