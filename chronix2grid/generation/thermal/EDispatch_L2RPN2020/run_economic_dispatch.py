@@ -25,7 +25,7 @@ def main_run_disptach(pypsa_net,
     # Update gen constrains dict with 
     # values passed by the users and params
     gen_constraints = update_gen_constrains(gen_constraints)  
-    params = update_params(load.shape[0], params)
+    params = update_params(load.shape[0], load.index[0], params)
 
     print ('Preprocessing input data..')
     # Preprocess input data:
