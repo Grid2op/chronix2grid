@@ -39,7 +39,7 @@ def read_configuration(input_folder, case, start_date, weeks):
     params['weeks'] = weeks
     params['start_date'] = start_date
     year = start_date.year
-    params['end_date'] = params['start_date'] + timedelta(days=7 * int(weeks))+timedelta(days=2)
+    params['end_date'] = params['start_date'] + timedelta(days=7 * int(weeks)) - timedelta(minutes=params['dt'])
     params['T'] = int(pd.Timedelta(params['end_date'] - params['start_date']).total_seconds() // (60))
     Nt_inter = int(params['T'] // params['dt'] + 1)
 
