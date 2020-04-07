@@ -115,8 +115,8 @@ class Dispatch(pypsa.Network):
         index_slice = self._res_load_scenario.loads.index.map(
            lambda x: (x.month, x.day, x.hour, x.minute, x.second)
         )
-        self._min_hydro_pu = self._min_hydro_pu.loc[index_slice, :]
-        self._max_hydro_pu = self._max_hydro_pu.loc[index_slice, :]
+        self._min_hydro_pu = self._min_hydro_pu.loc[index_slice, :].fillna(method='ffill')
+        self._max_hydro_pu = self._max_hydro_pu.loc[index_slice, :].fillna(method='ffill')
 
     def modify_marginal_costs(self, new_costs):
         """
@@ -252,6 +252,7 @@ if __name__ == "__main__":
     this_path = os.path.join(chronics_path_gen, 'Scenario_0')
     dispatch = Dispatch.from_gri2op_env(env118_blank)
     dispatch.read_hydro_guide_curves(os.path.join(INPUT_FOLDER, 'patterns', 'hydro.csv'))
+#     dispatch.read_hydro_guide_curves(os.path.join(INPUT_FOLDER, 'patterns', 'hydro_french.csv'))
     dispatch.read_load_and_res_scenario(os.path.join(this_path, 'load_p.csv.bz2'),
                                         os.path.join(this_path, 'prod_p.csv.bz2'))
     dispatch.make_hydro_constraints_from_res_load_scenario()
