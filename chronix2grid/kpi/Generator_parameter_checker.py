@@ -12,8 +12,8 @@ def EnergyMix_AprioriChecker(env118_withoutchron,Target_EM_percentage, PeakLoad,
     # In[132]:
 
 
-    print('\n the target energy mix is')
-    print(Target_EM_percentage)
+    #print('\n the target energy mix is')
+    #print(Target_EM_percentage)
 
 
     # ### Check initial capacity mix
@@ -28,11 +28,11 @@ def EnergyMix_AprioriChecker(env118_withoutchron,Target_EM_percentage, PeakLoad,
     CapacityNonRenewable=CapacityPerType['thermal']+CapacityPerType['nuclear']+CapacityPerType['hydro']
     CapacityMix=np.round((CapacityPerType/TotalCapacity*100)*10)/10
     CapacityMix.name='capacity_mix'
-    print('\n Total capacity:'+str(np.round(TotalCapacity)))
-    print('Total non renewable capacity:'+str(np.round(CapacityNonRenewable)))
-    print(CapacityPerType)
-    print('\n the capacity mix is:')
-    print(CapacityMix)
+    #print('\n Total capacity:'+str(np.round(TotalCapacity)))
+    #print('Total non renewable capacity:'+str(np.round(CapacityNonRenewable)))
+    #print(CapacityPerType)
+    #print('\n the capacity mix is:')
+    #print(CapacityMix)
 
 
     # ### Considering capacity factors
@@ -57,8 +57,8 @@ def EnergyMix_AprioriChecker(env118_withoutchron,Target_EM_percentage, PeakLoad,
     # In[140]:
 
 
-    print('\n the capacity factors are:')
-    print(CapacityFactor)
+    #print('\n the capacity factors are:')
+    #print(CapacityFactor)
 
 
     # In[141]:
@@ -96,8 +96,8 @@ def EnergyMix_AprioriChecker(env118_withoutchron,Target_EM_percentage, PeakLoad,
 
     Capacity['revised_pmax']=Capacity['target_energy_mix']/Capacity['Apriori_energy_mix']*Capacity['pmax']
     Capacity['revised_pmax']['thermal']=PeakLoad-Capacity['revised_pmax']['nuclear']
-    print("\n revised thermal capacity")
-    print(Capacity)
+    #print("\n revised thermal capacity")
+    #print(Capacity)
     
     
     error=np.abs(Capacity['target_energy_mix']-Capacity['Apriori_energy_mix']).sum()
