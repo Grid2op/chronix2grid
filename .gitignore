@@ -1,3 +1,6 @@
+# Variable input files
+chronix2grid/generation/input/dispatch
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
