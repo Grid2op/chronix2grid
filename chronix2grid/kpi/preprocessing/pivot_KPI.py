@@ -3,7 +3,7 @@ import sys
 import json
 import pandas as pd
 
-from kpi.preprocessing.pivot_utils import chronics_to_kpi, eco2mix_to_kpi, renewableninja_to_kpi
+from kpi.preprocessing.pivot_utils import chronics_to_kpi, eco2mix_to_kpi, renewableninja_to_kpi, eco2mix_to_kpi_regional
 
 def pivot_format(chronics_folder, kpi_input_folder, year, scenario_num, prods_charac, loads_charac, wind_solar_only, params):
 
@@ -18,10 +18,17 @@ def pivot_format(chronics_folder, kpi_input_folder, year, scenario_num, prods_ch
     hours = paramsKPI['night_hours']
 
     # Format chosen benchmark
-    if comparison == 'eco2mix':
-        ref_prod, ref_load = eco2mix_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, year, params)
-    elif comparison == 'renewable_ninja':
-        ref_prod, ref_load = renewableninja_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, year, params)
+    if comparison == 'France':
+        corresp_regions = {'R1':"Hauts-de-France", "R2": "Nouvelle-Aquitaine", "R3": "PACA"}
+        if wind_solar_only:
+            ref_prod, ref_load = renewableninja_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, year,
+                                                       params)
+        else:
+            ref_prod, ref_load = eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_charac, year, params,
+                                                         corresp_regions)
+    elif comparison == 'Texas':
+        print("Arrêt du calcul: la comparaison Texas n'est pas encore implémentée. La comparaison France est disponible")
+        sys.exit()
     else:
         print("Please chose one available benchmark in paramsKPI.json/comparison. Given comparison is: "+comparison)
         sys.exit()

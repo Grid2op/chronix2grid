@@ -1,7 +1,96 @@
 import os
 import sys
+import numpy as np
 import pandas as pd
 
+
+def eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_charac, year, params, corresp_regions):
+    conso_ = pd.DataFrame()
+    prod = pd.DataFrame()
+
+    for region_fictive in corresp_regions.keys():
+        region = corresp_regions[region_fictive]
+        repo_in = os.path.join(kpi_input_folder, 'France/eco2mix', 'eCO2mix_RTE_'+region+'_Annuel-Definitif_'+str(year)+'.csv')
+
+        prods_charac_ = prods_charac[prods_charac['zone']==region_fictive]
+        loads_charac_ = loads_charac[loads_charac['zone'] == region_fictive]
+
+        gens = {}
+        gens['solar'] = prods_charac_[prods_charac_['type'] == 'solar']['name'].values
+        gens['wind'] = prods_charac_[prods_charac_['type'] == 'wind']['name'].values
+        gens['hydro'] = prods_charac_[prods_charac_['type'] == 'hydro']['name'].values
+        gens['nuclear'] = prods_charac_[prods_charac_['type'] == 'nuclear']['name'].values
+        gens['thermal'] = prods_charac_[prods_charac_['type'] == 'thermal']['name'].values
+
+        corresp_carrier = {'thermal':['Gaz','Fioul','Bioénergies','Charbon'],
+                           'solar':['Solaire'],
+                           'wind':['Eolien'],
+                           'nuclear': ['Nucléaire'],
+                           'hydro':['Hydraulique','Pompage']}
+
+        eco2mix = pd.read_csv(repo_in, sep = ';', encoding = 'latin1', decimal = ',')
+        colToTake = ['Date', 'Heures', 'Consommation']
+        for col in ['Fioul', 'Charbon','Gaz','Bioénergies', 'Nucléaire','Eolien', 'Solaire', 'Hydraulique','Pompage']:
+            if col in eco2mix.columns:
+                colToTake.append(col)
+        df = eco2mix[colToTake]
+
+        # Time formatting
+        df['Space'] = ' '
+        df['Time'] = df['Date']+df['Space']+df['Heures']
+        df['Time'] = pd.to_datetime(df['Time'], infer_datetime_format=True)
+        df.set_index('Time', drop=False, inplace=True)
+        df['Solaire'] = df['Solaire'].mask(df['Solaire']<0,0)
+        df = df.replace('-', 0)
+
+        # Production formatting
+        for carrier_out in corresp_carrier.keys():
+            agregate_carrier = np.zeros(len(df))
+            for carr in corresp_carrier[carrier_out]:
+                if carr in df.columns:
+                    agregate_carrier += df[carr]
+            df[carrier_out] = agregate_carrier
+
+            # # Temporary
+        # tmp = df[['solar']].copy()
+        # tmp = tmp.resample('1H').first()
+        # array = tmp['solar'].to_numpy()
+        # print(tmp)
+        # print(array)
+        # file = open(r'D:\RTE\Challenge\1 - Développement\ChroniX2Grid\chronix2grid\generation\input_Nico\solar_pattern.npy', 'wb')
+        # tmp.save(file, array)
+
+        # Equitable repartition on usecase generators
+        for carrier in gens.keys():
+            n = len(gens[carrier])
+            for col in gens[carrier]:
+                df[col] = df[carrier]/n
+        agg_conso = df['Consommation']
+        df.drop(columns=['Space', 'Date', 'Heures',
+                         'Fioul', 'Charbon', 'Gaz', 'Bioénergies', 'Nucléaire', 'Eolien', 'Solaire', 'Hydraulique',
+                         'Pompage', 'Consommation']+list(corresp_carrier.keys()), inplace=True, errors='ignore')
+        # Resampling
+        df = df.resample(timestep).first()
+
+        # Load computation
+        loads = loads_charac_['name'].unique()
+
+        # Equitable repartition on loads nodes
+        conso = pd.DataFrame({'Time': df['Time']})
+        for col in loads:
+            conso[col] = agg_conso/len(loads)
+
+        # Equalize timeline with synthetic
+        start_date = params['start_date']
+        end_date = params['end_date']
+        df = df[(df.index >= start_date) & (df.index < end_date)]
+        conso = conso[(conso.index>=start_date)&(conso.index<end_date)]
+
+        # Add in dataframe
+        prod = pd.concat([prod,df], axis = 1)
+        conso_ = pd.concat([conso_, conso], axis=1)
+
+    return prod, conso_
 
 def eco2mix_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, year, params):
     repo_in = os.path.join(kpi_input_folder, 'eco2mix', 'eCO2mix_RTE_Annuel-Definitif_'+str(year)+'.csv')
@@ -73,9 +162,9 @@ def eco2mix_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, year,
 
 def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac, year, params):
     print("Importing and formatting data downloaded from Renewable Ninja API")
-    repo_in_solar = os.path.join(kpi_input_folder, 'renewableninja', 'solar_case118_' + str(year) + '.csv')
+    repo_in_solar = os.path.join(kpi_input_folder, 'France/renewable_ninja', 'solar_case118_' + str(year) + '.csv')
     ninja_solar = pd.read_csv(repo_in_solar, sep=';', encoding='latin1', decimal='.')
-    repo_in_wind = os.path.join(kpi_input_folder, 'renewableninja', 'wind_case118_' + str(year) + '.csv')
+    repo_in_wind = os.path.join(kpi_input_folder, 'France/renewable_ninja', 'wind_case118_' + str(year) + '.csv')
     ninja_wind = pd.read_csv(repo_in_wind, sep=';', encoding='latin1', decimal='.')
     timestep_ninja = 60 # Pas de temps une heure dans l'extraction renewable ninja
     ninja = pd.concat([ninja_solar, ninja_wind], axis = 1)
