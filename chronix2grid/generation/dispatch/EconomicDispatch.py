@@ -225,21 +225,28 @@ class Dispatch(pypsa.Network):
              res_load_scenario.solar_p],
             axis=1
         )
-
         try:
             full_opf_dispatch = full_opf_dispatch[self._env.name_gen].round(2)
         except KeyError:
             # Either we're trying to save results from a simplified dispatch or
             # using the save function before instanciating an env.
             pass
+
+        saving_folder = os.path.join(
+            parent_folder_path, self._res_load_scenario.name, 'chronics')
+        if not os.path.exists(saving_folder):
+            os.makedirs(saving_folder)
+        print(f'Saving chronics into {saving_folder}')
         full_opf_dispatch.to_csv(
-            os.path.join(parent_folder_path, self._res_load_scenario.name,
-                         "prod_p.csv.bz2"),
+            os.path.join(saving_folder, "prod_p.csv.bz2"),
             sep=';', index=False
         )
         res_load_scenario.marginal_prices.to_csv(
-            os.path.join(parent_folder_path, self._res_load_scenario.name,
-                         "prices.csv.bz2"),
+            os.path.join(saving_folder, "prices.csv.bz2"),
+            sep=';', index=False
+        )
+        res_load_scenario.loads.to_csv(
+            os.path.join(saving_folder, "load_p.csv.bz2"),
             sep=';', index=False
         )
 
