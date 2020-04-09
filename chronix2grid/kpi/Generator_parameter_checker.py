@@ -25,7 +25,7 @@ def EnergyMix_AprioriChecker(env118_withoutchron,Target_EM_percentage, PeakLoad,
     TotalCapacity=Mix_df['pmax'].sum()
     CapacityPerType=Mix_df.groupby(['type'])['pmax'].agg('sum')
 
-    CapacityNonRenewable=CapacityPerType['thermal']+CapacityPerType['nuclear']+CapacityPerType['hydro']
+    #CapacityNonRenewable=CapacityPerType['thermal']+CapacityPerType['nuclear']+CapacityPerType['hydro']
     CapacityMix=np.round((CapacityPerType/TotalCapacity*100)*10)/10
     CapacityMix.name='capacity_mix'
     #print('\n Total capacity:'+str(np.round(TotalCapacity)))
@@ -259,11 +259,15 @@ def Ramps_Pmax_Pmin_APrioriCheckers(env118_withoutchron,Capacity, chronics_path_
 
 
     # In[190]:
-
-
+    
+    RampDownNucHydro=0
+    if('nuclear' in Ramps_genType_df.index):
+        RampDownNucHydro+=Ramps_genType_df['rampDown']['nuclear']
+    if('hydro' in Ramps_genType_df.index):
+        RampDownNucHydro+=Ramps_genType_df['rampDown']['hydro']
     print('\n the max net load ramp down is '+str(df_stats_ramps['Load_net']['min']))
-    print('the max nuclear + hydro ramp down is '+str(Ramps_genType_df['rampDown']['nuclear']+Ramps_genType_df['rampDown']['hydro']))
-    IsRampDownInTrouble=(df_stats_ramps['Load_net']['min'] > Ramps_genType_df['rampDown']['nuclear']+Ramps_genType_df['rampDown']['hydro'])
+    print('the max nuclear + hydro ramp down is '+str(RampDownNucHydro))
+    IsRampDownInTrouble=(df_stats_ramps['Load_net']['min'] > RampDownNucHydro)
 
 
     # In[179]:
