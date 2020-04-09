@@ -1,6 +1,7 @@
 """Class for the economic dispatch framework. Allows to parametrize and run
 an economic dispatch based on RES and consumption time series"""
 
+from copy import deepcopy
 import datetime as dt
 import os
 
@@ -22,6 +23,9 @@ class Dispatch(pypsa.Network):
         self.add('Load', name='agg_load', bus='node')
         self._env = None  # The grid2op environment when instanciated with from_gri2dop_env
         self._res_load_scenario = None
+        self._simplified_res_load_scenario = None
+        self._has_results = False
+        self._has_simplified_results = False
 
     @property
     def wind_p(self):
@@ -104,7 +108,7 @@ class Dispatch(pypsa.Network):
             solar=[name for i, name in enumerate(self._env.name_gen)
                    if self._env.gen_type[i] == 'solar']
         )
-        self._res_load_scenario = ChroniXScenario(load_path_file, prod_path_file,
+        self._res_load_scenario = ChroniXScenario.from_disk(load_path_file, prod_path_file,
                                                   res_names, scenario_name=scenario_name)
 
     def make_hydro_constraints_from_res_load_scenario(self):
@@ -186,17 +190,39 @@ class Dispatch(pypsa.Network):
 
     def run(self, load, params, gen_constraints=None,
                      ramp_mode=RampMode.hard, by_carrier=False):
-        prods_dispatch, terminal_conditions = main_run_disptach(
+        prods_dispatch, terminal_conditions, marginal_prices = main_run_disptach(
             self if not by_carrier else self.simplify_net(),
             load, params, gen_constraints, ramp_mode)
-        self._res_load_scenario.prods_dispatch = prods_dispatch
+        if by_carrier:
+            self._simplified_res_load_scenario = self._res_load_scenario.simplify_chronix()
+            self._simplified_res_load_scenario.prods_dispatch = prods_dispatch
+            self._simplified_res_load_scenario.marginal_prices = marginal_prices
+            results = self._simplified_res_load_scenario
+            self._has_simplified_results = True
+            self._has_results = False
+        else:
+            self._res_load_scenario.prods_dispatch = prods_dispatch
+            self._res_load_scenario.marginal_prices = marginal_prices
+            results = self._res_load_scenario
+            self._has_results = True
+            self._has_simplified_results = False
         self.reset_ramps_from_grid2op_env()
-        return self._res_load_scenario, terminal_conditions
+        return results, terminal_conditions
 
     def save_results(self, parent_folder_path):
+        if not self._has_results and not self._has_simplified_results:
+            print('The optimization has first to run successfully in order to '
+                  'save results.')
+        if self._has_results:
+            print('Saving results for the grids with individual generators...')
+            res_load_scenario = self._res_load_scenario
+        else:
+            print('Saving results for the grids with aggregated generators by carriers...')
+            res_load_scenario = self._simplified_res_load_scenario
+
         full_opf_dispatch = pd.concat(
-            [self._res_load_scenario.prods_dispatch, self._res_load_scenario.wind_p,
-             self._res_load_scenario.solar_p],
+            [res_load_scenario.prods_dispatch, res_load_scenario.wind_p,
+             res_load_scenario.solar_p],
             axis=1
         )
         try:
@@ -205,26 +231,52 @@ class Dispatch(pypsa.Network):
             # Either we're trying to save results from a simplified dispatch or
             # using the save function before instanciating an env.
             pass
+
+        saving_folder = os.path.join(
+            parent_folder_path, self._res_load_scenario.name, 'chronics')
+        if not os.path.exists(saving_folder):
+            os.makedirs(saving_folder)
+        print(f'Saving chronics into {saving_folder}')
         full_opf_dispatch.to_csv(
-            os.path.join(parent_folder_path, self._res_load_scenario.name,
-                         "prod_p.csv.bz2"),
+            os.path.join(saving_folder, "prod_p.csv.bz2"),
+            sep=';', index=False
+        )
+        res_load_scenario.marginal_prices.to_csv(
+            os.path.join(saving_folder, "prices.csv.bz2"),
+            sep=';', index=False
+        )
+        res_load_scenario.loads.to_csv(
+            os.path.join(saving_folder, "load_p.csv.bz2"),
             sep=';', index=False
         )
 
 
 class ChroniXScenario:
-    def __init__(self, load_path_file, prod_path_file, res_names, scenario_name):
-        self.loads = pd.read_csv(load_path_file, sep=';', index_col=0, parse_dates=True)
-        prods = pd.read_csv(prod_path_file, sep=';', index_col=0, parse_dates=True)
+    def __init__(self, loads, prods, res_names, scenario_name):
+        self.loads = loads
         self.wind_p = prods[res_names['wind']]
         self.solar_p = prods[res_names['solar']]
         self.total_res = pd.concat([self.wind_p, self.solar_p], axis=1).sum(axis=1)
         self.prods_dispatch = None  # Will receive the results of the dispatch
+        self.marginal_prices = None # Will receive the marginal prices associated to a dispatch
         self.name = scenario_name
+
+    @classmethod
+    def from_disk(cls, load_path_file, prod_path_file, res_names, scenario_name):
+        loads = pd.read_csv(load_path_file, sep=';', index_col=0, parse_dates=True)
+        prods = pd.read_csv(prod_path_file, sep=';', index_col=0, parse_dates=True)
+        return cls(loads, prods, res_names, scenario_name)
 
     def net_load(self, losses_pct, name):
         load_minus_losses = self.loads.sum(axis=1) * (1 + losses_pct/100)
         return (load_minus_losses - self.total_res).to_frame(name=name)
+
+    def simplify_chronix(self):
+        simplified_chronix = deepcopy(self)
+        simplified_chronix.wind_p = simplified_chronix.wind_p.sum(axis=1).to_frame(name='wind')
+        simplified_chronix.solar_p = simplified_chronix.solar_p.sum(axis=1).to_frame(name='solar')
+        simplified_chronix.name = simplified_chronix.name + 'by_carrier'
+        return simplified_chronix
 
 
 if __name__ == "__main__":
@@ -273,7 +325,8 @@ if __name__ == "__main__":
     )
 
     dispatch.save_results('.')
-    test = pd.read_csv('./Scenario_0/prod_p.csv.bz2', sep=";")
+    test_prods = pd.read_csv('./Scenario_0/prod_p.csv.bz2', sep=";")
+    test_prices = pd.read_csv('./Scenario_0/prices.csv.bz2', sep=";")
 
 
 

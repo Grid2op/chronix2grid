@@ -312,6 +312,7 @@ def run_opf(net, demand, gen_max, gen_min, params):
         print('** OPF failed to find an optimal solution **')
     else:
         print('-- opf succeeded  >Objective value (should be greater than zero!')
+
     return net.generators_t.p.copy(), termination_condition
 
 def add_noise_gen(dispatch, gen_cap, noise_factor):
