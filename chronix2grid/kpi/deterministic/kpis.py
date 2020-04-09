@@ -17,11 +17,12 @@ from plotly.subplots import make_subplots
 
 class EconomicDispatchValidator:
 
-    def __init__(self, consumption, ref_dispatch, synthetic_dispatch, year, num_scenario, images_repo, prods_charac=None, loads_charac=None, prices=None):
+    def __init__(self, ref_consumption, syn_consumption, ref_dispatch, synthetic_dispatch, year, num_scenario, images_repo, prods_charac=None, loads_charac=None, prices=None):
 
         # Create Class variables
 
-        self.consumption = consumption
+        self.syn_consumption = syn_consumption
+        self.ref_consumption = ref_consumption
         self.ref_dispatch = ref_dispatch
         self.syn_dispatch = synthetic_dispatch
         self.num_scenario = 'Scenario_'+str(num_scenario)
@@ -45,12 +46,13 @@ class EconomicDispatchValidator:
             os.mkdir(os.path.join(self.image_repo, 'load_kpi'))
         
         # Reindex to avoid problems
-        # self.consumption.index.rename('Time', inplace=True)
+        # self.syn_consumption.index.rename('Time', inplace=True)
         # self.ref_dispatch.index.rename('Time', inplace=True)
         # self.syn_dispatch.index.rename('Time', inplace=True)
 
         # Aggregate variables
-        self.agg_conso = consumption.sum(axis=1)
+        self.ref_agg_conso = ref_consumption.sum(axis=1)
+        self.syn_agg_conso = syn_consumption.sum(axis=1)
         self.agg_ref_dispatch = ref_dispatch.sum(axis=1)
         self.agg_syn_dispatch = synthetic_dispatch.sum(axis=1)
         
@@ -61,9 +63,9 @@ class EconomicDispatchValidator:
 
         # # Check consisten information
         # try:
-        #     if self.consumption.index.equals(self.ref_dispatch.index) \
+        #     if self.syn_consumption.index.equals(self.ref_dispatch.index) \
         #         and self.ref_dispatch.index.equals(self.syn_dispatch.index) \
-        #         and self.syn_dispatch.index.equals(self.consumption.index):
+        #         and self.syn_dispatch.index.equals(self.syn_consumption.index):
         #         pass
         # except:
         #     print ('Input data should have same time frame')
@@ -395,29 +397,7 @@ class EconomicDispatchValidator:
 
         return stat_ref_high_price, stat_ref_low_price, ref_agg_mw_per_month, \
                stat_syn_high_price, stat_syn_low_price, syn_agg_mw_per_month
-    
-    # def __wind_entropy(self, wind_df):
-    #
-    #     '''
-    #     Return:
-    #     -------
-    #     A measure of chaoticness given a wind time series
-    #     '''
-    #
-    #     # Add month as column for wind dataframe
-    #     copied_wind_df = wind_df.copy()
-    #
-    #     def entropy_per_gen(df):
-    #         return df.apply(lambda x: spectral_entropy(x, 100, method='welch', normalize=True), axis=0)
-    #
-    #     # Get spectral entropy
-    #     entropy_per_month = copied_wind_df.groupby(pd.Grouper(freq='M')).apply(entropy_per_gen).round(2)
-    #
-    #     # Set index as month value
-    #     entropy_per_month.index = entropy_per_month.index.month
-    #     entropy_per_month.index.rename('month', inplace=True)
-    #
-    #     return entropy_per_month
+
         
     def __wind_metric_distrib(self, wind_df, save_plots = True):
         
@@ -785,7 +765,7 @@ class EconomicDispatchValidator:
         return syn_corr_solar, solar_night_ref, solar_night_syn, cloudiness_ref, cloudiness_syn
 
 
-    def wind_load_kpi(self):
+    def wind_load_kpi(self, save_plots = True):
 
         '''
         Return:
@@ -801,6 +781,7 @@ class EconomicDispatchValidator:
 
         regions = ['R1', 'R2', 'R3']
         corr_rel = []
+        corr_rel_ref = []
         for region in regions:
 
             # Create zone filter for wind and loads
@@ -808,32 +789,54 @@ class EconomicDispatchValidator:
             wind_names = self.prod_charac.loc[wind_filter & wind_region_filter]['name']
             loads_names_filter = self.load_charac[self.load_charac.zone == region]['name']
 
+            ## Dispatch
             # Extract only wind units per region
             wind_gens_in_region = self.syn_dispatch[wind_names]
-            loads_in_region = self.consumption[loads_names_filter]
+            loads_in_region = self.syn_consumption[loads_names_filter]
 
             # Compute correlation matrix
             tmp_corr = self._pairwise_corr_different_dfs(wind_gens_in_region, loads_in_region)
             corr_rel.append(tmp_corr)
 
-        # Plot results
-        plt.figure(figsize=(18,4))
-        self._plot_heatmap(corr_rel[0], 
-                           'Correlation Wind Load Region R1',
-                           path_png=os.path.join(self.image_repo,'wind_load_kpi','syn_corr_wind_load_R1.png'),
-                           save_png=True)
-        
-        plt.figure(figsize=(18,4))
-        self._plot_heatmap(corr_rel[1], 
-                           'Correlation Wind Load Region R2',
-                           path_png=os.path.join(self.image_repo,'wind_load_kpi','syn_corr_wind_load_R2.png'),
-                           save_png=True)
+            ## Reference
+            # Extract only wind units per region
+            wind_gens_in_region = self.ref_dispatch[wind_names]
+            loads_in_region = self.ref_consumption[loads_names_filter]
 
-        plt.figure(figsize=(12,3))
-        self._plot_heatmap(corr_rel[2], 
-                           'Correlation Wind Load Region R3',
-                            path_png=os.path.join(self.image_repo,'wind_load_kpi','syn_corr_wind_load_R3.png'),
-                            save_png=True)
+            # Compute correlation matrix
+            tmp_corr = self._pairwise_corr_different_dfs(wind_gens_in_region, loads_in_region)
+            corr_rel_ref.append(tmp_corr)
+
+        # Plot results
+        # Correlation heatmaps
+        for i, region in enumerate(regions):
+            fig, axes = plt.subplots(2, 1, figsize=(18, 8))
+            sns.heatmap(corr_rel_ref[i], annot=True, linewidths=.5, ax=axes[0], fmt='.1g',
+                        cmap=sns.diverging_palette(20, 220, n=200),vmin=-1, vmax=1, center=0)
+            axes[0].set_xticks([])
+            sns.heatmap(corr_rel[i], annot=True, linewidths=.5, ax=axes[1], fmt='.1g',
+                        cmap=sns.diverging_palette(20, 220, n=200),vmin=-1, vmax=1, center=0)
+            if save_plots:
+                fig.savefig(os.path.join(self.image_repo, 'wind_load_kpi', 'corr_wind_load_'+region+'.png'))
+
+        # ===================
+        # plt.figure(figsize=(18,4))
+        # self._plot_heatmap(corr_rel[0],
+        #                    'Correlation Wind Load Region R1',
+        #                    path_png=os.path.join(self.image_repo,'wind_load_kpi','syn_corr_wind_load_R1.png'),
+        #                    save_png=True)
+        #
+        # plt.figure(figsize=(18,4))
+        # self._plot_heatmap(corr_rel[1],
+        #                    'Correlation Wind Load Region R2',
+        #                    path_png=os.path.join(self.image_repo,'wind_load_kpi','syn_corr_wind_load_R2.png'),
+        #                    save_png=True)
+        #
+        # plt.figure(figsize=(12,3))
+        # self._plot_heatmap(corr_rel[2],
+        #                    'Correlation Wind Load Region R3',
+        #                     path_png=os.path.join(self.image_repo,'wind_load_kpi','syn_corr_wind_load_R3.png'),
+        #                     save_png=True)
 
 
         return corr_rel[0], corr_rel[1], corr_rel[2]
@@ -988,7 +991,7 @@ class EconomicDispatchValidator:
 
         ## Load Correlation of synthetic dispatch
         agg_thermal_syn = thermal_syn.sum(axis = 1)
-        correl = round(agg_thermal_syn.corr(self.agg_conso), self.precision)
+        correl = round(agg_thermal_syn.corr(self.syn_agg_conso), self.precision)
 
 
         # Write results
@@ -1010,13 +1013,13 @@ class EconomicDispatchValidator:
     def load_kpi(self, save_plots = True):
         
         # Normalized conso by day of week
-        conso_day = self.agg_conso.copy()
+        conso_day = self.syn_agg_conso.copy()
         conso_day.index = [date.weekday() for date in conso_day.index]
         conso_day = conso_day.groupby(conso_day.index).sum() / conso_day.max()
         conso_day.index = conso_day.index.set_names('Day_of_week')
 
         # Normalized conso by week of year
-        conso_week = self.agg_conso.copy()
+        conso_week = self.syn_agg_conso.copy()
         conso_week.index = [date.week for date in conso_week.index]
         conso_week = conso_week.groupby(conso_week.index).sum() / conso_week.max()
         conso_week.index = conso_week.index.set_names('Week_of_year')

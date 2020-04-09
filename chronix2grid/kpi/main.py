@@ -70,6 +70,7 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
 
         syn_dispatch.index = ref_dispatch.index
         syn_consumption.index = ref_dispatch.index
+        ref_consumption.index = ref_dispatch.index
 
         # Load agg price profile
         if not wind_solar_only:
@@ -77,7 +78,8 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
             # Start Economic dispatch validator
             # -- + -- + -- + -- + -- + -- + --
             print ('(1) Computing KPI\'s...')
-            dispatch_validator = EconomicDispatchValidator(syn_consumption,
+            dispatch_validator = EconomicDispatchValidator(ref_consumption,
+                                                           syn_consumption,
                                                            ref_dispatch,
                                                            syn_dispatch,
                                                            year,
@@ -92,7 +94,8 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
             # Start Economic dispatch validator
             # -- + -- + -- + -- + -- + -- + --
             print('(1) Computing KPI\'s...')
-            dispatch_validator = EconomicDispatchValidator(syn_consumption,
+            dispatch_validator = EconomicDispatchValidator(ref_consumption,
+                                                           syn_consumption,
                                                            ref_dispatch,
                                                            syn_dispatch,
                                                            year,

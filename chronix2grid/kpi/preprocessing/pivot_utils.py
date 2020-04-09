@@ -26,13 +26,19 @@ def eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_char
                            'solar':['Solaire'],
                            'wind':['Eolien'],
                            'nuclear': ['Nucléaire'],
-                           'hydro':['Hydraulique','Pompage']}
+                           'hydro':['Hydraulique']}
 
+        # Read and rectify some strange values in eco2mix
         eco2mix = pd.read_csv(repo_in, sep = ';', encoding = 'latin1', decimal = ',')
+        eco2mix = eco2mix.replace('ND', 0)
+        eco2mix['Solaire'] = eco2mix['Solaire'].mask(eco2mix['Solaire'] < 0, 0)
+        eco2mix = eco2mix.replace('-', 0)
+
         colToTake = ['Date', 'Heures', 'Consommation']
-        for col in ['Fioul', 'Charbon','Gaz','Bioénergies', 'Nucléaire','Eolien', 'Solaire', 'Hydraulique','Pompage']:
+        for col in ['Fioul', 'Charbon','Gaz','Bioénergies', 'Nucléaire','Eolien', 'Solaire', 'Hydraulique']:
             if col in eco2mix.columns:
                 colToTake.append(col)
+                eco2mix[col] = eco2mix[col].astype(float)
         df = eco2mix[colToTake]
 
         # Time formatting
@@ -40,8 +46,6 @@ def eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_char
         df['Time'] = df['Date']+df['Space']+df['Heures']
         df['Time'] = pd.to_datetime(df['Time'], infer_datetime_format=True)
         df.set_index('Time', drop=False, inplace=True)
-        df['Solaire'] = df['Solaire'].mask(df['Solaire']<0,0)
-        df = df.replace('-', 0)
 
         # Production formatting
         for carrier_out in corresp_carrier.keys():
@@ -65,12 +69,15 @@ def eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_char
             n = len(gens[carrier])
             for col in gens[carrier]:
                 df[col] = df[carrier]/n
+
+        # Resampling
+        df = df.resample(timestep).first()
+
+        # Dropping useless columns
         agg_conso = df['Consommation']
         df.drop(columns=['Space', 'Date', 'Heures',
                          'Fioul', 'Charbon', 'Gaz', 'Bioénergies', 'Nucléaire', 'Eolien', 'Solaire', 'Hydraulique',
-                         'Pompage', 'Consommation']+list(corresp_carrier.keys()), inplace=True, errors='ignore')
-        # Resampling
-        df = df.resample(timestep).first()
+                         'Pompage', 'Consommation'] + list(corresp_carrier.keys()), inplace=True, errors='ignore')
 
         # Load computation
         loads = loads_charac_['name'].unique()
@@ -160,7 +167,7 @@ def eco2mix_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, year,
 
     return df, conso
 
-def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac, year, params):
+def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac, year, params, corresp_regions):
     print("Importing and formatting data downloaded from Renewable Ninja API")
     repo_in_solar = os.path.join(kpi_input_folder, 'France/renewable_ninja', 'solar_case118_' + str(year) + '.csv')
     ninja_solar = pd.read_csv(repo_in_solar, sep=';', encoding='latin1', decimal='.')
@@ -191,23 +198,50 @@ def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac
     for gen in gens:
         ninja[gen] = 0.
 
-    # Temporary fake load
-    # Load computation
-    loads = loads_charac['name'].unique()
-    agg_conso = ninja.sum(axis=1).values
+    ## Load from regional eco2mix
+    conso_ = pd.DataFrame()
 
-    # Equitable repartition on loads nodes
-    conso = pd.DataFrame({'Time': ninja['Time']})
-    for col in loads:
-        conso[col] = agg_conso / len(loads)
+    for region_fictive in corresp_regions.keys():
+        region = corresp_regions[region_fictive]
+        repo_in = os.path.join(kpi_input_folder, 'France/eco2mix',
+                               'eCO2mix_RTE_' + region + '_Annuel-Definitif_' + str(year) + '.csv')
+
+        loads_charac_ = loads_charac[loads_charac['zone'] == region_fictive]
+
+        eco2mix = pd.read_csv(repo_in, sep=';', encoding='latin1', decimal=',')
+        colToTake = ['Date', 'Heures', 'Consommation']
+        df = eco2mix[colToTake]
+
+        # Time formatting
+        df['Space'] = ' '
+        df['Time'] = df['Date'] + df['Space'] + df['Heures']
+        df['Time'] = pd.to_datetime(df['Time'], infer_datetime_format=True)
+        df.set_index('Time', drop=False, inplace=True)
+        df = df.replace('-', 0)
+        df = df.replace('ND', 0)
+
+
+        # Resampling
+        df = df.resample(timestep).first()
+        agg_conso = df['Consommation'].astype(float)
+
+        # Load computation
+        loads = loads_charac_['name'].unique()
+
+        # Equitable repartition on loads nodes
+        conso = pd.DataFrame({'Time': df['Time']})
+        for col in loads:
+            conso[col] = agg_conso / len(loads)
+
+        conso_ = pd.concat([conso_, conso], axis = 1)
 
     # Equalize timeline with synthetic
     start_date = params['start_date']
     end_date = params['end_date']
     ninja = ninja[(ninja.index >= start_date) & (ninja.index < end_date)]
-    conso = conso[(conso.index >= start_date) & (conso.index < end_date)]
+    conso_ = conso_[(conso_.index >= start_date) & (conso_.index < end_date)]
 
-    return ninja, conso
+    return ninja, conso_
 
 def chronics_to_kpi(year, n_scenario, repo_in, timestep, params, thermal = True, monthly = False):
 
