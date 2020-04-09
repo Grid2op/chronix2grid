@@ -110,10 +110,10 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
             max_col = 1
         else:
             max_col = 2
-        dispatch_validator.plot_carriers_pw(curve='reference', stacked=True, max_col_splot=max_col, save_html=True,
-                                            wind_solar_only=wind_solar_only)
-        dispatch_validator.plot_carriers_pw(curve='synthetic', stacked=True, max_col_splot=max_col, save_html=True,
-                                            wind_solar_only=wind_solar_only)
+        # dispatch_validator.plot_carriers_pw(curve='reference', stacked=True, max_col_splot=max_col, save_html=True,
+        #                                     wind_solar_only=wind_solar_only)
+        # dispatch_validator.plot_carriers_pw(curve='synthetic', stacked=True, max_col_splot=max_col, save_html=True,
+        #                                     wind_solar_only=wind_solar_only)
 
         # Get Load KPI
         dispatch_validator.load_kpi()

@@ -1,6 +1,7 @@
 import os
 import argparse
 
+from scipy.fft import fft, fftfreq
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -28,6 +29,7 @@ class EconomicDispatchValidator:
         self.syn_dispatch = synthetic_dispatch
         self.num_scenario = 'Scenario_'+str(num_scenario)
         self.year = year
+        self.dt = (ref_dispatch.index.values[1] - ref_dispatch.index.values[0])/pd.Timedelta(minutes = 1)
 
         # Create repo if necessary for plot saving
         self.image_repo = images_repo+'/'+str(self.year)
@@ -543,9 +545,79 @@ class EconomicDispatchValidator:
             # Save plot as png
             fig.savefig(os.path.join(self.image_repo,'wind_kpi','histogram.png'))
 
+        ## Power spectral density
+        #Ref
+        ref_transform = fft(agg_ref_wind.values)
+        ref_density = [(z.real ** 2 + z.imag ** 2) for z in ref_transform]
+        ref_freq = fftfreq(len(ref_density), d=self.dt * 60)
+
+        # Syn
+        syn_transform = fft(agg_syn_wind.values)
+        syn_density = [(z.real ** 2 + z.imag ** 2) for z in syn_transform]
+        syn_freq = fftfreq(len(syn_density), d=self.dt * 60)
+
+        # Plot in log scale
+        fig, axes = plt.subplots(1, 2, figsize=(17, 5))
+        axes[0].plot(np.sort(ref_freq), ref_density, color = 'grey')
+        axes[0].set(xscale = 'log', yscale = 'log', xlabel = 'Frequency (Hz)', ylabel = 'Power spectral density',
+                    title = 'Reference power spectral density')
+        axes[1].plot(np.sort(syn_freq), syn_density, color = 'grey')
+        axes[1].set(xscale='log', yscale='log', xlabel='Frequency (Hz)', ylabel='Power spectral density',
+                    title = 'Synthetic power spectral density')
+        if save_plots:
+            fig.savefig(os.path.join(self.image_repo, 'wind_kpi', 'power_spectral_density.png'))
+
+        ## Auto-correlation
+        maxlags = 15
+        n_ref = len(wind_ref.columns)
+        n_syn = len(wind_syn.columns)
+        n = max(n_ref, n_syn)
+        fig, axes = plt.subplots(2, n, figsize=(30, 10))
+        for i, gen in enumerate(wind_ref.columns):
+            ts = wind_ref[gen].values
+            axes[0,i].acorr(ts, maxlags=maxlags)
+            axes[0,i].set(title = 'Reference '+gen + ' ACF')
+        for i, gen in enumerate(wind_syn.columns):
+            ts = wind_syn[gen].values
+            axes[1,i].acorr(ts, maxlags=maxlags)
+            axes[1,i].set(title = 'Synthetic '+gen + ' ACF')
+        if save_plots:
+            fig.savefig(os.path.join(self.image_repo, 'wind_kpi', 'generators_autocorrelation.png'))
+
+        ## Cross-correlation
+        maxlags = 10
+        n_ref = len(wind_ref.columns)
+        n_syn = len(wind_syn.columns)
+        n = max(n_ref, n_syn)
+
+        fig, axes = plt.subplots(sharex=True, sharey=True, ncols=n_ref, nrows=n_ref-1, figsize=(30, 13))
+        fig.suptitle('Reference cross-correlation between wind generators', fontsize=16)
+        for i, geni in enumerate(wind_ref.columns):
+            for j, genj in enumerate(wind_ref.columns.values[:i]):
+                tsi = wind_ref[geni].values
+                tsj = wind_ref[genj].values
+                axes[i-1, j].xcorr(tsi, tsj, maxlags=maxlags)
+                #axes[i,j].set()
+        if save_plots:
+            fig.savefig(os.path.join(self.image_repo, 'wind_kpi', 'reference_generators_cross-correlation.png'))
+
+        fig, axes = plt.subplots(sharex=True, sharey=True, ncols=n_syn, nrows=n_syn - 1, figsize=(30, 13))
+        fig.suptitle('Synthetic cross-correlation between wind generators', fontsize=16)
+        for i, geni in enumerate(wind_syn.columns):
+            for j, genj in enumerate(wind_syn.columns.values[:i]):
+                tsi = wind_syn[geni].values
+                tsj = wind_syn[genj].values
+                axes[i - 1, j].xcorr(tsi, tsj, maxlags=maxlags)
+                # axes[i,j].set()
+        if save_plots:
+            fig.savefig(os.path.join(self.image_repo, 'wind_kpi', 'synthetic_generators_cross-correlation.png'))
+
+
         return syn_corr_wind, \
                skewness_ref, skewness_syn, \
                kurtosis_ref, kurtosis_syn
+
+
 
     def __solar_at_night(self,
                          solar_df,
