@@ -48,7 +48,7 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
                                                                                                                 params)
         else:
             # Get reference and synthetic dispatch and loads
-            ref_dispatch, ref_consumption, syn_dispatch, syn_consumption, monthly_pattern, hours, prices = pivot_format(
+            ref_dispatch, ref_consumption, syn_dispatch, syn_consumption, monthly_pattern, hours, ref_prices, prices = pivot_format(
                                                                                                 generation_output_folder,
                                                                                                 kpi_input_folder,
                                                                                                 year,
@@ -87,7 +87,8 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
                                                            images_repo,
                                                            prods_charac=prods_charac,
                                                            loads_charac=loads_charac,
-                                                           prices=prices)
+                                                           ref_prices=ref_prices,
+                                                           syn_prices=prices)
             dispatch_validator.energy_mix()
 
         else:
@@ -127,6 +128,8 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
 
             # Get Thermal KPI
             dispatch_validator.thermal_kpi()
+            dispatch_validator.thermal_load_kpi()
+
 
         # Get Wind KPI
         dispatch_validator.wind_kpi()

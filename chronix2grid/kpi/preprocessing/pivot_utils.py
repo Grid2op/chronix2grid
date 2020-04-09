@@ -55,15 +55,6 @@ def eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_char
                     agregate_carrier += df[carr]
             df[carrier_out] = agregate_carrier
 
-            # # Temporary
-        # tmp = df[['solar']].copy()
-        # tmp = tmp.resample('1H').first()
-        # array = tmp['solar'].to_numpy()
-        # print(tmp)
-        # print(array)
-        # file = open(r'D:\RTE\Challenge\1 - Développement\ChroniX2Grid\chronix2grid\generation\input_Nico\solar_pattern.npy', 'wb')
-        # tmp.save(file, array)
-
         # Equitable repartition on usecase generators
         for carrier in gens.keys():
             n = len(gens[carrier])
@@ -71,6 +62,7 @@ def eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_char
                 df[col] = df[carrier]/n
 
         # Resampling
+        original_index = df.index
         df = df.resample(timestep).first()
 
         # Dropping useless columns
@@ -97,7 +89,16 @@ def eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_char
         prod = pd.concat([prod,df], axis = 1)
         conso_ = pd.concat([conso_, conso], axis=1)
 
-    return prod, conso_
+    # Read price data if exists
+    repo_in = os.path.join(kpi_input_folder, 'France/eco2mix/price_'+str(year)+'.csv')
+    try:
+        price = pd.read_csv(repo_in, sep=';', decimal='.')
+        price.index = original_index[original_index.notnull()]
+        price = price.resample(timestep).first()
+        price = price[(price.index >= start_date) & (price.index < end_date)]
+    except:
+        price = None
+    return prod, conso_, price
 
 def eco2mix_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, year, params):
     repo_in = os.path.join(kpi_input_folder, 'eco2mix', 'eCO2mix_RTE_Annuel-Definitif_'+str(year)+'.csv')

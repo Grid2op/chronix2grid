@@ -24,7 +24,7 @@ def pivot_format(chronics_folder, kpi_input_folder, year, scenario_num, prods_ch
             ref_prod, ref_load = renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac, year,
                                                        params, corresp_regions)
         else:
-            ref_prod, ref_load = eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_charac, year, params,
+            ref_prod, ref_load, ref_prices = eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_charac, year, params,
                                                          corresp_regions)
     elif comparison == 'Texas':
         print("Arrêt du calcul: la comparaison Texas n'est pas encore implémentée. La comparaison France est disponible")
@@ -43,5 +43,5 @@ def pivot_format(chronics_folder, kpi_input_folder, year, scenario_num, prods_ch
         syn_prod, syn_load, prices = chronics_to_kpi(year, scenario_num, chronics_folder, timestep, params,
                                              thermal=not wind_solar_only)
 
-        return ref_prod, ref_load, syn_prod, syn_load, monthly_pattern, hours, prices
+        return ref_prod, ref_load, syn_prod, syn_load, monthly_pattern, hours, ref_prices, prices
 
