@@ -276,7 +276,7 @@ def chronics_to_kpi(year, n_scenario, repo_in, timestep, params, thermal = True,
             folder = os.path.join(repo_in, str(year), 'Scenario_' + str(n_scenario), 'chronics')
             prod_p = pd.read_csv(os.path.join(folder, 'prod_p.csv.bz2'), sep=';', decimal='.')
             load_p = pd.read_csv(os.path.join(folder, 'load_p.csv.bz2'), sep=';', decimal='.')
-            price = pd.read_csv(os.path.join(folder, 'price.csv.bz2'), sep=';', decimal='.')
+            price = pd.read_csv(os.path.join(folder, 'prices.csv.bz2'), sep=';', decimal='.')
 
             # Rebuild of timeline
             datetime_index = pd.date_range(
@@ -284,9 +284,9 @@ def chronics_to_kpi(year, n_scenario, repo_in, timestep, params, thermal = True,
                 end=params['end_date'],
                 freq=str(params['dt']) + 'min')
 
-            prod_p['Time'] = datetime_index
-            load_p['Time'] = datetime_index
-            price['Time'] = datetime_index
+            prod_p['Time'] = datetime_index[:len(prod_p)]
+            load_p['Time'] = datetime_index[:len(load_p)]
+            price['Time'] = datetime_index[:len(price)]
             #load_p.rename(columns={'datetime': 'Time'}, inplace=True)
 
     else:
