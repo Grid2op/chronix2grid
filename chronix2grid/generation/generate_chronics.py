@@ -1,7 +1,6 @@
 # Native python libraries
 import os
 import json
-import shutil
 
 # Other Python libraries
 import pandas as pd
@@ -64,7 +63,7 @@ def read_configuration(input_folder, case, start_date, weeks):
 
 
 # Call generation scripts n_scenario times with dedicated random seeds
-def main(CASE, year, n_scenarios, params, input_folder, output_folder, prods_charac, loads_charac, lines, solar_pattern, load_weekly_pattern):
+def main(year, n_scenarios, params, input_folder, output_folder, prods_charac, loads_charac, lines, solar_pattern, load_weekly_pattern):
     print('=====================================================================================================================================')
     print('============================================== CHRONICS GENERATION ==================================================================')
     print('=====================================================================================================================================')
@@ -72,7 +71,6 @@ def main(CASE, year, n_scenarios, params, input_folder, output_folder, prods_cha
     # Create folders
     dispatch_input_folder = os.path.join(input_folder, 'dispatch/' + str(year))
     dispatch_output_folder = os.path.join(output_folder, str(year))
-    case_input_folder = os.path.join(input_folder, CASE)
 
     # Make sure the seeds are the same, whether computation is parallel or sequential
     seeds = [np.random.randint(low=0, high=2**31) for _ in range(n_scenarios)]
@@ -82,29 +80,19 @@ def main(CASE, year, n_scenarios, params, input_folder, output_folder, prods_cha
     if not os.path.exists(main_folder):
         os.mkdir(main_folder)
 
-    # Main output folder, format is grid2op multi folder compliant
-    main_out_folder = os.path.join(dispatch_output_folder, "chronics")
-    if not os.path.exists(main_out_folder):
-        os.mkdir(main_out_folder)
-
-    # Copy the constant files
-    shutil.copytree(case_input_folder, main_out_folder)
+    out_folder = os.path.join(dispatch_output_folder)
+    if not os.path.exists(out_folder):
+        os.mkdir(out_folder)
 
     # Launch proper scenario generation
     for i, seed in enumerate(seeds):
-        # Scenario data folder
-        scenario_out_folder = os.path.join(main_out_folder, 'Scenario_'+str(i))
-        if not os.path.exists(scenario_out_folder):
-            os.mkdir(scenario_out_folder)
-
         print("================ Generating scenario number "+str(i)+" ================")
-        load, load_forecasted = gen_loads.main(i, dispatch_input_folder, scenario_out_folder, seed, params, loads_charac, load_weekly_pattern, write_results = True)
+        load, load_forecasted = gen_loads.main(i, dispatch_input_folder, seed, params, loads_charac, load_weekly_pattern, write_results = True)
 
         prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = gen_enr.main(i, dispatch_input_folder, seed,params, prods_charac, solar_pattern, write_results = True)
 
-        gen_dispatch.main(i, load, prod_solar, prod_wind, scenario_out_folder, seed, params,
-                          prods_charac, lines, compute_hazards=True)
-        # TODO : export the prod_v and prod_q (+forecasted) files to the scenario_out_folder
+        gen_dispatch.main(i, load, prod_solar, prod_wind, out_folder, seed, params,
+                          prods_charac, lines, compute_hazards = True)
         print('\n')
     return
 
