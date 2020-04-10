@@ -10,7 +10,7 @@ from . import dispatch_utils as disp
 
 
 def main(i, load_forecasted, prod_solar, prod_wind, output_folder, seed, params,
-                          prods_charac, lines, compute_hazards = True):
+                          prods_charac, lines, compute_hazards=True):
     """
     This is the dispatch generation function, it allows you to generate producion chronics
     based on loads scenarios and solar and wind fatal generation with an optimal economic dispatch
@@ -35,7 +35,7 @@ def main(i, load_forecasted, prod_solar, prod_wind, output_folder, seed, params,
     """
 
     np.random.seed(seed)
-    output_folder = os.path.join(output_folder, 'Scenario_'+str(i))
+    output_folder = os.path.join(output_folder, 'Scenario_'+str(i), 'chronics')
     if not os.path.exists(output_folder):
         os.mkdir(output_folder)
 
