@@ -41,7 +41,7 @@ year, params, loads_charac, prods_charac, load_weekly_pattern, solar_pattern, li
 
 ## Chronic generation
 if GENERATION_CHRONICS:
-    gen.main(year, n_scenarios, params, INPUT_FOLDER, OUTPUT_FOLDER, prods_charac, loads_charac, lines, solar_pattern, load_weekly_pattern)
+    gen.main(CASE, year, n_scenarios, params, INPUT_FOLDER, OUTPUT_FOLDER, prods_charac, loads_charac, lines, solar_pattern, load_weekly_pattern)
 
 ## KPI formatting and computing
 if COMPUTE_KPI_ENR_ONLY:

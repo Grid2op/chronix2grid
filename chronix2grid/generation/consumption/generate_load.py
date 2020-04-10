@@ -1,5 +1,6 @@
 import os
 import json
+import shutil
 
 # Other Python libraries
 import pandas as pd
@@ -9,14 +10,15 @@ import numpy as np
 import generation.consumption.consumption_utils as conso
 
 
-def main(i, destination_folder, seed, params, loads_charac, load_weekly_pattern, write_results = True):
+def main(i, destination_folder, scenario_out_folder, seed, params, loads_charac, load_weekly_pattern, write_results = True):
     """
     This is the load generation function, it allows you to generate consumption chronics based on demand nodes characteristics and on weekly demand patterns.
 
     Parameters
     ----------
     i (int): scenario number
-    destination_folder (string): where results are written
+    destination_folder (string): where results are written for dispatch phase
+    scenario_out_folder (string): where results are written for final output folder
     seed (int): random seed of the scenario
     params (dict): system params such as timestep or mesh characteristics
     loads_charac (pandas.DataFrame): characteristics of loads node such as Pmax and type of demand
@@ -47,8 +49,8 @@ def main(i, destination_folder, seed, params, loads_charac, load_weekly_pattern,
     loads_series = conso.compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern)
     loads_series['datetime'] = datetime_index
 
-    # Save files
     print('Saving files in zipped csv')
+    # Save files for dispatch
     scenario_destination_path = os.path.join(destination_folder, 'Scenario_'+str(i))
     if not os.path.exists(scenario_destination_path):
         os.mkdir(scenario_destination_path)
@@ -58,9 +60,9 @@ def main(i, destination_folder, seed, params, loads_charac, load_weekly_pattern,
     load = conso.create_csv(loads_series, os.path.join(scenario_destination_path, 'load_p.csv.bz2'),
                   reordering=True,
                   noise=params['planned_std'], write_results = write_results)
-    
+    # Save files for output
+    shutil.copy(os.path.join(scenario_destination_path, 'load_p.csv.bz2'),
+                os.path.join(scenario_out_folder, 'load_p_forecasted.csv.bz2'))
+    shutil.copy(os.path.join(scenario_destination_path, 'load_p.csv.bz2'),
+                os.path.join(scenario_out_folder, 'load_p.csv.bz2'))
     return load, load_forecasted
-
-
-
-    

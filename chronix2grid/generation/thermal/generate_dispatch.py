@@ -10,7 +10,7 @@ import generation.thermal.dispatch_utils as disp
 
 
 def main(i, load_forecasted, prod_solar, prod_wind, output_folder, seed, params,
-                          prods_charac, lines, compute_hazards = True):
+                          prods_charac, lines, compute_hazards=True):
     """
     This is the dispatch generation function, it allows you to generate producion chronics
     based on loads scenarios and solar and wind fatal generation with an optimal economic dispatch
@@ -35,9 +35,6 @@ def main(i, load_forecasted, prod_solar, prod_wind, output_folder, seed, params,
     """
 
     np.random.seed(seed)
-    output_folder = os.path.join(output_folder, 'Scenario_'+str(i))
-    if not os.path.exists(output_folder):
-        os.mkdir(output_folder)
 
     print('Generating maintenance and hazard signals ...')
     if compute_hazards:
@@ -47,6 +44,3 @@ def main(i, load_forecasted, prod_solar, prod_wind, output_folder, seed, params,
         disp.create_csv(maintenance, os.path.join(output_folder, 'maintenance_forecasted.csv.bz2'), reordering=True)
         disp.create_csv(hazards, os.path.join(output_folder, 'hazards.csv.bz2'), reordering=True)
 
-
-
-    
