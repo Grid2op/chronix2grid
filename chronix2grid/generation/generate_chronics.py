@@ -9,9 +9,9 @@ from datetime import date
 from datetime import timedelta
 
 # Libraries developed for this module
-import generation.consumption.generate_load as gen_loads
-import generation.renewable.generate_solar_wind as gen_enr
-import generation.thermal.generate_dispatch as gen_dispatch
+from .consumption import generate_load as gen_loads
+from .renewable import generate_solar_wind as gen_enr
+from .thermal import generate_dispatch as gen_dispatch
 
 
 # ======================================================================================================================

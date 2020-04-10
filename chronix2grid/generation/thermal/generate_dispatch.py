@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 
 # Libraries developed for this module
-import generation.thermal.dispatch_utils as disp
+from . import dispatch_utils as disp
 
 
 def main(i, load_forecasted, prod_solar, prod_wind, output_folder, seed, params,

@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 
 # Libraries developed for this module
-import generation.renewable.solar_wind_utils as swutils
+from . import solar_wind_utils as swutils
 
 
 def main(i, destination_folder, seed, params, prods_charac, solar_pattern, write_results = True):
