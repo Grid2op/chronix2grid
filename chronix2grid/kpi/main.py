@@ -9,8 +9,8 @@ import pandas as pd
 # if module_path not in sys.path:
 #     sys.path.append(module_path)
 
-from kpi.preprocessing.pivot_KPI import pivot_format
-from kpi.deterministic.kpis import EconomicDispatchValidator
+from .preprocessing.pivot_KPI import pivot_format
+from .deterministic.kpis import EconomicDispatchValidator
 
 
 
@@ -45,7 +45,7 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
                                                                                                             prods_charac,
                                                                                                             loads_charac,
                                                                                                             wind_solar_only,
-                                                                                                                params)
+                                                                                                                params, case)
         else:
             # Get reference and synthetic dispatch and loads
             ref_dispatch, ref_consumption, syn_dispatch, syn_consumption, monthly_pattern, hours, ref_prices, prices = pivot_format(
@@ -56,7 +56,7 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
                                                                                                 prods_charac,
                                                                                                 loads_charac,
                                                                                                 wind_solar_only,
-                                                                                                params)
+                                                                                                params, case)
 
 
         # -- + -- + ---
@@ -145,7 +145,7 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
         # -- + -- + -- + -- + --
         print ('(2) Generating json output file...')
 
-        kpi_output_folder = os.path.join('kpi/output',str(year))
+        kpi_output_folder = os.path.join(kpi_input_folder, os.pardir, 'output', str(year))
         if not os.path.exists(kpi_output_folder):
             os.mkdir(kpi_output_folder)
         kpi_output_folder = os.path.join(kpi_output_folder,'Scenario_' + str(scenario_num))

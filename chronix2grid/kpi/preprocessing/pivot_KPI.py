@@ -3,9 +3,9 @@ import sys
 import json
 import pandas as pd
 
-from kpi.preprocessing.pivot_utils import chronics_to_kpi, eco2mix_to_kpi, renewableninja_to_kpi, eco2mix_to_kpi_regional
+from .pivot_utils import chronics_to_kpi, eco2mix_to_kpi, renewableninja_to_kpi, eco2mix_to_kpi_regional
 
-def pivot_format(chronics_folder, kpi_input_folder, year, scenario_num, prods_charac, loads_charac, wind_solar_only, params):
+def pivot_format(chronics_folder, kpi_input_folder, year, scenario_num, prods_charac, loads_charac, wind_solar_only, params, case):
 
     # Json parameters
     json1_file = open(os.path.join(kpi_input_folder, 'paramsKPI.json'))
@@ -36,7 +36,7 @@ def pivot_format(chronics_folder, kpi_input_folder, year, scenario_num, prods_ch
     # Format generated chronics
 
     if wind_solar_only:
-        syn_prod, syn_load = chronics_to_kpi(year, scenario_num, chronics_folder, timestep, params,
+        syn_prod, syn_load = chronics_to_kpi(year, scenario_num, os.path.join(chronics_folder, case), timestep, params,
                                                      thermal=not wind_solar_only, monthly = False)
         return ref_prod, ref_load, syn_prod, syn_load, monthly_pattern, hours
     else:
