@@ -48,8 +48,8 @@ def main(i, destination_folder, seed, params, loads_charac, load_weekly_pattern,
     loads_series['datetime'] = datetime_index
 
     # Save files
-    print('Saving files in zipped csv')
     scenario_destination_path = os.path.join(destination_folder, 'Scenario_'+str(i))
+    print('Saving files in zipped csv in "{}"'.format(scenario_destination_path))
     if not os.path.exists(scenario_destination_path):
         os.mkdir(scenario_destination_path)
     load_forecasted = conso.create_csv(loads_series, os.path.join(scenario_destination_path, 'load_p_forecasted.csv.bz2'),

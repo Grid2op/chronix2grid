@@ -75,7 +75,7 @@
     "gen": {
       "_module": "pandas.core.frame",
       "_class": "DataFrame",
-      "_object": "{\"columns\":[\"name\",\"bus\",\"p_mw\",\"vm_pu\",\"sn_mva\",\"min_q_mvar\",\"max_q_mvar\",\"scaling\",\"slack\",\"in_service\",\"type\",\"controllable\",\"min_p_mw\",\"max_p_mw\"],\"index\":[0,1,2,3],\"data\":[[null,1,40.0,1.045,null,-40.0,50.0,1.0,false,true,null,true,0.0,140.0],[null,2,0.0,1.01,null,0.0,40.0,1.0,false,true,null,true,0.0,100.0],[null,5,0.0,1.07,null,-6.0,24.0,1.0,false,true,null,true,0.0,100.0],[null,7,0.0,1.09,null,-6.0,24.0,1.0,false,true,null,true,0.0,100.0]]}",
+      "_object": "{\"columns\":[\"name\",\"bus\",\"p_mw\",\"vm_pu\",\"sn_mva\",\"min_q_mvar\",\"max_q_mvar\",\"scaling\",\"slack\",\"in_service\",\"type\",\"controllable\",\"min_p_mw\",\"max_p_mw\"],\"index\":[0,1,2,3,4],\"data\":[[null,1,40.0,1.045,null,-40.0,50.0,1.0,false,true,null,true,0.0,140.0],[null,2,0.0,1.01,null,0.0,40.0,1.0,false,true,null,true,0.0,100.0],[null,5,0.0,1.07,null,-6.0,24.0,1.0,false,true,null,true,0.0,100.0],[null,5,0.0,1.07,null,-6.0,24.0,1.0,false,true,null,true,0.0,100.0],[null,7,0.0,1.09,null,-6.0,24.0,1.0,false,true,null,true,0.0,100.0]]}",
       "orient": "split",
       "dtype": {
         "name": "object",

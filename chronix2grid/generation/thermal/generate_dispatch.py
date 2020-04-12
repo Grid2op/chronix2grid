@@ -35,9 +35,15 @@ def main(i, load_forecasted, prod_solar, prod_wind, output_folder, seed, params,
     """
 
     np.random.seed(seed)
-    output_folder = os.path.join(output_folder, 'Scenario_'+str(i), 'chronics')
     if not os.path.exists(output_folder):
         os.mkdir(output_folder)
+    pre_folder = os.path.join(output_folder, 'Scenario_{}'.format(i))
+    if not os.path.exists(pre_folder):
+        os.mkdir(pre_folder)
+    output_folder = os.path.join(pre_folder, 'chronics')
+    if not os.path.exists(output_folder):
+        os.mkdir(output_folder)
+
 
     print('Generating maintenance and hazard signals ...')
     if compute_hazards:
