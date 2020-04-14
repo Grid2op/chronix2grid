@@ -13,7 +13,9 @@ INPUT_FOLDER = 'generation/input'
 OUTPUT_FOLDER = 'generation/output'
 #CASE = 'case118_l2rpn_2020'
 CASE = 'case118_l2rpn'
+OUTPUT_FOLDER = os.path.join(OUTPUT_FOLDER, CASE)
 KPI_INPUT_FOLDER = 'kpi/input'
+KPI_OUTPUT_FOLDER = 'kpi/output'
 IMAGES_FOLDER = 'kpi/images'
 
 ### LAUNCH CONFIGURATION
@@ -49,12 +51,12 @@ if COMPUTE_KPI_ENR_ONLY:
     wind_solar_only = True
     if not os.path.exists(KPI_INPUT_FOLDER):
         os.mkdir(KPI_INPUT_FOLDER)
-    kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, OUTPUT_FOLDER, IMAGES_FOLDER, year, CASE, n_scenarios, wind_solar_only, params)
+    kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, KPI_OUTPUT_FOLDER, IMAGES_FOLDER, year, CASE, n_scenarios, wind_solar_only, params)
 
 elif COMPUTE_ALL_KPI:
     # Get and format monthly optimized chronics
     wind_solar_only = False
     if not os.path.exists(KPI_INPUT_FOLDER):
         os.mkdir(KPI_INPUT_FOLDER)
-    kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, OUTPUT_FOLDER, IMAGES_FOLDER, year, CASE, n_scenarios, wind_solar_only, params)
+    kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, KPI_OUTPUT_FOLDER, IMAGES_FOLDER, year, CASE, n_scenarios, wind_solar_only, params)
 
