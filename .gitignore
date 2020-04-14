@@ -139,3 +139,4 @@ dmypy.json
 chronix2grid/generation/input/dispatch/
 chronix2grid/generation/output/
 **.orig
+chronix2grid/kpi/images
