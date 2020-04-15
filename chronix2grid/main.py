@@ -15,7 +15,6 @@ OUTPUT_FOLDER = 'generation/output'
 CASE = 'case118_l2rpn'
 OUTPUT_FOLDER = os.path.join(OUTPUT_FOLDER, CASE)
 KPI_INPUT_FOLDER = 'kpi/input'
-KPI_OUTPUT_FOLDER = 'kpi/output'
 IMAGES_FOLDER = 'kpi/images'
 
 ### LAUNCH CONFIGURATION
@@ -23,14 +22,14 @@ IMAGES_FOLDER = 'kpi/images'
 # Warning: only dates and floats in params.json
 # KPI calculation parameters in <KPI_INPUT_FOLDER>/paramsKPI.json
 start_date = "2012-01-01"
-weeks = 4
+weeks = 52
 n_scenarios = 1
 
 
 ### COMPUTATION PHASES
-GENERATION_CHRONICS = True    # Il manque la partie dispatch. A integrer dans generation/thermal une fois Camilo prêt
+GENERATION_CHRONICS = False    # Il manque la partie dispatch. A integrer dans generation/thermal une fois Camilo prêt
 COMPUTE_KPI_ENR_ONLY = False     # Pour visualiser des KPIs sur solar et wind en attendant le dispatch
-COMPUTE_ALL_KPI = False         # En attendant que le dispatch soit prêt
+COMPUTE_ALL_KPI = True         # En attendant que le dispatch soit prêt
 
 
 
@@ -51,12 +50,12 @@ if COMPUTE_KPI_ENR_ONLY:
     wind_solar_only = True
     if not os.path.exists(KPI_INPUT_FOLDER):
         os.mkdir(KPI_INPUT_FOLDER)
-    kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, KPI_OUTPUT_FOLDER, IMAGES_FOLDER, year, CASE, n_scenarios, wind_solar_only, params)
+    kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, OUTPUT_FOLDER, IMAGES_FOLDER, year, CASE, n_scenarios, wind_solar_only, params)
 
 elif COMPUTE_ALL_KPI:
     # Get and format monthly optimized chronics
     wind_solar_only = False
     if not os.path.exists(KPI_INPUT_FOLDER):
         os.mkdir(KPI_INPUT_FOLDER)
-    kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, KPI_OUTPUT_FOLDER, IMAGES_FOLDER, year, CASE, n_scenarios, wind_solar_only, params)
+    kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, OUTPUT_FOLDER, IMAGES_FOLDER, year, CASE, n_scenarios, wind_solar_only, params)
 

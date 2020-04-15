@@ -32,6 +32,11 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
         prods_charac = pd.read_csv(os.path.abspath(generation_input_folder + '/' + case + '/prods_charac.csv'), sep=';')
         loads_charac = pd.read_csv(os.path.abspath(generation_input_folder + '/' + case + '/loads_charac.csv'), sep=';')
 
+    # Create single zone if no zone is given
+    if 'zone' not in prods_charac.columns:
+        prods_charac['zone'] = 'R1'
+        loads_charac['zone'] = 'R1'
+
     for scenario_num in range(n_scenarios):
         print('Scenario '+str(scenario_num)+'...')
         if params['weeks'] != 52:
