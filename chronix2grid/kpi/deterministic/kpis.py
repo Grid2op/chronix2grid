@@ -574,15 +574,24 @@ class EconomicDispatchValidator:
         n_ref = len(wind_ref.columns)
         n_syn = len(wind_syn.columns)
         n = max(n_ref, n_syn)
+        print(n)
         fig, axes = plt.subplots(2, n, figsize=(30, 10))
         for i, gen in enumerate(wind_ref.columns):
             ts = wind_ref[gen].values
-            axes[0,i].acorr(ts, maxlags=maxlags)
-            axes[0,i].set(title = 'Reference '+gen + ' ACF')
+            if n==1:
+                ax = axes[0]
+            else:
+                ax = axes[0,i]
+            ax.acorr(ts, maxlags=maxlags)
+            ax.set(title = 'Reference '+gen + ' ACF')
         for i, gen in enumerate(wind_syn.columns):
             ts = wind_syn[gen].values
-            axes[1,i].acorr(ts, maxlags=maxlags)
-            axes[1,i].set(title = 'Synthetic '+gen + ' ACF')
+            if n==1:
+                ax = axes[1]
+            else:
+                ax = axes[1,i]
+            ax.acorr(ts, maxlags=maxlags)
+            ax.set(title = 'Synthetic '+gen + ' ACF')
         if save_plots:
             fig.savefig(os.path.join(self.image_repo, 'wind_kpi', 'generators_autocorrelation.png'))
 
