@@ -5,10 +5,14 @@ import pandas as pd
 
 
 def eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_charac, year, params, corresp_regions):
+    # Initialize dataframes to fill*
+    print("Importing and formatting data downloaded from regional eco2mix data")
     conso_ = pd.DataFrame()
     prod = pd.DataFrame()
 
+    # Read data per region in corresp_regions
     for region_fictive in corresp_regions.keys():
+
         region = corresp_regions[region_fictive]
         repo_in = os.path.join(kpi_input_folder, 'France/eco2mix', 'eCO2mix_RTE_'+region+'_Annuel-Definitif_'+str(year)+'.csv')
 
@@ -28,12 +32,13 @@ def eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_char
                            'nuclear': ['Nucléaire'],
                            'hydro':['Hydraulique']}
 
-        # Read and rectify some strange values in eco2mix
+        # Read and correct some strange values in eco2mix
         eco2mix = pd.read_csv(repo_in, sep = ';', encoding = 'latin1', decimal = ',')
         eco2mix = eco2mix.replace('ND', 0)
         eco2mix['Solaire'] = eco2mix['Solaire'].mask(eco2mix['Solaire'] < 0, 0)
         eco2mix = eco2mix.replace('-', 0)
 
+        # Format columns names and types
         colToTake = ['Date', 'Heures', 'Consommation']
         for col in ['Fioul', 'Charbon','Gaz','Bioénergies', 'Nucléaire','Eolien', 'Solaire', 'Hydraulique']:
             if col in eco2mix.columns:
@@ -55,7 +60,7 @@ def eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_char
                     agregate_carrier += df[carr]
             df[carrier_out] = agregate_carrier
 
-        # Equitable repartition on usecase generators
+        # Equitable repartition among region generators
         for carrier in gens.keys():
             n = len(gens[carrier])
             for col in gens[carrier]:
@@ -79,7 +84,7 @@ def eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_char
         for col in loads:
             conso[col] = agg_conso/len(loads)
 
-        # Equalize timeline with synthetic
+        # Equalize timeline with synthetic chronics
         start_date = params['start_date']
         end_date = params['end_date']
         df = df[(df.index >= start_date) & (df.index < end_date)]
@@ -100,75 +105,9 @@ def eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_char
         price = None
     return prod, conso_, price
 
-def eco2mix_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, year, params):
-    repo_in = os.path.join(kpi_input_folder, 'eco2mix', 'eCO2mix_RTE_Annuel-Definitif_'+str(year)+'.csv')
-
-    gens = {}
-    gens['solar'] = prods_charac[prods_charac['type'] == 'solar']['name'].values
-    gens['wind'] = prods_charac[prods_charac['type'] == 'wind']['name'].values
-    gens['hydro'] = prods_charac[prods_charac['type'] == 'hydro']['name'].values
-    gens['nuclear'] = prods_charac[prods_charac['type'] == 'nuclear']['name'].values
-    gens['thermal'] = prods_charac[prods_charac['type'] == 'thermal']['name'].values
-
-    corresp_carrier = {'thermal':['Gaz','Fioul','Bioénergies','Charbon'],
-                       'solar':['Solaire'],
-                       'wind':['Eolien'],
-                       'nuclear': ['Nucléaire'],
-                       'hydro':['Hydraulique','Pompage']}
-
-    eco2mix = pd.read_csv(repo_in, sep = ';', encoding = 'latin1', decimal = ',')
-    df = eco2mix[['Date', 'Heures', 'Fioul', 'Charbon','Gaz','Bioénergies', 'Nucléaire','Eolien', 'Solaire', 'Hydraulique','Pompage']]
-
-    # Time formatting
-    df['Space'] = ' '
-    df['Time'] = df['Date']+df['Space']+df['Heures']
-    df['Time'] = pd.to_datetime(df['Time'], infer_datetime_format=True)
-    df.set_index('Time', drop=False, inplace=True)
-
-    # Production formatting
-    for carrier_out in corresp_carrier.keys():
-        df[carrier_out] = df[corresp_carrier[carrier_out]].sum(axis = 1)
-
-    # # Temporary
-    # tmp = df[['solar']].copy()
-    # tmp = tmp.resample('1H').first()
-    # array = tmp['solar'].to_numpy()
-    # print(tmp)
-    # print(array)
-    # file = open(r'D:\RTE\Challenge\1 - Développement\ChroniX2Grid\chronix2grid\generation\input_Nico\solar_pattern.npy', 'wb')
-    # tmp.save(file, array)
-
-    # Equitable repartition on usecase generators
-    for carrier in gens.keys():
-        n = len(gens[carrier])
-        for col in gens[carrier]:
-            df[col] = df[carrier]/n
-
-    df.drop(columns=['Space', 'Date', 'Heures',
-                     'Fioul', 'Charbon', 'Gaz', 'Bioénergies', 'Nucléaire', 'Eolien', 'Solaire', 'Hydraulique',
-                     'Pompage']+list(corresp_carrier.keys()), inplace=True)
-
-    # Resampling
-    df = df.resample(timestep).first()
-
-    # Load computation
-    loads = loads_charac['name'].unique()
-    agg_conso = df.sum(axis = 1).values
-
-    # Equitable repartition on loads nodes
-    conso = pd.DataFrame({'Time': df['Time']})
-    for col in loads:
-        conso[col] = agg_conso/len(loads)
-
-    # Equalize timeline with synthetic
-    start_date = params['start_date']
-    end_date = params['end_date']
-    df = df[(df.index >= start_date) & (df.index < end_date)]
-    conso = conso[(conso.index>=start_date)&(conso.index<end_date)]
-
-    return df, conso
-
 def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac, year, params, corresp_regions):
+
+    # Initialize data frame for production
     print("Importing and formatting data downloaded from Renewable Ninja API")
     repo_in_solar = os.path.join(kpi_input_folder, 'France/renewable_ninja', 'solar_case118_' + str(year) + '.csv')
     ninja_solar = pd.read_csv(repo_in_solar, sep=';', encoding='latin1', decimal='.')
@@ -177,7 +116,7 @@ def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac
     timestep_ninja = 60 # Pas de temps une heure dans l'extraction renewable ninja
     ninja = pd.concat([ninja_solar, ninja_wind], axis = 1)
 
-    # Time column to add !
+    # Time column to add
     start_date = pd.to_datetime(str(year)+'-01-01')
     end_date = pd.to_datetime(str(year+1) + '-01-01')
     datetime_index = pd.date_range(
@@ -199,7 +138,7 @@ def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac
     for gen in gens:
         ninja[gen] = 0.
 
-    ## Load from regional eco2mix
+    ## Electricty consumption from regional eco2mix
     conso_ = pd.DataFrame()
 
     for region_fictive in corresp_regions.keys():
@@ -218,6 +157,8 @@ def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac
         df['Time'] = df['Date'] + df['Space'] + df['Heures']
         df['Time'] = pd.to_datetime(df['Time'], infer_datetime_format=True)
         df.set_index('Time', drop=False, inplace=True)
+
+        # Correct some strange values in eco2mix data
         df = df.replace('-', 0)
         df = df.replace('ND', 0)
 
@@ -226,14 +167,11 @@ def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac
         df = df.resample(timestep).first()
         agg_conso = df['Consommation'].astype(float)
 
-        # Load computation
-        loads = loads_charac_['name'].unique()
-
         # Equitable repartition on loads nodes
+        loads = loads_charac_['name'].unique()
         conso = pd.DataFrame({'Time': df['Time']})
         for col in loads:
             conso[col] = agg_conso / len(loads)
-
         conso_ = pd.concat([conso_, conso], axis = 1)
 
     # Equalize timeline with synthetic
@@ -244,64 +182,43 @@ def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac
 
     return ninja, conso_
 
-def chronics_to_kpi(year, n_scenario, repo_in, timestep, params, thermal = True, monthly = False):
+def chronics_to_kpi(year, n_scenario, chronics_repo, timestep, params, thermal = True):
 
-    print(" Formatting chronics for KPI")
+    print("Importing and formatting synthetic chronics")
 
     if thermal:
+        ## Format when all dispatch is generated
 
-        if monthly:
-            price = pd.DataFrame()
-            prod_p = pd.DataFrame()
-            load_p = pd.DataFrame()
+        # Read generated chronics after dispatch phase
+        folder = os.path.join(chronics_repo, str(year), 'Scenario_' + str(n_scenario))
+        prod_p = pd.read_csv(os.path.join(folder, 'prod_p.csv.bz2'), sep=';', decimal='.')
+        load_p = pd.read_csv(os.path.join(folder, 'load_p.csv.bz2'), sep=';', decimal='.')
+        price = pd.read_csv(os.path.join(folder, 'prices.csv.bz2'), sep=';', decimal='.')
 
-            for month in range(1, 13):
-                print('Month number ' + str(month))
+        # Rebuild timeline
+        datetime_index = pd.date_range(
+            start=params['start_date'],
+            end=params['end_date'],
+            freq=str(params['dt']) + 'min')
 
-                folder = os.path.join(repo_in, str(year), 'Scenario_'+str(n_scenario), str(year)+'_'+str(month))
-                prod_p_ = pd.read_csv(os.path.join(folder,'prod_p.csv.bz2'), sep = ';', decimal = '.')
-                load_p_ = pd.read_csv(os.path.join(folder,'load_p.csv.bz2'), sep = ';', decimal = '.')
-                price_ = pd.read_csv(os.path.join(folder,'price.csv'), sep = ';', decimal = '.')
-
-                for df in load_p_, prod_p_:
-                    df.rename(columns = {'datetime':'Time'}, inplace = True)
-
-                prod_p = prod_p.append(prod_p_)
-                load_p = load_p.append(load_p_)
-                price = price.append(price_)
-            price['Time'] = load_p['Time']
-
-        else:
-            print('Year ' + str(year))
-            folder = os.path.join(repo_in, str(year), 'Scenario_' + str(n_scenario))
-            prod_p = pd.read_csv(os.path.join(folder, 'prod_p.csv.bz2'), sep=';', decimal='.')
-            load_p = pd.read_csv(os.path.join(folder, 'load_p.csv.bz2'), sep=';', decimal='.')
-            price = pd.read_csv(os.path.join(folder, 'prices.csv.bz2'), sep=';', decimal='.')
-
-            # Rebuild of timeline
-            datetime_index = pd.date_range(
-                start=params['start_date'],
-                end=params['end_date'],
-                freq=str(params['dt']) + 'min')
-
-            prod_p['Time'] = datetime_index[:len(prod_p)]
-            load_p['Time'] = datetime_index[:len(load_p)]
-            price['Time'] = datetime_index[:len(price)]
-            #load_p.rename(columns={'datetime': 'Time'}, inplace=True)
+        prod_p['Time'] = datetime_index[:len(prod_p)]
+        load_p['Time'] = datetime_index[:len(load_p)]
+        price['Time'] = datetime_index[:len(price)]
 
     else:
-        print('Year '+str(year))
-        folder = os.path.join(repo_in, 'dispatch', str(year), 'Scenario_' + str(n_scenario))
-        solar_p = pd.read_csv(os.path.join(folder, 'solar_p.csv.bz2'), sep=';', decimal='.')
+        ## Format synthetic chronics when no dispatch has been done
 
+        # Read generated chronics
+        folder = os.path.join(chronics_repo, 'dispatch', str(year), 'Scenario_' + str(n_scenario))
+
+        solar_p = pd.read_csv(os.path.join(folder, 'solar_p.csv.bz2'), sep=';', decimal='.')
         wind_p = pd.read_csv(os.path.join(folder, 'wind_p.csv.bz2'), sep=';', decimal='.')
         wind_p.drop(columns = ['datetime'],inplace = True)
-
+        prod_p = pd.concat([solar_p, wind_p], axis=1)
 
         load_p = pd.read_csv(os.path.join(folder, 'load_p.csv.bz2'), sep=';', decimal='.')
 
-        prod_p = pd.concat([solar_p, wind_p], axis=1)
-
+        # Timeline has already been written
         for df in load_p, prod_p:
             df.rename(columns={'datetime': 'Time'}, inplace=True)
 
@@ -314,6 +231,7 @@ def chronics_to_kpi(year, n_scenario, repo_in, timestep, params, thermal = True,
     prod_p.set_index('Time', drop=False, inplace=True)
     prod_p = prod_p.resample(timestep).first()
 
+    ## Return with price if dispatch has been made
     if not thermal:
         return prod_p, load_p
     if thermal:
@@ -321,4 +239,3 @@ def chronics_to_kpi(year, n_scenario, repo_in, timestep, params, thermal = True,
         price.set_index('Time', drop=True, inplace=True)
         price = price.resample(timestep).first()
         return prod_p, load_p, price
-
