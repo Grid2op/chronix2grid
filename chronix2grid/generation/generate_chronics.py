@@ -91,8 +91,7 @@ def main(year, n_scenarios, params, input_folder, output_folder, prods_charac, l
 
         prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = gen_enr.main(i, dispatch_input_folder, seed,params, prods_charac, solar_pattern, write_results = True)
 
-        gen_dispatch.main(i, load, prod_solar, prod_wind, out_folder, seed, params,
-                          prods_charac, lines, compute_hazards = True)
+#        gen_dispatch.main(i, load, prod_solar, prod_wind, out_folder, seed, params,
+#                          prods_charac, lines, compute_hazards = True)
         print('\n')
     return
-

@@ -7,8 +7,7 @@ from . import dispatch_utils as disp
 from .EDispatch_L2RPN2020 import run_economic_dispatch
 
 
-def main(dispatcher, input_folder, output_folder, seed, params, lines,
-         params_opf, compute_hazards=True):
+def main(dispatcher, input_folder, output_folder, seed, params_opf):
 
     np.random.seed(seed)
 
@@ -25,14 +24,6 @@ def main(dispatcher, input_folder, output_folder, seed, params, lines,
     )
 
     dispatcher.save_results(output_folder)
-
-    print('Generating maintenance and hazard signals ...')
-    if compute_hazards:
-        maintenance = disp.compute_random_event('maintenance', lines, params)
-        hazards = disp.compute_random_event('hazards', lines, params)
-        disp.create_csv(maintenance, os.path.join(output_folder, 'maintenance.csv.bz2'), reordering=True)
-        disp.create_csv(maintenance, os.path.join(output_folder, 'maintenance_forecasted.csv.bz2'), reordering=True)
-        disp.create_csv(hazards, os.path.join(output_folder, 'hazards.csv.bz2'), reordering=True)
 
     shutil.copy(os.path.join(input_folder, 'load_p_forecasted.csv.bz2'),
                 os.path.join(output_folder, 'load_p_forecasted.csv.bz2'))
