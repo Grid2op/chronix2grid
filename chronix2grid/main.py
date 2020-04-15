@@ -1,10 +1,7 @@
 # Native python packages
 import os
 
-# Other python packages
-
-
-# Modules
+# Chronix2grid modules
 import generation.generate_chronics as gen
 import kpi.main as kpis
 
@@ -15,7 +12,7 @@ OUTPUT_FOLDER = 'generation/output'
 CASE = 'case118_l2rpn'
 OUTPUT_FOLDER = os.path.join(OUTPUT_FOLDER, CASE)
 KPI_INPUT_FOLDER = 'kpi/input'
-IMAGES_FOLDER = 'kpi/images'
+IMAGES_FOLDER = os.path.join('kpi/images', CASE)
 
 ### LAUNCH CONFIGURATION
 # Chronic generation parameters in <INPUT_FOLDER>/<CASE>/params.json
@@ -48,14 +45,12 @@ if GENERATION_CHRONICS:
 if COMPUTE_KPI_ENR_ONLY:
     # Get and format solar and wind on all timescale, then compute KPI and save plots
     wind_solar_only = True
-    if not os.path.exists(KPI_INPUT_FOLDER):
-        os.mkdir(KPI_INPUT_FOLDER)
-    kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, OUTPUT_FOLDER, IMAGES_FOLDER, year, CASE, n_scenarios, wind_solar_only, params)
+    os.makedirs(IMAGES_FOLDER, exist_ok=True)
+    kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, OUTPUT_FOLDER, IMAGES_FOLDER, year, CASE, n_scenarios, wind_solar_only, params, loads_charac, prods_charac)
 
 elif COMPUTE_ALL_KPI:
-    # Get and format monthly optimized chronics
+    # Get and format dispatched chronics, then compute KPI and save plots
     wind_solar_only = False
-    if not os.path.exists(KPI_INPUT_FOLDER):
-        os.mkdir(KPI_INPUT_FOLDER)
-    kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, OUTPUT_FOLDER, IMAGES_FOLDER, year, CASE, n_scenarios, wind_solar_only, params)
+    os.makedirs(IMAGES_FOLDER, exist_ok=True)
+    kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, OUTPUT_FOLDER, IMAGES_FOLDER, year, CASE, n_scenarios, wind_solar_only, params, loads_charac, prods_charac)
 
