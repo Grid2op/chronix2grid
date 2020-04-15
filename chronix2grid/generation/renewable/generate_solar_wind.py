@@ -30,7 +30,6 @@ def main(i, destination_folder, seed, params, prods_charac, solar_pattern, write
     pandas.DataFrame: solar and wind production chronics generated at every node with additional gaussian noise
     pandas.DataFrame: solar and wind production chronics forecasted for the scenario without additional gaussian noise
     """
-
     np.random.seed(seed)
     smoothdist = params['smoothdist']
 
@@ -92,7 +91,7 @@ def main(i, destination_folder, seed, params, prods_charac, solar_pattern, write
     print('Saving files in zipped csv')
     scenario_destination_path = os.path.join(destination_folder, 'Scenario_' + str(i))
     if not os.path.exists(scenario_destination_path):
-        os.mkdir(scenario_destination_path)
+        os.makedirs(scenario_destination_path)
     prod_solar_forecasted =  swutils.create_csv(solar_series, os.path.join(scenario_destination_path, 'solar_p_forecasted.csv.bz2'),
                   reordering=True,
                   shift=True,
@@ -115,5 +114,14 @@ def main(i, destination_folder, seed, params, prods_charac, solar_pattern, write
     prod_p = swutils.create_csv(prods_series, os.path.join(scenario_destination_path, 'prod_p.csv.bz2'),
                                    reordering=True,
                                    noise=params['planned_std'], write_results = write_results)
-    
+
+    prod_v = prods_charac[['name', 'V']].set_index('name')
+    prod_v = prod_v.T
+    prod_v.index = [0]
+    prod_v = prod_v.reindex(range(len(prod_p)))
+    prod_v = prod_v.fillna(method='ffill') * 1.04
+
+    prod_v.to_csv(os.path.join(scenario_destination_path, 'prod_v.csv.bz2'),
+                  sep=';', index=False)
+
     return prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted
