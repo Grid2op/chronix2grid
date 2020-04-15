@@ -52,15 +52,11 @@ def main(i, destination_folder, seed, params, loads_charac, load_weekly_pattern,
     print('Saving files in zipped csv in "{}"'.format(scenario_destination_path))
     if not os.path.exists(scenario_destination_path):
         os.mkdir(scenario_destination_path)
-    load_forecasted = conso.create_csv(loads_series, os.path.join(scenario_destination_path, 'load_p_forecasted.csv.bz2'),
-                  reordering=True,
+    load_p_forecasted = conso.create_csv(loads_series, scenario_destination_path,
+                                         forecasted=True, reordering=True,
                   shift=True, write_results=write_results, index=False)
-    load = conso.create_csv(loads_series, os.path.join(scenario_destination_path, 'load_p.csv.bz2'),
+    load_p = conso.create_csv(loads_series, scenario_destination_path,
                   reordering=True,
                   noise=params['planned_std'], write_results=write_results, index=True)
     
-    return load, load_forecasted
-
-
-
-    
+    return load_p, load_p_forecasted

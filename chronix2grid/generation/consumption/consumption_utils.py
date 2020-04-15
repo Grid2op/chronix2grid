@@ -229,8 +229,8 @@ def interpolate_noise(computation_noise, params, locations, time_scale):
     return output
 
 
-def create_csv(dict_, path, reordering=True, noise=None, shift=False,
-               with_pdb=False, write_results=True, index=True):
+def create_csv(dict_, path, forecasted=False, reordering=True, noise=None, shift=False,
+               write_results=True, index=True):
     df = pd.DataFrame.from_dict(dict_)
     df.set_index('datetime', inplace = True)
     df = df.sort_index(ascending=True)
@@ -241,15 +241,23 @@ def create_csv(dict_, path, reordering=True, noise=None, shift=False,
             value.append(natural_keys(name))
         new_ordering = [x for _,x in sorted(zip(value,list(df)))]
         df = df[new_ordering]
-    if noise is not None:
-        df *= (1+noise*np.random.normal(0, 1, df.shape))
     if shift:
         df = df.shift(-1)
         df = df.fillna(0)
-    # if with_pdb:
-    #     pdb.set_trace()
+
+    df_reactive_power = 0.7 * df
+    if noise is not None:
+        df *= (1+noise*np.random.normal(0, 1, df.shape))
+        df_reactive_power *= (1+noise*np.random.normal(0, 1, df.shape))
+
     if write_results:
-        df.to_csv(path, index=index, sep=';', float_format='%.1f')
+        file_extension = '_forecasted' if forecasted else ''
+        df.to_csv(
+            os.path.join(path, f'load_p{file_extension}.csv.bz2'),
+            index=index, sep=';', float_format='%.1f')
+        df_reactive_power.to_csv(
+            os.path.join(path, f'load_q{file_extension}.csv.bz2'),
+            index=index, sep=';', float_format='%.1f')
 
     return df
 
