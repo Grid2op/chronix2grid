@@ -54,10 +54,10 @@ def main(i, destination_folder, seed, params, loads_charac, load_weekly_pattern,
         os.mkdir(scenario_destination_path)
     load_forecasted = conso.create_csv(loads_series, os.path.join(scenario_destination_path, 'load_p_forecasted.csv.bz2'),
                   reordering=True,
-                  shift=True, write_results = write_results)
+                  shift=True, write_results=write_results, index=False)
     load = conso.create_csv(loads_series, os.path.join(scenario_destination_path, 'load_p.csv.bz2'),
                   reordering=True,
-                  noise=params['planned_std'], write_results = write_results)
+                  noise=params['planned_std'], write_results=write_results, index=True)
     
     return load, load_forecasted
 

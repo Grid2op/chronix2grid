@@ -1,6 +1,7 @@
 """Class for the economic dispatch framework. Allows to parametrize and run
 an economic dispatch based on RES and consumption time series"""
 
+from collections import namedtuple
 from copy import deepcopy
 import datetime as dt
 import os
@@ -13,8 +14,9 @@ from chronix2grid.generation.dispatch.utils import RampMode
 from chronix2grid.generation.thermal.EDispatch_L2RPN2020.run_economic_dispatch import (
     main_run_disptach)
 
+DispatchResults = namedtuple('DispatchResults', ['chronix', 'terminal_conditions'])
 
-class Dispatch(pypsa.Network):
+class Dispatcher(pypsa.Network):
     """Wrapper around a pypsa.Network to add higher level methods"""
 
     def __init__(self, *args, **kwargs):
@@ -22,30 +24,44 @@ class Dispatch(pypsa.Network):
         self.add('Bus', 'node')
         self.add('Load', name='agg_load', bus='node')
         self._env = None  # The grid2op environment when instanciated with from_gri2dop_env
-        self._res_load_scenario = None
-        self._simplified_res_load_scenario = None
+        self._chronix_scenario = None
+        self._simplified_chronix_scenario = None
         self._has_results = False
         self._has_simplified_results = False
 
     @property
     def wind_p(self):
-        if self._res_load_scenario is None:
-            raise Exception('Cannot access this property before instantiated the Load and'
+        if self._chronix_scenario is None:
+            raise Exception('Cannot access this property before instantiated the Load and '
                             'renewables scenario.')
-        return self._res_load_scenario.wind_p
+        return self._chronix_scenario.wind_p
 
     @property
     def solar_p(self):
-        if self._res_load_scenario is None:
-            raise Exception('Cannot access this property before instantiated the Load and'
+        if self._chronix_scenario is None:
+            raise Exception('Cannot access this property before instantiated the Load and '
                             'renewables scenario.')
-        return self._res_load_scenario.solar_p
+        return self._chronix_scenario.solar_p
+
+    @property
+    def chronix_scenario(self):
+        if self._chronix_scenario is None:
+            raise Exception('Cannot access this property before instantiated the Load and '
+                            'renewables scenario.')
+        return self._chronix_scenario
+
+    @chronix_scenario.setter
+    def chronix_scenario(self, chronix_scenario):
+        if not isinstance(chronix_scenario, ChroniXScenario):
+            raise Exception('The chronix_scenario argument should be an instance of '
+                            'ChronixScenario.')
+        self._chronix_scenario = chronix_scenario
 
     def net_load(self, losses_pct, name):
-        if self._res_load_scenario is None:
+        if self._chronix_scenario is None:
             raise Exception('Cannot compute net load before instantiated the Load and'
                             'renewables scenario.')
-        return self._res_load_scenario.net_load(losses_pct, name)
+        return self._chronix_scenario.net_load(losses_pct, name)
 
     def nlargest_ramps(self, n, losses_pct):
         ramps = self.net_load(losses_pct, "").diff()
@@ -108,20 +124,22 @@ class Dispatch(pypsa.Network):
             solar=[name for i, name in enumerate(self._env.name_gen)
                    if self._env.gen_type[i] == 'solar']
         )
-        self._res_load_scenario = ChroniXScenario.from_disk(load_path_file, prod_path_file,
-                                                  res_names, scenario_name=scenario_name)
+        self._chronix_scenario = ChroniXScenario.from_disk(load_path_file, prod_path_file,
+                                                           res_names, scenario_name=scenario_name)
 
     def make_hydro_constraints_from_res_load_scenario(self):
-        if self._res_load_scenario is None or self._hydro_file_path is None:
+        if self._chronix_scenario is None or self._hydro_file_path is None:
             raise Exception('This method can only be applied when a Scenario for load'
                             'and renewables has been instantiated and hydro guide'
                             'curves have been read.')
-        index_slice = self._res_load_scenario.loads.index.map(
+        index_slice = self._chronix_scenario.loads.index.map(
            lambda x: (x.month, x.day, x.hour, x.minute, x.second)
         )
 
         self._min_hydro_pu = self._min_hydro_pu.reindex(index_slice).fillna(method='ffill')
         self._max_hydro_pu = self._max_hydro_pu.reindex(index_slice).fillna(method='ffill')
+
+        return {'p_max_pu': self._max_hydro_pu.copy(), 'p_min_pu': self._min_hydro_pu.copy()}
 
     def modify_marginal_costs(self, new_costs):
         """
@@ -154,7 +172,7 @@ class Dispatch(pypsa.Network):
 
     def simplify_net(self):
         carriers = self.generators.carrier.unique()
-        simplified_net = Dispatch()
+        simplified_net = Dispatcher()
         for carrier in carriers:
             names = self.generators[self.generators.carrier == carrier].index.tolist()
 
@@ -194,31 +212,31 @@ class Dispatch(pypsa.Network):
             self if not by_carrier else self.simplify_net(),
             load, params, gen_constraints, ramp_mode)
         if by_carrier:
-            self._simplified_res_load_scenario = self._res_load_scenario.simplify_chronix()
-            self._simplified_res_load_scenario.prods_dispatch = prods_dispatch
-            self._simplified_res_load_scenario.marginal_prices = marginal_prices
-            results = self._simplified_res_load_scenario
+            self._simplified_chronix_scenario = self._chronix_scenario.simplify_chronix()
+            self._simplified_chronix_scenario.prods_dispatch = prods_dispatch
+            self._simplified_chronix_scenario.marginal_prices = marginal_prices
+            results = self._simplified_chronix_scenario
             self._has_simplified_results = True
             self._has_results = False
         else:
-            self._res_load_scenario.prods_dispatch = prods_dispatch
-            self._res_load_scenario.marginal_prices = marginal_prices
-            results = self._res_load_scenario
+            self._chronix_scenario.prods_dispatch = prods_dispatch
+            self._chronix_scenario.marginal_prices = marginal_prices
+            results = self._chronix_scenario
             self._has_results = True
             self._has_simplified_results = False
         self.reset_ramps_from_grid2op_env()
-        return results, terminal_conditions
+        return DispatchResults(chronix=results, terminal_conditions=terminal_conditions)
 
-    def save_results(self, parent_folder_path):
+    def save_results(self, output_folder):
         if not self._has_results and not self._has_simplified_results:
             print('The optimization has first to run successfully in order to '
                   'save results.')
         if self._has_results:
             print('Saving results for the grids with individual generators...')
-            res_load_scenario = self._res_load_scenario
+            res_load_scenario = self.chronix_scenario
         else:
             print('Saving results for the grids with aggregated generators by carriers...')
-            res_load_scenario = self._simplified_res_load_scenario
+            res_load_scenario = self._simplified_chronix_scenario
 
         full_opf_dispatch = pd.concat(
             [res_load_scenario.prods_dispatch, res_load_scenario.wind_p,
@@ -232,21 +250,17 @@ class Dispatch(pypsa.Network):
             # using the save function before instanciating an env.
             pass
 
-        saving_folder = os.path.join(
-            parent_folder_path, self._res_load_scenario.name, 'chronics')
-        if not os.path.exists(saving_folder):
-            os.makedirs(saving_folder)
-        print(f'Saving chronics into {saving_folder}')
+        print(f'Saving chronics into {output_folder}')
         full_opf_dispatch.to_csv(
-            os.path.join(saving_folder, "prod_p.csv.bz2"),
+            os.path.join(output_folder, "prod_p.csv.bz2"),
             sep=';', index=False
         )
         res_load_scenario.marginal_prices.to_csv(
-            os.path.join(saving_folder, "prices.csv.bz2"),
+            os.path.join(output_folder, "prices.csv.bz2"),
             sep=';', index=False
         )
         res_load_scenario.loads.to_csv(
-            os.path.join(saving_folder, "load_p.csv.bz2"),
+            os.path.join(output_folder, "load_p.csv.bz2"),
             sep=';', index=False
         )
 
@@ -303,7 +317,7 @@ if __name__ == "__main__":
               }
     chronics_path_gen = os.path.join(INPUT_FOLDER, "dispatch", str(2012))
     this_path = os.path.join(chronics_path_gen, 'Scenario_0')
-    dispatch = Dispatch.from_gri2op_env(env118_blank)
+    dispatch = Dispatcher.from_gri2op_env(env118_blank)
     dispatch.read_hydro_guide_curves(os.path.join(INPUT_FOLDER, 'patterns', 'hydro.csv'))
     dispatch.read_load_and_res_scenario(os.path.join(this_path, 'load_p.csv.bz2'),
                                         os.path.join(this_path, 'prod_p.csv.bz2'),
