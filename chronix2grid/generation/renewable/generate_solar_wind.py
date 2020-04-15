@@ -7,6 +7,8 @@ import numpy as np
 
 # Libraries developed for this module
 from . import solar_wind_utils as swutils
+import generation.generation_utils as utils
+
 
 
 def main(i, destination_folder, seed, params, prods_charac, solar_pattern, write_results = True):
@@ -41,10 +43,10 @@ def main(i, destination_folder, seed, params, prods_charac, solar_pattern, write
 
     # Generate GLOBAL temperature noise
     print('Computing global auto-correlated spatio-temporal noise for sun and wind...')
-    solar_noise = swutils.generate_coarse_noise(params, 'solar')
-    long_scale_wind_noise = swutils.generate_coarse_noise(params, 'long_wind')
-    medium_scale_wind_noise = swutils.generate_coarse_noise(params, 'medium_wind')
-    short_scale_wind_noise = swutils.generate_coarse_noise(params, 'short_wind')
+    solar_noise = utils.generate_coarse_noise(params, 'solar')
+    long_scale_wind_noise = utils.generate_coarse_noise(params, 'long_wind')
+    medium_scale_wind_noise = utils.generate_coarse_noise(params, 'medium_wind')
+    short_scale_wind_noise = utils.generate_coarse_noise(params, 'short_wind')
 
     # Compute Wind and solar series of scenario
     print('Generating solar and wind production chronics')
@@ -95,7 +97,7 @@ def main(i, destination_folder, seed, params, prods_charac, solar_pattern, write
     prod_solar_forecasted =  swutils.create_csv(solar_series, os.path.join(scenario_destination_path, 'solar_p_forecasted.csv.bz2'),
                   reordering=True,
                   shift=True,
-                  with_pdb=True, write_results=write_results, index=False)
+                  write_results=write_results, index=False)
 
     prod_solar = swutils.create_csv(solar_series, os.path.join(scenario_destination_path, 'solar_p.csv.bz2'),
                   reordering=True,
@@ -105,7 +107,7 @@ def main(i, destination_folder, seed, params, prods_charac, solar_pattern, write
                                                os.path.join(scenario_destination_path, 'wind_p_forecasted.csv.bz2'),
                                                reordering=True,
                                                shift=True,
-                                               with_pdb=True, write_results=write_results, index=False)
+                                               write_results=write_results, index=False)
 
     prod_wind = swutils.create_csv(wind_series, os.path.join(scenario_destination_path, 'wind_p.csv.bz2'),
                                     reordering=True,

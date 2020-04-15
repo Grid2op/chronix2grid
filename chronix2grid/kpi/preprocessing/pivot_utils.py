@@ -5,7 +5,7 @@ import pandas as pd
 
 
 def eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_charac, year, params, corresp_regions):
-    # Initialize dataframes to fill*
+    # Initialize dataframes to fill
     print("Importing and formatting data downloaded from regional eco2mix data")
     conso_ = pd.DataFrame()
     prod = pd.DataFrame()
@@ -190,7 +190,7 @@ def chronics_to_kpi(year, n_scenario, chronics_repo, timestep, params, thermal =
         ## Format when all dispatch is generated
 
         # Read generated chronics after dispatch phase
-        folder = os.path.join(chronics_repo, str(year), 'Scenario_' + str(n_scenario))
+        folder = os.path.join(chronics_repo, str(year), 'Scenario_' + str(n_scenario), 'chronics')
         prod_p = pd.read_csv(os.path.join(folder, 'prod_p.csv.bz2'), sep=';', decimal='.')
         load_p = pd.read_csv(os.path.join(folder, 'load_p.csv.bz2'), sep=';', decimal='.')
         price = pd.read_csv(os.path.join(folder, 'prices.csv.bz2'), sep=';', decimal='.')

@@ -1,11 +1,8 @@
 from scipy.interpolate import interp1d
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import os
-import re
-import copy
-import pdb
+import generation.generation_utils as utils
 
 def compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern):
     # Compute active part of loads
@@ -26,10 +23,9 @@ def compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern):
 
 def compute_residential(locations, Pmax, temperature_noise, params, weekly_pattern, index):
 
-    # What if we want more than 1 year???
 
     # Compute refined signals
-    temperature_signal = interpolate_noise(
+    temperature_signal = utils.interpolate_noise(
         temperature_noise,
         params,
         locations,
@@ -72,19 +68,6 @@ def compute_load_pattern(params, weekly_pattern, index):
     weekly_pattern = weekly_pattern[(index * index_weekly_perweek):((index + 1) * index_weekly_perweek)]
     weekly_pattern /= np.mean(weekly_pattern)
 
-    # # # pdb.set_trace()
-    # #
-    # fig, ax = plt.subplots(figsize=(16, 10))
-    # plt.plot(weekly_pattern)
-    # # ax.hist(center_reduce(solar_tmp), 1000, density=True, label="Gen", alpha=0.3)
-    # # ax.hist(center_reduce(solar_2017), 100, density=True, label="FR", alpha=0.3)
-    # plt.title("load {}".format(index))
-    # plt.legend()
-    # plt.show()
-    #
-    # plt.plot(weekly_pattern)
-    # plt.show()
-
     start_year = pd.to_datetime(str(params['start_date'].year) + '/01/01', format='%Y-%m-%d')
     T_bis = int(pd.Timedelta(params['end_date'] - start_year).total_seconds() // (60))
 
@@ -106,128 +89,7 @@ def compute_load_pattern(params, weekly_pattern, index):
     output = f2(t_inter)
     output = output * (output > 0)
 
-    # pdb.set_trace()
-    # fig, ax = plt.subplots(figsize=(16, 10))
-    # plt.plot(output[:index_weekly_perweek])
-    # # ax.hist(center_reduce(solar_tmp), 1000, density=True, label="Gen", alpha=0.3)
-    # # ax.hist(center_reduce(solar_2017), 100, density=True, label="FR", alpha=0.3)
-    # plt.title("load {}".format(index))
-    # plt.legend()
-    # plt.show()
-
     return output
-
-def generate_coarse_noise(params, data_type):
-    """
-    This function generates a spatially and temporally correlated noise.
-    Because it may take a lot of time to compute a correlated noise on
-    a too fine mesh, we recommend to first compute a correlated signal
-    on a coarse mesh, and then use the interpolation function.
-
-    Input:
-        params: (dict) Defines the mesh dimensions and
-            precision. Also define the correlation scales
-
-    Output:
-        (np.array) 3D autocorrelated noise
-    """
-
-    # Get computation domain size
-    Lx = params['Lx']
-    Ly = params['Ly']
-    T = params['T']
-
-    # Get the decay parameter for each dimension
-    dx_corr = params['dx_corr']
-    dy_corr = params['dy_corr']
-    dt_corr = params[data_type + '_corr']
-
-    # Compute number of element in each dimension
-    Nx_comp = int(Lx // dx_corr + 1)
-    Ny_comp = int(Ly // dy_corr + 1)
-    Nt_comp = int(T // dt_corr + 1)
-
-    # Generate gaussian noise input·
-    output = np.random.normal(0, 1, (Nx_comp, Ny_comp, Nt_comp))
-
-    return output
-
-def interpolate_noise(computation_noise, params, locations, time_scale):
-    """
-    This interpolates an autocarrelated noise mesh, to make it more granular.
-
-    Input:
-        computation_noise: (np.array) Autocorrelated signal computed on a coarse mesh
-        params: (dict) Defines the mesh dimensions and
-            precision. Also define the correlation scales
-        locations: (dict) Defines the location of the points of interest in the domain
-
-    Output:
-        (dict of np.array) returns one time series per location mentioned in dict locations
-    """
-
-    # Get computation domain size
-    Lx = params['Lx']
-    Ly = params['Ly']
-    T = params['T']
-
-    # Get the decay parameter for each dimension
-    dx_corr = params['dx_corr']
-    dy_corr = params['dy_corr']
-    dt_corr = time_scale
-
-    # Compute number of element in each dimension
-    Nx_comp = int(Lx // dx_corr + 1)
-    Ny_comp = int(Ly // dy_corr + 1)
-    Nt_comp = int(T // dt_corr + 1)
-
-    # Get interpolation temporal mesh size
-    dt = params['dt']
-
-    # Compute number of element in each dimension
-    Nt_inter = T // dt + 1
-
-    # Get coordinates
-    x, y = locations
-
-    # Get coordinates of closest points in the coarse mesh
-    x_minus = int(x // dx_corr)
-    x_plus = int(x // dx_corr + 1)
-    y_minus = int(y // dy_corr)
-    y_plus = int(y // dy_corr + 1)
-
-    # 1st step : spatial interpolation
-
-    # Initialize output
-    output = np.zeros(Nt_comp)
-
-    # Initialize sum of distances
-    dist_tot = 0
-
-    # For every close point, add the corresponding time series, weighted by the inverse
-    # of the distance between them
-    for x_neighbor in [x_minus, x_plus]:
-        for y_neighbor in [y_minus, y_plus]:
-            dist = 1 / (np.sqrt((x - dx_corr * x_neighbor) ** 2 + (y - dy_corr * y_neighbor) ** 2) + 1)
-            output += dist * computation_noise[x_neighbor, y_neighbor, :]
-            dist_tot += dist
-    output /= dist_tot
-
-    # 2nd step : temporal quadratic interpolation
-    t_comp = np.linspace(0, int(T), int(Nt_comp), endpoint=True)
-    t_inter = np.linspace(0, int(T), int(Nt_inter), endpoint=True)
-    if Nt_comp == 2:
-        f2 = interp1d(t_comp, output, kind='linear')
-    elif Nt_comp == 3:
-        f2 = interp1d(t_comp, output, kind='quadratic')
-    elif Nt_comp > 3:
-        f2 = interp1d(t_comp, output, kind='cubic')
-
-    if Nt_comp >= 2:
-        output = f2(t_inter)
-
-    return output
-
 
 def create_csv(dict_, path, forecasted=False, reordering=True, noise=None, shift=False,
                write_results=True, index=True):
@@ -238,7 +100,7 @@ def create_csv(dict_, path, forecasted=False, reordering=True, noise=None, shift
     if reordering:
         value = []
         for name in list(df):
-            value.append(natural_keys(name))
+            value.append(utils.natural_keys(name))
         new_ordering = [x for _,x in sorted(zip(value,list(df)))]
         df = df[new_ordering]
     if shift:
@@ -260,7 +122,4 @@ def create_csv(dict_, path, forecasted=False, reordering=True, noise=None, shift
             index=False, sep=';', float_format='%.1f')
 
     return df
-
-def natural_keys(text):
-    return int([ c for c in re.split('(\d+)', text) ][1])
 
