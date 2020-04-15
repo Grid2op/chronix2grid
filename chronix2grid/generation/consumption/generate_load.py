@@ -51,7 +51,7 @@ def main(i, destination_folder, seed, params, loads_charac, load_weekly_pattern,
     scenario_destination_path = os.path.join(destination_folder, 'Scenario_'+str(i))
     print('Saving files in zipped csv in "{}"'.format(scenario_destination_path))
     if not os.path.exists(scenario_destination_path):
-        os.mkdir(scenario_destination_path)
+        os.makedirs(scenario_destination_path)
     load_p_forecasted = conso.create_csv(loads_series, scenario_destination_path,
                                          forecasted=True, reordering=True,
                   shift=True, write_results=write_results, index=False)

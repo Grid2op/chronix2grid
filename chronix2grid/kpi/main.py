@@ -152,10 +152,10 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
 
         kpi_output_folder = os.path.join(kpi_input_folder, os.pardir, 'output', str(year))
         if not os.path.exists(kpi_output_folder):
-            os.mkdir(kpi_output_folder)
+            os.makedirs(kpi_output_folder)
         kpi_output_folder = os.path.join(kpi_output_folder,'Scenario_' + str(scenario_num))
         if not os.path.exists(kpi_output_folder):
-            os.mkdir(kpi_output_folder)
+            os.makedirs(kpi_output_folder)
 
         with open(os.path.join(kpi_output_folder,'ec_validator_output.json'), 'w') as json_f:
             json.dump(dispatch_validator.output, json_f)

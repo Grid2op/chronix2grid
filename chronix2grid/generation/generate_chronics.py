@@ -78,11 +78,11 @@ def main(year, n_scenarios, params, input_folder, output_folder, prods_charac, l
     # Make sure the output folders exist
     main_folder = os.path.join(dispatch_input_folder)
     if not os.path.exists(main_folder):
-        os.mkdir(main_folder)
+        os.makedirs(main_folder)
 
     out_folder = os.path.join(dispatch_output_folder)
     if not os.path.exists(out_folder):
-        os.mkdir(out_folder)
+        os.makedirs(out_folder)
 
     # Launch proper scenario generation
     for i, seed in enumerate(seeds):

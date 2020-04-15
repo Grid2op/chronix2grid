@@ -49,13 +49,13 @@ if COMPUTE_KPI_ENR_ONLY:
     # Get and format solar and wind on all timescale, then compute KPI and save plots
     wind_solar_only = True
     if not os.path.exists(KPI_INPUT_FOLDER):
-        os.mkdir(KPI_INPUT_FOLDER)
+        os.makedirs(KPI_INPUT_FOLDER)
     kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, OUTPUT_FOLDER, IMAGES_FOLDER, year, CASE, n_scenarios, wind_solar_only, params)
 
 elif COMPUTE_ALL_KPI:
     # Get and format monthly optimized chronics
     wind_solar_only = False
     if not os.path.exists(KPI_INPUT_FOLDER):
-        os.mkdir(KPI_INPUT_FOLDER)
+        os.makedirs(KPI_INPUT_FOLDER)
     kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, OUTPUT_FOLDER, IMAGES_FOLDER, year, CASE, n_scenarios, wind_solar_only, params)
 
