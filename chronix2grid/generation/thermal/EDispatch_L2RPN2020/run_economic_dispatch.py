@@ -95,14 +95,14 @@ def main_run_disptach(pypsa_net,
         axis=1)
 
     # Add noise to results
-    gen_cap = pypsa_net.generators.p_nom
-    prod_p_with_noise = add_noise_gen(prod_p, gen_cap, noise_factor=0.0007)
+    # gen_cap = pypsa_net.generators.p_nom
+    # prod_p_with_noise = add_noise_gen(prod_p, gen_cap, noise_factor=0.0007)
 
     end = time.time()
     print('Total time {} min'.format(round((end - start)/60, 2)))
     print('OPF Done......')
 
-    return prod_p_with_noise, termination_conditions, marginal_prices
+    return prod_p, termination_conditions, marginal_prices
 
 # In case to launch by the terminal
 # ++  ++  ++  ++  ++  ++  ++  ++  +

@@ -6,6 +6,7 @@ from copy import deepcopy
 import datetime as dt
 import os
 
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import pypsa
@@ -13,6 +14,7 @@ import pypsa
 from chronix2grid.generation.dispatch.utils import RampMode
 from chronix2grid.generation.thermal.EDispatch_L2RPN2020.run_economic_dispatch import (
     main_run_disptach)
+from chronix2grid.generation.thermal.EDispatch_L2RPN2020.utils import add_noise_gen
 
 DispatchResults = namedtuple('DispatchResults', ['chronix', 'terminal_conditions'])
 
@@ -250,11 +252,32 @@ class Dispatcher(pypsa.Network):
             # using the save function before instanciating an env.
             pass
 
+        gen_cap = pd.Series({gen_name: gen_pmax for gen_name, gen_pmax in
+                             zip(self._env.name_gen, self._env.gen_pmax)})
+        prod_p_with_noise = add_noise_gen(full_opf_dispatch, gen_cap, noise_factor=0.0007)
+
+        # prod_v_forecasted = pd.DataFrame(columns=prod_p_with_noise.columns,
+        #                              index=prod_p_with_noise.index,
+        #                              data=60 * 1.04)
+        # prod_v = prod_v_forecasted * (1 + 0.007 * np.random.normal(0, 1, prod_v_forecasted.shape))
+
         print(f'Saving chronics into {output_folder}')
         full_opf_dispatch.to_csv(
+            os.path.join(output_folder, "prod_p_forecasted.csv.bz2"),
+            sep=';', index=False
+        )
+        prod_p_with_noise.to_csv(
             os.path.join(output_folder, "prod_p.csv.bz2"),
             sep=';', index=False
         )
+        # prod_v_forecasted.to_csv(
+        #     os.path.join(output_folder, "prod_v_forecasted.csv.bz2"),
+        #     sep=';', index=False
+        # )
+        # prod_v.to_csv(
+        #     os.path.join(output_folder, "prod_v.csv.bz2"),
+        #     sep=';', index=False
+        # )
         res_load_scenario.marginal_prices.to_csv(
             os.path.join(output_folder, "prices.csv.bz2"),
             sep=';', index=False

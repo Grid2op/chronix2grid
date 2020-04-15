@@ -257,7 +257,7 @@ def create_csv(dict_, path, forecasted=False, reordering=True, noise=None, shift
             index=index, sep=';', float_format='%.1f')
         df_reactive_power.to_csv(
             os.path.join(path, f'load_q{file_extension}.csv.bz2'),
-            index=index, sep=';', float_format='%.1f')
+            index=False, sep=';', float_format='%.1f')
 
     return df
 

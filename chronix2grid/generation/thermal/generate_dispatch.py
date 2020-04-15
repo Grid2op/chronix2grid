@@ -27,10 +27,9 @@ def main(dispatcher, input_folder, output_folder, seed, params_opf):
 
     shutil.copy(os.path.join(input_folder, 'load_p_forecasted.csv.bz2'),
                 os.path.join(output_folder, 'load_p_forecasted.csv.bz2'))
-    shutil.copy(os.path.join(input_folder, 'wind_p_forecasted.csv.bz2'),
-                os.path.join(output_folder, 'wind_p_forecasted.csv.bz2'))
-    shutil.copy(
-        os.path.join(input_folder, 'solar_p_forecasted.csv.bz2'),
-        os.path.join(output_folder, 'solar_p_forecasted.csv.bz2'))
+    shutil.copy(os.path.join(input_folder, 'load_q_forecasted.csv.bz2'),
+                os.path.join(output_folder, 'load_q_forecasted.csv.bz2'))
+    shutil.copy(os.path.join(input_folder, 'load_q.csv.bz2'),
+                os.path.join(output_folder, 'load_q.csv.bz2'))
 
     return dispatch_results

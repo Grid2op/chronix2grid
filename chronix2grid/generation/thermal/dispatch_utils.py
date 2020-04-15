@@ -1,14 +1,14 @@
 import os
 import re
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 
 def make_scenario_input_output_directories(input_folder, output_folder, scenario_name):
     os.makedirs(os.path.join(input_folder, scenario_name), exist_ok=True)
-    os.makedirs(os.path.join(output_folder, scenario_name, 'chronics'), exist_ok=True)
-    return os.path.join(input_folder, scenario_name), os.path.join(output_folder, scenario_name, 'chronics')
+    os.makedirs(os.path.join(output_folder, scenario_name), exist_ok=True)
+    return os.path.join(input_folder, scenario_name), os.path.join(output_folder, scenario_name)
 
 def compute_random_event(event_type, lines, params):
 
