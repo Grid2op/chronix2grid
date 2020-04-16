@@ -25,13 +25,16 @@ def main(i, destination_folder, seed, params, prods_charac, solar_pattern, write
     prods_charac (pandas.DataFrame): characteristics of production nodes such as Pmax and type of production
     solar_pattern (pandas.DataFrame): hourly solar production pattern for a year. It represent specificity of the production region considered
     smoothdist (float): parameter for smoothing
-
+    write_results (boolean): whether to write results or not. Default is True
 
     Returns
     -------
-    pandas.DataFrame: solar and wind production chronics generated at every node with additional gaussian noise
-    pandas.DataFrame: solar and wind production chronics forecasted for the scenario without additional gaussian noise
+    pandas.DataFrame: solar production chronics generated at every node with additional gaussian noise
+    pandas.DataFrame: solar production chronics forecasted for the scenario without additional gaussian noise
+    pandas.DataFrame: wind production chronics generated at every node with additional gaussian noise
+    pandas.DataFrame: wind production chronics forecasted for the scenario without additional gaussian noise
     """
+
     np.random.seed(seed)
     smoothdist = params['smoothdist']
 
