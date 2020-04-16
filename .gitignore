@@ -140,3 +140,5 @@ chronix2grid/generation/input/dispatch/
 chronix2grid/generation/output/
 **.orig
 chronix2grid/kpi/images
+chronix2grid/generation/input/case118_l2rpn/dispatch/
+chronix2grid/kpi/output/2012/Scenario_*/ec_validator_output.json
