@@ -190,7 +190,7 @@ def chronics_to_kpi(year, n_scenario, chronics_repo, timestep, params, thermal =
         ## Format when all dispatch is generated
 
         # Read generated chronics after dispatch phase
-        folder = os.path.join(chronics_repo, str(year), 'Scenario_' + str(n_scenario), 'chronics')
+        folder = os.path.join(chronics_repo, str(year), 'Scenario_' + str(n_scenario))
         prod_p = pd.read_csv(os.path.join(folder, 'prod_p.csv.bz2'), sep=';', decimal='.')
         load_p = pd.read_csv(os.path.join(folder, 'load_p.csv.bz2'), sep=';', decimal='.')
         price = pd.read_csv(os.path.join(folder, 'prices.csv.bz2'), sep=';', decimal='.')
