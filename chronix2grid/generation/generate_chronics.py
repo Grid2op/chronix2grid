@@ -7,12 +7,14 @@ import pandas as pd
 import numpy as np
 from datetime import timedelta
 
+
 # Libraries developed for this module
-from .consumption import generate_load as gen_loads
-from .renewable import generate_solar_wind as gen_enr
-from .thermal import generate_dispatch as gen_dispatch
-
-
+from chronix2grid.generation.consumption import generate_load as gen_loads
+from chronix2grid.generation.renewable import generate_solar_wind as gen_enr
+from chronix2grid.generation.thermal import generate_dispatch as gen_dispatch
+from chronix2grid.generation.dispatch import utils as du
+import chronix2grid.generation.dispatch.EconomicDispatch as ec
+import chronix2grid.generation.generation_utils as gu
 
 def read_configuration(input_folder, case, start_date, weeks):
     """
@@ -49,6 +51,9 @@ def read_configuration(input_folder, case, start_date, weeks):
         except ValueError:
             params[key] = pd.to_datetime(value, format='%Y-%m-%d')
 
+    with open(os.path.join(input_folder, case, 'params_opf.json'), 'r') as opf_param_json:
+        params_opf = json.load(opf_param_json)
+
     # Compute date and time parameters
     start_date = pd.to_datetime(start_date, format='%Y-%m-%d')
     params['weeks'] = weeks
@@ -74,11 +79,13 @@ def read_configuration(input_folder, case, start_date, weeks):
     load_weekly_pattern = pd.read_csv(os.path.join(input_folder, 'patterns', 'load_weekly_pattern.csv'))
     solar_pattern = np.load(os.path.join(input_folder, 'patterns', 'solar_pattern.npy'))
 
-    return year, params, loads_charac, prods_charac, load_weekly_pattern, solar_pattern, lines
+    return year, params, loads_charac, prods_charac, load_weekly_pattern, solar_pattern, lines, params_opf
 
 
 # Call generation scripts n_scenario times with dedicated random seeds
-def main(case, year, n_scenarios, params, input_folder, output_folder, prods_charac, loads_charac, lines, solar_pattern, load_weekly_pattern):
+def main(case, year, n_scenarios, params, input_folder, output_folder,
+         prods_charac, loads_charac, lines, solar_pattern, load_weekly_pattern,
+         params_opf):
     """
     Main function for chronics generation. It works with three steps: load generation, renewable generation (solar and wind) and then dispatch computation to get the whole energy mix
 
@@ -111,19 +118,9 @@ def main(case, year, n_scenarios, params, input_folder, output_folder, prods_cha
 
     ## Folder settings
 
-    # Folder names
-    dispatch_input_folder_case = os.path.join(input_folder, case, 'dispatch')
-    dispatch_input_folder= os.path.join(dispatch_input_folder_case, str(year))
-    dispatch_output_folder = os.path.join(output_folder, str(year))
+    dispatch_input_folder, dispatch_input_folder_case, dispatch_output_folder = gu.make_generation_input_output_directories(input_folder, case, year, output_folder)
 
-    # Make sure the output folders exist
-    if not os.path.exists(dispatch_input_folder_case):
-        os.makedirs(dispatch_input_folder_case)
-    if not os.path.exists(dispatch_input_folder):
-        os.makedirs(dispatch_input_folder)
-    out_folder = os.path.join(dispatch_output_folder)
-    if not os.path.exists(out_folder):
-        os.makedirs(out_folder)
+    dispatcher = ec.init_dispatcher(params_opf["grid_path"], input_folder)
 
     ## Launch proper scenarios generation
     for i, seed in enumerate(seeds):
@@ -132,7 +129,30 @@ def main(case, year, n_scenarios, params, input_folder, output_folder, prods_cha
 
         prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = gen_enr.main(i, dispatch_input_folder, seed,params, prods_charac, solar_pattern, write_results = True)
 
-        # gen_dispatch.main(i, load, prod_solar, prod_wind, out_folder, seed, params,
-        #                      prods_charac, lines, compute_hazards = True)
+        scenario_name = f'Scenario_{i}'
+        input_scenario_folder, output_scneario_folder = du.make_scenario_input_output_directories(
+            dispatch_input_folder, dispatch_output_folder, scenario_name)
+
+        prods = pd.concat([prod_solar, prod_wind], axis=1)
+        res_names = dict(wind=prod_wind.columns, solar=prod_solar.columns)
+        dispatcher.chronix_scenario = ec.ChroniXScenario(load, prods, res_names,
+                                                         scenario_name)
+
+        dispatch_results = gen_dispatch.main(dispatcher, input_scenario_folder,
+                                             output_scneario_folder,
+                                             seed, params_opf)
         print('\n')
     return
+
+
+if __name__ == '__main__':
+    CASE = 'case118_l2rpn'
+    INPUT_FOLDER = os.path.abspath('input')
+    OUTPUT_FOLDER = os.path.abspath('output')
+    # Detailed configuration to set in <INPUT_FOLDER>/<CASE>/params.json
+    start_date = "2012-01-01"
+    weeks = 1
+    n_scenarios = 1
+    year, params, loads_charac, prods_charac, load_weekly_pattern, solar_pattern, lines, params_opf = read_configuration(INPUT_FOLDER, CASE, start_date, weeks)
+
+    main(CASE, year, n_scenarios, params, INPUT_FOLDER, OUTPUT_FOLDER, prods_charac, loads_charac, lines, solar_pattern, load_weekly_pattern, params_opf)

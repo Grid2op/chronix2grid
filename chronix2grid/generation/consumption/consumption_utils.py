@@ -2,7 +2,7 @@ from scipy.interpolate import interp1d
 import numpy as np
 import pandas as pd
 import os
-import generation.generation_utils as utils
+from .. import generation_utils as utils
 
 def compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern):
     # Compute active part of loads

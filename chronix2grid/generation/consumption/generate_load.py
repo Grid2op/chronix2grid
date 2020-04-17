@@ -7,7 +7,7 @@ import numpy as np
 
 # Libraries developed for this module
 from . import consumption_utils as conso
-import generation.generation_utils as utils
+from .. import generation_utils as utils
 
 
 

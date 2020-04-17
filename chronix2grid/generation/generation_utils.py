@@ -4,6 +4,20 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
 
+
+def make_generation_input_output_directories(input_folder, case, year, output_folder):
+
+    dispatch_input_folder_case = os.path.join(input_folder, case, 'dispatch')
+    dispatch_input_folder = os.path.join(dispatch_input_folder_case, str(year))
+    dispatch_output_folder = os.path.join(output_folder, str(year))
+
+    os.makedirs(dispatch_input_folder_case, exist_ok=True)
+    os.makedirs(dispatch_input_folder, exist_ok=True)
+    os.makedirs(dispatch_output_folder, exist_ok=True)
+
+    return dispatch_input_folder, dispatch_input_folder_case, dispatch_output_folder
+
+
 def generate_coarse_noise(params, data_type):
     """
     This function generates a spatially and temporally correlated noise.

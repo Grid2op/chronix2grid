@@ -6,6 +6,8 @@ from copy import deepcopy
 import datetime as dt
 import os
 
+import grid2op
+from grid2op.Chronics import ChangeNothing
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -17,6 +19,21 @@ from chronix2grid.generation.thermal.EDispatch_L2RPN2020.run_economic_dispatch i
 from chronix2grid.generation.thermal.EDispatch_L2RPN2020.utils import add_noise_gen
 
 DispatchResults = namedtuple('DispatchResults', ['chronix', 'terminal_conditions'])
+
+
+def init_dispatcher(grid_path, input_folder):
+
+    env118_withoutchron = grid2op.make("blank",
+                                       grid_path=grid_path,
+                                       chronics_class=ChangeNothing)
+
+    dispatcher = Dispatcher.from_gri2op_env(env118_withoutchron)
+
+    dispatcher.read_hydro_guide_curves(
+        os.path.join(input_folder, 'patterns', 'hydro_french.csv'))
+
+    return dispatcher
+
 
 class Dispatcher(pypsa.Network):
     """Wrapper around a pypsa.Network to add higher level methods"""
@@ -256,11 +273,6 @@ class Dispatcher(pypsa.Network):
                              zip(self._env.name_gen, self._env.gen_pmax)})
         prod_p_with_noise = add_noise_gen(full_opf_dispatch, gen_cap, noise_factor=0.0007)
 
-        # prod_v_forecasted = pd.DataFrame(columns=prod_p_with_noise.columns,
-        #                              index=prod_p_with_noise.index,
-        #                              data=60 * 1.04)
-        # prod_v = prod_v_forecasted * (1 + 0.007 * np.random.normal(0, 1, prod_v_forecasted.shape))
-
         print(f'Saving chronics into {output_folder}')
         full_opf_dispatch.to_csv(
             os.path.join(output_folder, "prod_p_forecasted.csv.bz2"),
@@ -270,14 +282,6 @@ class Dispatcher(pypsa.Network):
             os.path.join(output_folder, "prod_p.csv.bz2"),
             sep=';', index=False
         )
-        # prod_v_forecasted.to_csv(
-        #     os.path.join(output_folder, "prod_v_forecasted.csv.bz2"),
-        #     sep=';', index=False
-        # )
-        # prod_v.to_csv(
-        #     os.path.join(output_folder, "prod_v.csv.bz2"),
-        #     sep=';', index=False
-        # )
         res_load_scenario.marginal_prices.to_csv(
             os.path.join(output_folder, "prices.csv.bz2"),
             sep=';', index=False

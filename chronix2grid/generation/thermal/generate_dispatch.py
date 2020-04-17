@@ -3,9 +3,20 @@ import shutil
 
 import numpy as np
 
-from . import dispatch_utils as disp
 from .EDispatch_L2RPN2020 import run_economic_dispatch
 
+
+def parse_ramp_mode(mode):
+    if mode == 'hard':
+        return run_economic_dispatch.RampMode.hard
+    if mode == 'medium':
+        return run_economic_dispatch.RampMode.medium
+    if mode == 'easy':
+        return run_economic_dispatch.RampMode.easy
+    if mode == '':
+        return run_economic_dispatch.RampMode.none
+    raise ValueError(f'mode only takes values from (hard, medium, easy, none), '
+                     '{mode} was passed')
 
 def main(dispatcher, input_folder, output_folder, seed, params_opf):
 
@@ -19,7 +30,7 @@ def main(dispatcher, input_folder, output_folder, seed, params_opf):
         agg_load_without_renew,
         params=params_opf,
         gen_constraints=hydro_constraints,
-        ramp_mode=run_economic_dispatch.RampMode.none,
+        ramp_mode=parse_ramp_mode(params_opf['ramp_mode']),
         by_carrier=params_opf['dispatch_by_carrier']
     )
 

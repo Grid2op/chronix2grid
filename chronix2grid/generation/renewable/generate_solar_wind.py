@@ -7,7 +7,7 @@ import numpy as np
 
 # Libraries developed for this module
 from . import solar_wind_utils as swutils
-import generation.generation_utils as utils
+from .. import generation_utils as utils
 
 
 

@@ -2,7 +2,7 @@ from scipy.interpolate import interp1d
 import numpy as np
 import pandas as pd
 import copy
-import generation.generation_utils as utils
+from .. import generation_utils as utils
 
 def compute_wind_series(locations, Pmax, long_noise, medium_noise, short_noise, params, smoothdist):
     # Compute refined signals
