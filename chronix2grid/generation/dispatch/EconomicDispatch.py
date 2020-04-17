@@ -21,7 +21,7 @@ from chronix2grid.generation.thermal.EDispatch_L2RPN2020.utils import add_noise_
 DispatchResults = namedtuple('DispatchResults', ['chronix', 'terminal_conditions'])
 
 
-def init_dispatcher(grid_path, input_folder):
+def init_dispatcher_from_config(grid_path, input_folder):
 
     env118_withoutchron = grid2op.make("blank",
                                        grid_path=grid_path,
@@ -323,7 +323,7 @@ class ChroniXScenario:
 if __name__ == "__main__":
     import os
     import grid2op
-    from grid2op.ChronicsHandler import ChangeNothing
+    from grid2op.Chronics import ChangeNothing
     import chronix2grid.generation.thermal.EDispatch_L2RPN2020.run_economic_dispatch as run_economic_dispatch
 
     INPUT_FOLDER = 'chronix2grid/generation/input'

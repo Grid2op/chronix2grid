@@ -121,7 +121,7 @@ def main(case, year, n_scenarios, params, input_folder, output_folder,
 
     dispatch_input_folder, dispatch_input_folder_case, dispatch_output_folder = gu.make_generation_input_output_directories(input_folder, case, year, output_folder)
 
-    dispatcher = ec.init_dispatcher(params_opf["grid_path"], input_folder)
+    dispatcher = ec.init_dispatcher_from_config(params_opf["grid_path"], input_folder)
 
     ## Launch proper scenarios generation
     for i, seed in enumerate(seeds):
