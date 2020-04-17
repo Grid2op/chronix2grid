@@ -12,7 +12,7 @@ from .utils import preprocess_input_data
 from .utils import preprocess_net, filter_ramps
 from .utils import run_opf
 from .utils import update_gen_constrains, update_params
-from chronix2grid.generation.dispatch.utils import RampMode
+from generation.dispatch.utils import RampMode
 
 
 def main_run_disptach(pypsa_net, 

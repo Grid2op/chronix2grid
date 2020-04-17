@@ -9,12 +9,12 @@ from datetime import timedelta
 
 
 # Libraries developed for this module
-from chronix2grid.generation.consumption import generate_load as gen_loads
-from chronix2grid.generation.renewable import generate_solar_wind as gen_enr
-from chronix2grid.generation.thermal import generate_dispatch as gen_dispatch
-from chronix2grid.generation.dispatch import utils as du
-import chronix2grid.generation.dispatch.EconomicDispatch as ec
-import chronix2grid.generation.generation_utils as gu
+from .consumption import generate_load as gen_loads
+from .renewable import generate_solar_wind as gen_enr
+from .thermal import generate_dispatch as gen_dispatch
+from .dispatch import utils as du
+from .dispatch import EconomicDispatch as ec
+import generation.generation_utils as gu
 
 def read_configuration(input_folder, case, start_date, weeks):
     """
@@ -25,7 +25,7 @@ def read_configuration(input_folder, case, start_date, weeks):
     ----------
     input_folder (string): peth of folder where inputs are stored
     case (str): name of case to study (must be a folder within input_folder)
-    start_date (str): string containing start date of generation (recommended format is YYYY-MM-DD)
+    start_date (str): string containing start date of geneiration (recommended format is YYYY-MM-DD)
     weeks (int): number of weeks on which to generate the chronics
 
     Returns

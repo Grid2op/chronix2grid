@@ -13,10 +13,10 @@ import pandas as pd
 import plotly.express as px
 import pypsa
 
-from chronix2grid.generation.dispatch.utils import RampMode
-from chronix2grid.generation.thermal.EDispatch_L2RPN2020.run_economic_dispatch import (
+from generation.dispatch.utils import RampMode
+from generation.thermal.EDispatch_L2RPN2020.run_economic_dispatch import (
     main_run_disptach)
-from chronix2grid.generation.thermal.EDispatch_L2RPN2020.utils import add_noise_gen
+from generation.thermal.EDispatch_L2RPN2020.utils import add_noise_gen
 
 DispatchResults = namedtuple('DispatchResults', ['chronix', 'terminal_conditions'])
 
