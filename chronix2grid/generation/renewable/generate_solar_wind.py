@@ -10,16 +10,14 @@ from . import solar_wind_utils as swutils
 from .. import generation_utils as utils
 
 
-
-def main(i, destination_folder, seed, params, prods_charac, solar_pattern, write_results = True):
+def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, write_results = True):
     """
     This is the solar and wind production generation function, it allows you to generate consumption chronics based on
     production nodes characteristics and on a solar typical yearly production patterns.
 
     Parameters
     ----------
-    i (int): scenario number
-    destination_folder (string): where results are written
+    scenario_destination_path (str): Path of output directory
     seed (int): random seed of the scenario
     params (dict): system params such as timestep or mesh characteristics
     prods_charac (pandas.DataFrame): characteristics of production nodes such as Pmax and type of production
@@ -94,7 +92,6 @@ def main(i, destination_folder, seed, params, prods_charac, solar_pattern, write
 
     # Save files
     print('Saving files in zipped csv')
-    scenario_destination_path = os.path.join(destination_folder, 'Scenario_' + str(i))
     if not os.path.exists(scenario_destination_path):
         os.makedirs(scenario_destination_path)
     prod_solar_forecasted =  swutils.create_csv(solar_series, os.path.join(scenario_destination_path, 'solar_p_forecasted.csv.bz2'),

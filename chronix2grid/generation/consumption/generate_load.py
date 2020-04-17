@@ -10,15 +10,13 @@ from . import consumption_utils as conso
 from .. import generation_utils as utils
 
 
-
-def main(scenario_num, destination_folder, seed, params, loads_charac, load_weekly_pattern, write_results = True):
+def main(scenario_destination_path, seed, params, loads_charac, load_weekly_pattern, write_results = True):
     """
     This is the load generation function, it allows you to generate consumption chronics based on demand nodes characteristics and on weekly demand patterns.
 
     Parameters
     ----------
-    scenario_num (int): scenario number
-    destination_folder (string): where results are written
+    scenario_destination_path (string): where results are written
     seed (int): random seed of the scenario
     params (dict): system params such as timestep or mesh characteristics
     loads_charac (pandas.DataFrame): characteristics of loads node such as Pmax and type of demand
@@ -49,7 +47,6 @@ def main(scenario_num, destination_folder, seed, params, loads_charac, load_week
     loads_series['datetime'] = datetime_index
 
     # Save files
-    scenario_destination_path = os.path.join(destination_folder, 'Scenario_'+str(scenario_num))
     print('Saving files in zipped csv in "{}"'.format(scenario_destination_path))
     if not os.path.exists(scenario_destination_path):
         os.makedirs(scenario_destination_path)

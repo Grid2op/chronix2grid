@@ -85,7 +85,7 @@ def read_configuration(input_folder, case, start_date, weeks):
 # Call generation scripts n_scenario times with dedicated random seeds
 def main(case, year, n_scenarios, params, input_folder, output_folder,
          prods_charac, loads_charac, lines, solar_pattern, load_weekly_pattern,
-         params_opf):
+         params_opf, mode='LRTK'):
     """
     Main function for chronics generation. It works with three steps: load generation, renewable generation (solar and wind) and then dispatch computation to get the whole energy mix
 
@@ -102,6 +102,7 @@ def main(case, year, n_scenarios, params, input_folder, output_folder,
     lines (pandas.DataFrame): as returned by function chronix2grid.generation.generate_chronics.read_configuration
     solar_pattern (pandas.DataFrame): as returned by function chronix2grid.generation.generate_chronics.read_configuration
     load_weekly_pattern (pandas.DataFrame): as returned by function chronix2grid.generation.generate_chronics.read_configuration
+    mode (str): options to launch certain parts of the generation process : L load R renewable T thermal
 
 
     Returns
@@ -124,23 +125,27 @@ def main(case, year, n_scenarios, params, input_folder, output_folder,
 
     ## Launch proper scenarios generation
     for i, seed in enumerate(seeds):
-        print("================ Generating scenario number "+str(i)+" ================")
-        load, load_forecasted = gen_loads.main(i, dispatch_input_folder, seed, params, loads_charac, load_weekly_pattern, write_results = True)
-
-        prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = gen_enr.main(i, dispatch_input_folder, seed,params, prods_charac, solar_pattern, write_results = True)
-
         scenario_name = f'Scenario_{i}'
-        input_scenario_folder, output_scneario_folder = du.make_scenario_input_output_directories(
-            dispatch_input_folder, dispatch_output_folder, scenario_name)
+        scenario_dispatch_input_folder = os.path.join(dispatch_input_folder, scenario_name)
 
-        prods = pd.concat([prod_solar, prod_wind], axis=1)
-        res_names = dict(wind=prod_wind.columns, solar=prod_solar.columns)
-        dispatcher.chronix_scenario = ec.ChroniXScenario(load, prods, res_names,
-                                                         scenario_name)
+        print("================ Generating "+scenario_name+" ================")
+        if 'L' in mode:
+            load, load_forecasted = gen_loads.main(scenario_dispatch_input_folder, seed, params, loads_charac, load_weekly_pattern, write_results = True)
 
-        dispatch_results = gen_dispatch.main(dispatcher, input_scenario_folder,
-                                             output_scneario_folder,
-                                             seed, params_opf)
+        if 'R' in mode:
+            prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = gen_enr.main(scenario_dispatch_input_folder, seed, params, prods_charac, solar_pattern, write_results = True)
+        if 'T' in mode:
+            input_scenario_folder, output_scneario_folder = du.make_scenario_input_output_directories(
+                dispatch_input_folder, dispatch_output_folder, scenario_name)
+
+            prods = pd.concat([prod_solar, prod_wind], axis=1)
+            res_names = dict(wind=prod_wind.columns, solar=prod_solar.columns)
+            dispatcher.chronix_scenario = ec.ChroniXScenario(load, prods, res_names,
+                                                             scenario_name)
+
+            dispatch_results = gen_dispatch.main(dispatcher, input_scenario_folder,
+                                                 output_scneario_folder,
+                                                 seed, params_opf)
         print('\n')
     return
 
