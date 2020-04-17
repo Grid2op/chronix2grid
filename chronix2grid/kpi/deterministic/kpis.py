@@ -39,10 +39,10 @@ class EconomicDispatchValidator:
         # Create repos if necessary for plot saving
         self.image_repo = images_repo+'/'+str(self.year)
         if not os.path.exists(self.image_repo):
-            os.mkdir(self.image_repo)
+            os.makedirs(self.image_repo, exist_ok=True)
         self.image_repo += '/' + self.num_scenario
         if not os.path.exists(self.image_repo):
-            os.mkdir(self.image_repo)
+            os.makedirs(self.image_repo, exist_ok=True)
             os.mkdir(os.path.join(self.image_repo,'dispatch_view'))
             os.mkdir(os.path.join(self.image_repo, 'wind_kpi'))
             os.mkdir(os.path.join(self.image_repo, 'wind_load_kpi'))
