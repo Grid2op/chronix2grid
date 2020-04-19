@@ -1,14 +1,5 @@
 from setuptools import setup
 
-extras = {
-    "docs": ["numpydoc", "sphinx", "sphinx_rtd_theme", "sphinxcontrib_trio"],
-    "test": ["nbformat", "jupyter_client", "jyquickhelper"]
-}
-
-all_targets = []
-for el in extras:
-    all_targets += extras[el]
-extras["all"] = list(set(all_targets))
 
 setup(name='Chronix2Grid',
       version='0.1.0',
@@ -98,7 +89,6 @@ setup(name='Chronix2Grid',
                         "python-dateutil==2.8.1",
                         "pytz==2019.3",
                         "PyUtilib==5.7.3",
-                        "pywin32==227",
                         "pywinpty==0.5.7",
                         "pyzmq==19.0.0",
                         "qtconsole==4.7.1",
@@ -123,5 +113,5 @@ setup(name='Chronix2Grid',
                         "zipp==3.1.0"
                         ],
       zip_safe=False,
-      entry_points={'console_scripts': ['chronix2grid.main=grid2viz.command_line:main']}
+      entry_points={'console_scripts': ['chronix2grid=chronix2grid.main:generate']}
 )

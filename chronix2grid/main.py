@@ -4,8 +4,8 @@ import os
 import click
 
 # Chronix2grid modules
-import generation.generate_chronics as gen
-import kpi.main as kpis
+from chronix2grid.generation import generate_chronics as gen
+from chronix2grid.kpi import main as kpis
 
 # ==============================================================
 ## CONSTANT VARIABLES

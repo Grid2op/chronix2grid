@@ -14,7 +14,7 @@ from .renewable import generate_solar_wind as gen_enr
 from .thermal import generate_dispatch as gen_dispatch
 from .dispatch import utils as du
 from .dispatch import EconomicDispatch as ec
-import generation.generation_utils as gu
+from . import generation_utils as gu
 
 def read_configuration(input_folder, case, start_date, weeks):
     """
