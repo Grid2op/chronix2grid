@@ -1,12 +1,12 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 setup(name='Chronix2Grid',
-      version='0.1.0',
+      version='0.1.0rc5',
       description='A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)',
       long_description='TODO',
       classifiers=[
-          'Development Status :: 5 - ALPHA',
+          'Development Status :: 3 - Alpha',
           'Programming Language :: Python :: 3.6',
           'Programming Language :: Python :: 3.7',
           "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
@@ -20,7 +20,7 @@ setup(name='Chronix2Grid',
       author_email=' mario.jothy@artelys.com',
       url="https://github.com/mjothy/chronix2grid",
       license='Mozilla Public License 2.0 (MPL 2.0)',
-      packages=['chronix2grid'],
+      packages=find_packages(),
       include_package_data=True,
       install_requires=["appdirs==1.4.3",
                         "attrs==19.3.0",
