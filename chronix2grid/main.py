@@ -26,26 +26,31 @@ def generate(case, start_date, weeks, n_scenarios, mode, root_folder):
     output_folder = os.path.join(OUTPUT_FOLDER, case)
     images_folder = os.path.join(IMAGES_FOLDER, case)
 
-    # Reading parameters
-    year, params, loads_charac, prods_charac, load_weekly_pattern, solar_pattern, lines, params_opf = gen.read_configuration(
-        INPUT_FOLDER, case, start_date, weeks)
+    time_parameters = gen.time_parameters(weeks, start_date)
 
     # Chronic generation
     if 'L' in mode or 'R' in mode:
-        gen.main(case, year, n_scenarios, params, INPUT_FOLDER, output_folder, prods_charac, loads_charac, lines, solar_pattern, load_weekly_pattern, params_opf, mode)
+        params, loads_charac, prods_charac = gen.main(
+            case, n_scenarios, INPUT_FOLDER, output_folder, time_parameters, mode)
+
+    year = time_parameters['year']
 
     # KPI formatting and computing
     if 'R' in mode and 'K' in mode and 'T' not in mode:
         # Get and format solar and wind on all timescale, then compute KPI and save plots
         wind_solar_only = True
         os.makedirs(IMAGES_FOLDER, exist_ok=True)
-        kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, output_folder, images_folder, year, case, n_scenarios, wind_solar_only, params, loads_charac, prods_charac)
+        kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, output_folder, images_folder,
+                  year, case, n_scenarios, wind_solar_only, params,
+                  loads_charac, prods_charac)
 
     elif 'T' in mode and 'K' in mode:
         # Get and format dispatched chronics, then compute KPI and save plots
         wind_solar_only = False
         os.makedirs(IMAGES_FOLDER, exist_ok=True)
-        kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, output_folder, images_folder, year, case, n_scenarios, wind_solar_only, params, loads_charac, prods_charac)
+        kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, output_folder, images_folder,
+                  year, case, n_scenarios, wind_solar_only, params,
+                  loads_charac, prods_charac)
 
 
 if __name__ == "__main__":

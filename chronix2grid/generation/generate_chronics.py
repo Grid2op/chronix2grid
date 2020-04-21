@@ -15,77 +15,31 @@ from .thermal import generate_dispatch as gen_dispatch
 from .dispatch import utils as du
 from .dispatch import EconomicDispatch as ec
 from . import generation_utils as gu
+from ..config import DispatchConfigManager, LoadsConfigManager, ResConfigManager
 
-def read_configuration(input_folder, case, start_date, weeks):
-    """
-    This functions reads the detailed parameters of the generation in params.json, but also the case settup through files prods_charac.csv, loads_charac.csv and lines.csv
-    It processes it and returns usable format for each of those parameters
 
-    Parameters
-    ----------
-    input_folder (string): peth of folder where inputs are stored
-    case (str): name of case to study (must be a folder within input_folder)
-    start_date (str): string containing start date of geneiration (recommended format is YYYY-MM-DD)
-    weeks (int): number of weeks on which to generate the chronics
-
-    Returns
-    -------
-    int: year of generated chronics (if weeks>52, takes the most ancient year)
-    dict: dictionnary with parameters, including a formatting of params.json
-    pandas.DataFrame: characteristics of generators such as Pmax, carrier and region
-    pandas.DataFrame: characteristics of loads node such as Pmax, type of demand and region
-    pandas.DataFrame: normalized weekly pattern of load, used as reference for load generation
-    pandas.DataFrame: normalized yearly solar production pattern, used as reference for solar chronics generation
-    pandas.DataFrame: characteristics of lines
-
-    """
-
-    # Read Json parameters
-    print('Importing parameters ...')
-    json1_file = open(os.path.join(input_folder, case, 'params.json'))
-    json1_str = json1_file.read()
-    params = json.loads(json1_str)
-    for key, value in params.items():
-        try:
-            params[key] = float(value)
-        except ValueError:
-            params[key] = pd.to_datetime(value, format='%Y-%m-%d')
-
-    with open(os.path.join(input_folder, case, 'params_opf.json'), 'r') as opf_param_json:
-        params_opf = json.load(opf_param_json)
-
-    # Compute date and time parameters
+def time_parameters(weeks, start_date):
+    result = dict()
     start_date = pd.to_datetime(start_date, format='%Y-%m-%d')
-    params['weeks'] = weeks
-    params['start_date'] = start_date
-    year = start_date.year
-    params['end_date'] = params['start_date'] + timedelta(days=7 * int(weeks)) - timedelta(minutes=params['dt'])
-    params['T'] = int(pd.Timedelta(params['end_date'] - params['start_date']).total_seconds() // (60))
-    # Nt_inter = int(params['T'] // params['dt'] + 1)
+    result['weeks'] = weeks
+    result['start_date'] = start_date
+    result['year'] = start_date.year
+    return result
 
-    # Import loads_charac.csv, prods_charac.csv and lines.csv in desired case
-    print('Importing loads prods and lines parameters ...')
-    try:
-        loads_charac = pd.read_csv(os.path.join(input_folder, case, 'loads_charac.csv'), sep = ',')
-        names = loads_charac['name']   # to generate error if separator is wrong
-        prods_charac = pd.read_csv(os.path.join(input_folder, case, 'prods_charac.csv'), sep = ',')
-        lines = pd.read_csv(os.path.join(input_folder, case, 'lines_names.csv'), sep=',')
-    except:
-        loads_charac = pd.read_csv(os.path.join(input_folder, case, 'loads_charac.csv'), sep=';')
-        prods_charac = pd.read_csv(os.path.join(input_folder, case, 'prods_charac.csv'), sep=';')
-        lines = pd.read_csv(os.path.join(input_folder, case, 'lines_names.csv'), sep=';')
 
-    # Importing weekly patterns
-    load_weekly_pattern = pd.read_csv(os.path.join(input_folder, 'patterns', 'load_weekly_pattern.csv'))
-    solar_pattern = np.load(os.path.join(input_folder, 'patterns', 'solar_pattern.npy'))
-
-    return year, params, loads_charac, prods_charac, load_weekly_pattern, solar_pattern, lines, params_opf
+def updated_time_parameters_with_timestep(time_parameters, timestep):
+    time_parameters['end_date'] = time_parameters['start_date'] + timedelta(
+        days=7 * int(time_parameters['weeks'])) - timedelta(minutes=timestep)
+    time_parameters['T'] = int(
+        pd.Timedelta(
+            time_parameters['end_date'] - time_parameters['start_date']
+        ).total_seconds() // 60
+    )
+    return time_parameters
 
 
 # Call generation scripts n_scenario times with dedicated random seeds
-def main(case, year, n_scenarios, params, input_folder, output_folder,
-         prods_charac, loads_charac, lines, solar_pattern, load_weekly_pattern,
-         params_opf, mode='LRTK'):
+def main(case, n_scenarios, input_folder, output_folder, time_params, mode='LRTK'):
     """
     Main function for chronics generation. It works with three steps: load generation, renewable generation (solar and wind) and then dispatch computation to get the whole energy mix
 
@@ -104,7 +58,7 @@ def main(case, year, n_scenarios, params, input_folder, output_folder,
     load_weekly_pattern (pandas.DataFrame): as returned by function chronix2grid.generation.generate_chronics.read_configuration
     mode (str): options to launch certain parts of the generation process : L load R renewable T thermal
 
-
+l
     Returns
     -------
 
@@ -118,9 +72,44 @@ def main(case, year, n_scenarios, params, input_folder, output_folder,
     seeds = [np.random.randint(low=0, high=2 ** 31) for _ in range(n_scenarios)]
 
     ## Folder settings
+    year = time_params['year']
 
     dispatch_input_folder, dispatch_input_folder_case, dispatch_output_folder = gu.make_generation_input_output_directories(input_folder, case, year, output_folder)
+    load_config_manager = LoadsConfigManager(
+        name="Loads Generation",
+        root_directory=input_folder,
+        input_directories=dict(case=case, patterns='patterns'),
+        required_input_files=dict(case=['loads_charac.csv', 'params.json'],
+                                  patterns=['load_weekly_pattern.csv']),
+        output_directory=dispatch_input_folder
+    )
+    load_config_manager.validate_configuration()
 
+    params, loads_charac, load_weekly_pattern = load_config_manager.read_configuration()
+
+    res_config_manager = ResConfigManager(
+        name="Renewables Generation",
+        root_directory=input_folder,
+        input_directories=dict(case=case, patterns='patterns'),
+        required_input_files=dict(case=['prods_charac.csv', 'params.json'],
+                                  patterns=['solar_pattern.npy']),
+        output_directory=dispatch_input_folder
+    )
+
+    params, prods_charac, solar_pattern = res_config_manager.read_configuration()
+
+    params.update(time_params)
+    params = updated_time_parameters_with_timestep(params, params['dt'])
+
+    dispath_config_manager = DispatchConfigManager(
+        name="Dispatch",
+        root_directory=os.path.join(input_folder, case),
+        output_directory=dispatch_output_folder,
+        input_directories=dict(params='.', year=os.path.join('dispatch', str(year))),
+        required_input_files=dict(params=['params_opf.json'], year=[])
+    )
+    dispath_config_manager.validate_configuration()
+    params_opf = dispath_config_manager.read_configuration()
     dispatcher = ec.init_dispatcher_from_config(params_opf["grid_path"], input_folder)
 
     ## Launch proper scenarios generation
@@ -137,7 +126,6 @@ def main(case, year, n_scenarios, params, input_folder, output_folder,
         if 'T' in mode:
             input_scenario_folder, output_scneario_folder = du.make_scenario_input_output_directories(
                 dispatch_input_folder, dispatch_output_folder, scenario_name)
-
             prods = pd.concat([prod_solar, prod_wind], axis=1)
             res_names = dict(wind=prod_wind.columns, solar=prod_solar.columns)
             dispatcher.chronix_scenario = ec.ChroniXScenario(load, prods, res_names,
@@ -147,17 +135,5 @@ def main(case, year, n_scenarios, params, input_folder, output_folder,
                                                  output_scneario_folder,
                                                  seed, params_opf)
         print('\n')
-    return
+    return params, loads_charac, prods_charac
 
-
-if __name__ == '__main__':
-    CASE = 'case118_l2rpn'
-    INPUT_FOLDER = os.path.abspath('input')
-    OUTPUT_FOLDER = os.path.abspath('output')
-    # Detailed configuration to set in <INPUT_FOLDER>/<CASE>/params.json
-    start_date = "2012-01-01"
-    weeks = 1
-    n_scenarios = 1
-    year, params, loads_charac, prods_charac, load_weekly_pattern, solar_pattern, lines, params_opf = read_configuration(INPUT_FOLDER, CASE, start_date, weeks)
-
-    main(CASE, year, n_scenarios, params, INPUT_FOLDER, OUTPUT_FOLDER, prods_charac, loads_charac, lines, solar_pattern, load_weekly_pattern, params_opf)
