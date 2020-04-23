@@ -226,10 +226,10 @@ class Dispatcher(pypsa.Network):
         return simplified_net
 
     def run(self, load, params, gen_constraints=None,
-                     ramp_mode=RampMode.hard, by_carrier=False):
+                     ramp_mode=RampMode.hard, by_carrier=False, **kwargs):
         prods_dispatch, terminal_conditions, marginal_prices = main_run_disptach(
             self if not by_carrier else self.simplify_net(),
-            load, params, gen_constraints, ramp_mode)
+            load, params, gen_constraints, ramp_mode, **kwargs)
         if by_carrier:
             self._simplified_chronix_scenario = self._chronix_scenario.simplify_chronix()
             self._simplified_chronix_scenario.prods_dispatch = prods_dispatch

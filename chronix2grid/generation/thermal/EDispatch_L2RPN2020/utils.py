@@ -265,7 +265,7 @@ def get_grouped_snapshots(snapshot, mode):
     }
     return periods[mode]
 
-def run_opf(net, demand, gen_max, gen_min, params):
+def run_opf(net, demand, gen_max, gen_min, params, **kwargs):
     """ Run linear OPF problem in PyPSA considering
     only marginal costs and ramps as LP problem.
     
@@ -307,7 +307,7 @@ def run_opf(net, demand, gen_max, gen_min, params):
     net.generators_t.p_min_pu = pd.concat([gen_min], axis=1)
     # ++  ++  ++  ++
     # Run Linear OPF
-    status, termination_condition = net.lopf(net.snapshots, pyomo=False, solver_name='cbc')
+    status, termination_condition = net.lopf(net.snapshots, **kwargs)
     if status != 'ok':
         print('** OPF failed to find an optimal solution **')
     else:

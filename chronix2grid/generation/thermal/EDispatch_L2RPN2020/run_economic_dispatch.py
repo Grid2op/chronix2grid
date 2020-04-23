@@ -20,7 +20,7 @@ def main_run_disptach(pypsa_net,
                       params={},
                       gen_constraints={},
                       ramp_mode=RampMode.hard,
-                      ):
+                      **kwargs):
 
     # Update gen constrains dict with 
     # values passed by the users and params
@@ -69,7 +69,7 @@ def main_run_disptach(pypsa_net,
             # Run opf given in specified mode
             dispatch, termination_condition = run_opf(
                 pypsa_net, load_per_mode, gen_max_pu_per_mode,
-                gen_min_pu_per_mode, params)
+                gen_min_pu_per_mode, params, **kwargs)
 
             results.append(dispatch)
             termination_conditions.append(termination_condition)
