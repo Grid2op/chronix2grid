@@ -3,7 +3,7 @@ import sys
 import json
 import pandas as pd
 
-from .pivot_utils import chronics_to_kpi, renewableninja_to_kpi, eco2mix_to_kpi_regional
+from .pivot_utils import chronics_to_kpi, renewableninja_to_kpi, eco2mix_to_kpi_regional, nrel_to_kpi
 
 def pivot_format(chronics_folder, kpi_input_folder, year, scenario_num, prods_charac, loads_charac, wind_solar_only, params, case):
     """
@@ -42,7 +42,7 @@ def pivot_format(chronics_folder, kpi_input_folder, year, scenario_num, prods_ch
     monthly_pattern = paramsKPI['seasons']
     hours = paramsKPI['night_hours']
 
-    # Format chosen benchmark chronics
+    ## Format chosen benchmark chronics calling designed pivot functions
     if comparison == 'France':
         corresp_regions = {'R1':"Hauts-de-France", "R2": "Nouvelle-Aquitaine", "R3": "PACA"}
         if wind_solar_only:
@@ -52,8 +52,12 @@ def pivot_format(chronics_folder, kpi_input_folder, year, scenario_num, prods_ch
             ref_prod, ref_load, ref_prices = eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_charac, year, params,
                                                          corresp_regions)
     elif comparison == 'Texas':
-        print("Computation stopped: Texas Benchmark not yet implemented")
-        sys.exit()
+
+        if wind_solar_only:
+            ref_prod, ref_load  = nrel_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, params,year)
+        else:
+            print("Computation stopped: Texas Benchmark not implemented for a whole energy mix. Launch KPI computation in mode wind solar and load only.")
+            sys.exit()
     else:
         print("Please chose one available benchmark in paramsKPI.json/comparison. Given comparison is: "+comparison)
         sys.exit()

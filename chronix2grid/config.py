@@ -188,4 +188,9 @@ class DispatchConfigManager(ConfigManager):
             'params_opf.json')
         with open(params_filepath, 'r') as opf_param_json:
             params_opf = json.load(opf_param_json)
+        try:
+            if params_opf['mode_opf'] == '':
+                params_opf['mode_opf'] = None
+        except KeyError:
+            raise KeyError('The mode_opf field of params_opf.jons is missing.')
         return params_opf

@@ -107,8 +107,10 @@ def update_params(num, start_date, params_user):
     # Check some inputs
     if not 60 % step_opf == 0:
         raise RuntimeError("\"step_opf_min\" argument might be (5, 10, 15, 20, 30, 60)")
-    if not mode_opf.lower() in ['day', 'week', 'month']:
-        raise RuntimeError("Please provide a valid opf mode (day, week, month")
+    if mode_opf is not None :
+        print('mode_opf is not None')
+        if not mode_opf.lower() in ['day', 'week', 'month']:
+            raise RuntimeError("Please provide a valid opf mode (day, week, month")
     # Create temporary date range to be load to input data
     if snaps == []:
         snapshots = pd.date_range(start=start_date, periods=num, freq='5min')
@@ -292,7 +294,10 @@ def run_opf(net, demand, gen_max, gen_min, params, **kwargs):
                'month': demand.index.month.unique().values[0],
     }
     mode = params['mode_opf']
-    print(f'\n--> OPF formulation by => {mode} - Analyzing {mode} # {to_disp[mode]}')
+    if mode is None:
+        print(f'\n--> OPF formulation by => full chronix - Analyzing ')
+    else:
+        print(f'\n--> OPF formulation by => {mode} - Analyzing {mode} # {to_disp[mode]}')
     # Reset information previously 
     # saved it in PyPSA instance
     net.loads_t.p_set = net.loads_t.p_set.iloc[0:0, 0:0]

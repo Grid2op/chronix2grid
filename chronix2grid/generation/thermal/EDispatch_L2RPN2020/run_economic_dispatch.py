@@ -50,29 +50,40 @@ def main_run_disptach(pypsa_net,
     months = tot_snap.month.unique()
     start = time.time()
     results, termination_conditions = [], []
-    for month in months:
-        # Get snapshots per month
-        snap_per_month = tot_snap[tot_snap.month == month]
-        # Filter input data per month
-        load_per_month = load_.loc[snap_per_month]
-        # Get gen constraints separated and filter by month
-        g_max_pu, g_min_pu = gen_constraints_['p_max_pu'], gen_constraints_['p_min_pu']
-        g_max_pu_per_month = g_max_pu.loc[snap_per_month]
-        g_min_pu_per_month = g_min_pu.loc[snap_per_month]
-        # Get grouped snapsshots given monthly snapshots
-        snap_per_mode = get_grouped_snapshots(snap_per_month, params['mode_opf'])
-        for snaps in snap_per_mode:
-            # Truncate input data per mode (day, week, month)
-            load_per_mode = load_per_month.loc[snaps]
-            gen_max_pu_per_mode = g_max_pu_per_month.loc[snaps]
-            gen_min_pu_per_mode = g_min_pu_per_month.loc[snaps]
-            # Run opf given in specified mode
-            dispatch, termination_condition = run_opf(
-                pypsa_net, load_per_mode, gen_max_pu_per_mode,
-                gen_min_pu_per_mode, params, **kwargs)
+    if (params['mode_opf'] is not None):
+        print('mode_opf is not None')
+        for month in months:
+            # Get snapshots per month
+            snap_per_month = tot_snap[tot_snap.month == month]
+            # Filter input data per month
+            load_per_month = load_.loc[snap_per_month]
+            # Get gen constraints separated and filter by month
+            g_max_pu, g_min_pu = gen_constraints_['p_max_pu'], gen_constraints_['p_min_pu']
+            g_max_pu_per_month = g_max_pu.loc[snap_per_month]
+            g_min_pu_per_month = g_min_pu.loc[snap_per_month]
+            # Get grouped snapsshots given monthly snapshots
+            if (params['mode_opf'] is not None):
+                snap_per_mode = get_grouped_snapshots(snap_per_month, params['mode_opf'])
+                for snaps in snap_per_mode:
+                    # Truncate input data per mode (day, week, month)
+                    load_per_mode = load_per_month.loc[snaps]
+                    gen_max_pu_per_mode = g_max_pu_per_month.loc[snaps]
+                    gen_min_pu_per_mode = g_min_pu_per_month.loc[snaps]
+                    # Run opf given in specified mode
+                    dispatch, termination_condition = run_opf(
+                        pypsa_net, load_per_mode, gen_max_pu_per_mode,
+                        gen_min_pu_per_mode, params, **kwargs)
 
-            results.append(dispatch)
-            termination_conditions.append(termination_condition)
+                    results.append(dispatch)
+                    termination_conditions.append(termination_condition)
+    else:
+        g_max_pu, g_min_pu = gen_constraints_['p_max_pu'], gen_constraints_['p_min_pu']
+        dispatch, termination_condition = run_opf(
+               pypsa_net, load_, g_max_pu,
+               g_min_pu, params, **kwargs)
+
+        results.append(dispatch)
+        termination_conditions.append(termination_condition)
 
     # Unpack individual dispatchs and prices
     opf_prod = pd.DataFrame()

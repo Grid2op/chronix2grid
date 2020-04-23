@@ -1,8 +1,12 @@
-import re
+import datetime as dt
 import os
+import re
+
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
+
+from ..config import DispatchConfigManager, LoadsConfigManager, ResConfigManager
 
 
 def make_generation_input_output_directories(input_folder, case, year, output_folder):
@@ -131,3 +135,96 @@ def interpolate_noise(computation_noise, params, locations, time_scale):
 
 def natural_keys(text):
     return int([ c for c in re.split('(\d+)', text) ][1])
+
+
+def time_parameters(weeks, start_date):
+    result = dict()
+    start_date = pd.to_datetime(start_date, format='%Y-%m-%d')
+    result['weeks'] = weeks
+    result['start_date'] = start_date
+    result['year'] = start_date.year
+    return result
+
+
+def updated_time_parameters_with_timestep(time_parameters, timestep):
+    time_parameters['end_date'] = time_parameters['start_date'] + dt.timedelta(
+        days=7 * int(time_parameters['weeks'])) - dt.timedelta(minutes=timestep)
+    time_parameters['T'] = int(
+        pd.Timedelta(
+            time_parameters['end_date'] - time_parameters['start_date']
+        ).total_seconds() // 60
+    )
+    return time_parameters
+
+
+def generate_seeds(n_seeds, seed_for_loads=None, seed_for_res=None, seed_for_disp=None):
+    if seed_for_loads is not None:
+        np.random.seed(seed_for_loads)
+    else:
+        np.random.seed()
+    seeds_for_loads = [np.random.randint(low=0, high=2 ** 31) for _ in
+                       range(n_seeds)]
+    if seed_for_res is not None:
+        np.random.seed(seed_for_res)
+    else:
+        np.random.seed()
+    seeds_for_res = [np.random.randint(low=0, high=2 ** 31) for _ in
+                       range(n_seeds)]
+    if seed_for_disp is not None:
+        np.random.seed(seed_for_disp)
+    else:
+        np.random.seed()
+    seeds_for_disp = [np.random.randint(low=0, high=2 ** 31) for _ in
+                       range(n_seeds)]
+
+    return seeds_for_loads, seeds_for_res, seeds_for_disp
+
+
+def read_all_configurations(weeks, start_date, case, root_dir):
+    time_params = time_parameters(weeks, start_date)
+    year = time_params['year']
+
+    output_folder = os.path.join(root_dir, 'generation', 'output', case)
+    input_folder = os.path.join(root_dir, 'generation', 'input')
+
+    print(f'output_folder: {output_folder}')
+    dispatch_input_folder, dispatch_input_folder_case, dispatch_output_folder = make_generation_input_output_directories(
+        input_folder, case, year, output_folder)
+    load_config_manager = LoadsConfigManager(
+        name="Loads Generation",
+        root_directory=input_folder,
+        input_directories=dict(case=case, patterns='patterns'),
+        required_input_files=dict(case=['loads_charac.csv', 'params.json'],
+                                  patterns=['load_weekly_pattern.csv']),
+        output_directory=dispatch_input_folder
+    )
+    load_config_manager.validate_configuration()
+
+    params, loads_charac, load_weekly_pattern = load_config_manager.read_configuration()
+
+    res_config_manager = ResConfigManager(
+        name="Renewables Generation",
+        root_directory=input_folder,
+        input_directories=dict(case=case, patterns='patterns'),
+        required_input_files=dict(case=['prods_charac.csv', 'params.json'],
+                                  patterns=['solar_pattern.npy']),
+        output_directory=dispatch_input_folder
+    )
+
+    params, prods_charac, solar_pattern = res_config_manager.read_configuration()
+
+    params.update(time_params)
+    params = updated_time_parameters_with_timestep(params, params['dt'])
+
+    dispath_config_manager = DispatchConfigManager(
+        name="Dispatch",
+        root_directory=os.path.join(input_folder, case),
+        output_directory=dispatch_output_folder,
+        input_directories=dict(params='.', year=os.path.join('dispatch', str(year))),
+        required_input_files=dict(params=['params_opf.json'], year=[])
+    )
+    dispath_config_manager.validate_configuration()
+    params_opf = dispath_config_manager.read_configuration()
+
+    return (year, params, loads_charac, prods_charac, load_weekly_pattern,
+            solar_pattern, params_opf)

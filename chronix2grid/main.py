@@ -5,6 +5,7 @@ import click
 
 # Chronix2grid modules
 from chronix2grid.generation import generate_chronics as gen
+from chronix2grid.generation import generation_utils as gu
 from chronix2grid.kpi import main as kpis
 
 # ==============================================================
@@ -30,7 +31,7 @@ def generate(case, start_date, weeks, n_scenarios, mode, root_folder,
     output_folder = os.path.join(OUTPUT_FOLDER, case)
     images_folder = os.path.join(IMAGES_FOLDER, case)
 
-    time_parameters = gen.time_parameters(weeks, start_date)
+    time_parameters = gu.time_parameters(weeks, start_date)
     seed_for_loads = parse_seed_arg(seed_for_loads, '--seed-for-loads')
     seed_for_res = parse_seed_arg(seed_for_res, '--seed-for-res')
     seed_for_dispatch = parse_seed_arg(seed_for_dispatch, '--seed-for-dispatch')

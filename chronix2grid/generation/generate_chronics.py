@@ -39,7 +39,7 @@ def main(case, n_scenarios, input_folder, output_folder, time_params, mode='LRTK
     load_weekly_pattern (pandas.DataFrame): as returned by function chronix2grid.generation.generate_chronics.read_configuration
     mode (str): options to launch certain parts of the generation process : L load R renewable T thermal
 
-l
+
     Returns
     -------
 
@@ -49,7 +49,7 @@ l
     print('============================================== CHRONICS GENERATION ==================================================================')
     print('=====================================================================================================================================')
 
-    seeds_for_loads, seeds_for_res, seeds_for_disp = generate_seeds(
+    seeds_for_loads, seeds_for_res, seeds_for_disp = gu.generate_seeds(
         n_scenarios, seed_for_loads, seed_for_res, seed_for_disp
     )
 
@@ -84,7 +84,7 @@ l
     params, prods_charac, solar_pattern = res_config_manager.read_configuration()
 
     params.update(time_params)
-    params = updated_time_parameters_with_timestep(params, params['dt'])
+    params = gu.updated_time_parameters_with_timestep(params, params['dt'])
 
     dispath_config_manager = DispatchConfigManager(
         name="Dispatch",
@@ -124,45 +124,4 @@ l
     return params, loads_charac, prods_charac
 
 
-def time_parameters(weeks, start_date):
-    result = dict()
-    start_date = pd.to_datetime(start_date, format='%Y-%m-%d')
-    result['weeks'] = weeks
-    result['start_date'] = start_date
-    result['year'] = start_date.year
-    return result
-
-
-def updated_time_parameters_with_timestep(time_parameters, timestep):
-    time_parameters['end_date'] = time_parameters['start_date'] + timedelta(
-        days=7 * int(time_parameters['weeks'])) - timedelta(minutes=timestep)
-    time_parameters['T'] = int(
-        pd.Timedelta(
-            time_parameters['end_date'] - time_parameters['start_date']
-        ).total_seconds() // 60
-    )
-    return time_parameters
-
-
-def generate_seeds(n_seeds, seed_for_loads=None, seed_for_res=None, seed_for_disp=None):
-    if seed_for_loads is not None:
-        np.random.seed(seed_for_loads)
-    else:
-        np.random.seed()
-    seeds_for_loads = [np.random.randint(low=0, high=2 ** 31) for _ in
-                       range(n_seeds)]
-    if seed_for_res is not None:
-        np.random.seed(seed_for_res)
-    else:
-        np.random.seed()
-    seeds_for_res = [np.random.randint(low=0, high=2 ** 31) for _ in
-                       range(n_seeds)]
-    if seed_for_disp is not None:
-        np.random.seed(seed_for_disp)
-    else:
-        np.random.seed()
-    seeds_for_disp = [np.random.randint(low=0, high=2 ** 31) for _ in
-                       range(n_seeds)]
-
-    return seeds_for_loads, seeds_for_res, seeds_for_disp
 

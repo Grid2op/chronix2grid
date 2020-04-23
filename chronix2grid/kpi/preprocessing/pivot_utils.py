@@ -239,3 +239,95 @@ def chronics_to_kpi(year, n_scenario, chronics_repo, timestep, params, thermal =
         price.set_index('Time', drop=True, inplace=True)
         price = price.resample(timestep).first()
         return prod_p, load_p, price
+
+
+def nrel_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, params, year):
+
+    # Read relation between reference generators and regions
+    corresp_regions_gens = pd.read_csv(os.path.join(kpi_input_folder, 'Texas', 'corresp_gens.csv'), sep = ';')
+    corresp_regions_loads = pd.read_csv(os.path.join(kpi_input_folder, 'Texas', 'corresp_loads.csv'), sep = ';')
+
+    # Initialize data frame for production
+    print("Importing and formatting data downloaded from NREL Texas")
+    repo_in_prod = os.path.join(kpi_input_folder, 'Texas', 'prod_2007.csv.bz2')
+    nrel_prod = pd.read_csv(repo_in_prod, sep=',', encoding='latin1', decimal='.')
+
+    repo_in_load = os.path.join(kpi_input_folder, 'Texas', 'load_2007.csv.bz2')
+    nrel_load = pd.read_csv(repo_in_load, sep=',', encoding='latin1', decimal='.')
+
+    # Datetime processing
+    nrel_prod['datetime'] = pd.to_datetime(nrel_prod['datetime'])
+    nrel_load['datetime'] = pd.to_datetime(nrel_load['datetime'])
+
+    # Test if chosen timestep is relevant for NREL
+    timestep_int = int(timestep[:2])
+    if timestep_int < 5:
+        print('Erreur: NREL requires timestep >15 min to compute KPI. Please change timestep in paramsKPI.json')
+        sys.exit()
+
+    # For each fictive region, rearange generators and load nodes to get as many as in synthetic configuration
+    ref_prod = pd.DataFrame({'datetime':nrel_prod['datetime']})
+    ref_load = pd.DataFrame({'datetime':nrel_prod['datetime']})
+
+    regions = corresp_regions_gens['zone'].unique()
+    for region_fictive in regions:
+        ref_prod_ = pd.DataFrame({'datetime':nrel_prod.index})
+        ref_load_ = pd.DataFrame({'datetime':nrel_load.index})
+
+        # Production generators
+        ref_gens = corresp_regions_gens[corresp_regions_gens['zone']==region_fictive]['name'].unique()
+        nref = len(ref_gens)
+        syn_gens = prods_charac[prods_charac['zone'] == region_fictive]['name'].unique()
+        nsyn = len(syn_gens)
+
+
+        if nref <= nsyn:
+            for i, col in enumerate(syn_gens):
+                if i < (nref-1):
+                    ref_prod_[col] = nrel_prod[ref_gens[i]].astype(float)
+                else:
+                    ref_prod_[col] = nrel_prod[ref_gens[(nref-1)]].astype(float)/(nsyn-nref+1)
+        else:
+            for i, col in enumerate(syn_gens):
+                if i < (nsyn-1):
+                    ref_prod_[col] = nrel_prod[ref_gens[i]].astype(float)
+                else:
+                    ref_prod_[col] = nrel_prod[ref_gens[i:len(ref_gens)]].sum(axis = 1)
+        ref_prod_.drop(columns = ['datetime'], inplace=True)
+        ref_prod = pd.concat([ref_prod, ref_prod_], axis=1)
+
+        # Loads nodes with same principle
+        ref_gens = corresp_regions_loads[corresp_regions_loads['zone']==region_fictive]['name'].unique()
+        nref = len(ref_gens)
+        syn_gens = loads_charac[loads_charac['zone'] == region_fictive]['name'].unique()
+        nsyn = len(syn_gens)
+
+        if nref <= nsyn:
+            for i, col in enumerate(syn_gens):
+                if i < (nref-1):
+                    ref_load_[col] = nrel_load[ref_gens[i]].astype(float)
+                else:
+                    ref_load_[col] = nrel_load[ref_gens[(nref-1)]].astype(float)/(nsyn-nref+1)
+        else:
+            for i, col in enumerate(syn_gens):
+                if i < (nsyn - 1):
+                    ref_load_[col] = nrel_load[ref_gens[i]].astype(float)
+                else:
+                    ref_load_[col] = nrel_load[ref_gens[i:len(ref_gens)]].sum(axis=1).astype(float)
+        ref_load_.drop(columns=['datetime'], inplace = True)
+        ref_load = pd.concat([ref_load, ref_load_], axis = 1)
+
+    # Set datetime limits and resample like synthetic chronics
+    ref_prod.set_index('datetime', inplace = True)
+    ref_load.set_index('datetime', inplace=True)
+    ref_prod = ref_prod.resample(timestep).first()
+    ref_load = ref_load.resample(timestep).first()
+
+    start_date = params['start_date']
+    end_date = params['end_date']
+    ref_prod.index = [ts.replace(year = year) for ts in ref_prod.index]
+    ref_load.index = [ts.replace(year=year) for ts in ref_load.index]
+    ref_prod = ref_prod[(ref_prod.index >= start_date) & (ref_prod.index < end_date)]
+    ref_load = ref_load[(ref_load.index >= start_date) & (ref_load.index < end_date)]
+
+    return ref_prod, ref_load
