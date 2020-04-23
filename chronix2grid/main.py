@@ -16,7 +16,11 @@ from chronix2grid.kpi import main as kpis
 @click.option('--n_scenarios', default=1, help='Number of scenarios to generate')
 @click.option('--mode', default='LRTK', help='Steps to execute : L for loads only (and KPI); R(K) for renewables (and KPI) only; LRTK for all generation')
 @click.option('--root-folder', default=os.path.normpath(os.getcwd()), help='root of all file generation and input')
-def generate(case, start_date, weeks, n_scenarios, mode, root_folder):
+@click.option('--seed-for-loads', default=None, help='Input seed to ensure reproducibility of loads generation')
+@click.option('--seed-for-res', default=None, help='Input seed to ensure reproducibility of renewables generation')
+@click.option('--seed-for-dispatch', default=None, help='Input seed to ensure reproducibility of dispatch')
+def generate(case, start_date, weeks, n_scenarios, mode, root_folder,
+             seed_for_loads, seed_for_res, seed_for_dispatch):
     INPUT_FOLDER = os.path.join(root_folder, 'generation', 'input')
     OUTPUT_FOLDER = os.path.join(root_folder, 'generation', 'output')
 
@@ -27,11 +31,15 @@ def generate(case, start_date, weeks, n_scenarios, mode, root_folder):
     images_folder = os.path.join(IMAGES_FOLDER, case)
 
     time_parameters = gen.time_parameters(weeks, start_date)
+    seed_for_loads = parse_seed_arg(seed_for_loads, '--seed-for-loads')
+    seed_for_res = parse_seed_arg(seed_for_res, '--seed-for-res')
+    seed_for_dispatch = parse_seed_arg(seed_for_dispatch, '--seed-for-dispatch')
 
     # Chronic generation
     if 'L' in mode or 'R' in mode:
         params, loads_charac, prods_charac = gen.main(
-            case, n_scenarios, INPUT_FOLDER, output_folder, time_parameters, mode)
+            case, n_scenarios, INPUT_FOLDER, output_folder, time_parameters,
+            mode, seed_for_loads, seed_for_res, seed_for_dispatch)
 
     year = time_parameters['year']
 
@@ -51,6 +59,15 @@ def generate(case, start_date, weeks, n_scenarios, mode, root_folder):
         kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, output_folder, images_folder,
                   year, case, n_scenarios, wind_solar_only, params,
                   loads_charac, prods_charac)
+
+
+def parse_seed_arg(seed, arg_name):
+    if seed is not None:
+        try:
+            seed = int(seed)
+        except TypeError:
+            raise RuntimeError(f'The parameter {arg_name} must be an integer')
+    return seed
 
 
 if __name__ == "__main__":

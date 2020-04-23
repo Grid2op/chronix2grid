@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 
 setup(name='Chronix2Grid',
-      version='0.1.0rc6',
+      version='0.1.0rc8',
       description='A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)',
       long_description='TODO',
       classifiers=[
@@ -89,7 +89,6 @@ setup(name='Chronix2Grid',
                         "python-dateutil==2.8.1",
                         "pytz==2019.3",
                         "PyUtilib==5.7.3",
-                        "pywinpty==0.5.7",
                         "pyzmq==19.0.0",
                         "qtconsole==4.7.1",
                         "QtPy==1.9.0",

@@ -18,28 +18,9 @@ from . import generation_utils as gu
 from ..config import DispatchConfigManager, LoadsConfigManager, ResConfigManager
 
 
-def time_parameters(weeks, start_date):
-    result = dict()
-    start_date = pd.to_datetime(start_date, format='%Y-%m-%d')
-    result['weeks'] = weeks
-    result['start_date'] = start_date
-    result['year'] = start_date.year
-    return result
-
-
-def updated_time_parameters_with_timestep(time_parameters, timestep):
-    time_parameters['end_date'] = time_parameters['start_date'] + timedelta(
-        days=7 * int(time_parameters['weeks'])) - timedelta(minutes=timestep)
-    time_parameters['T'] = int(
-        pd.Timedelta(
-            time_parameters['end_date'] - time_parameters['start_date']
-        ).total_seconds() // 60
-    )
-    return time_parameters
-
-
 # Call generation scripts n_scenario times with dedicated random seeds
-def main(case, n_scenarios, input_folder, output_folder, time_params, mode='LRTK'):
+def main(case, n_scenarios, input_folder, output_folder, time_params, mode='LRTK',
+         seed_for_loads=None, seed_for_res=None, seed_for_disp=None):
     """
     Main function for chronics generation. It works with three steps: load generation, renewable generation (solar and wind) and then dispatch computation to get the whole energy mix
 
@@ -68,9 +49,13 @@ l
     print('============================================== CHRONICS GENERATION ==================================================================')
     print('=====================================================================================================================================')
 
-    ## Random seeds:  Make sure the seeds are the same, whether computation is parallel or sequential
-    seeds = [np.random.randint(low=0, high=2 ** 31) for _ in range(n_scenarios)]
+    seeds_for_loads, seeds_for_res, seeds_for_disp = generate_seeds(
+        n_scenarios, seed_for_loads, seed_for_res, seed_for_disp
+    )
 
+    print(seeds_for_loads)
+    print(seeds_for_res)
+    print(seeds_for_disp)
     ## Folder settings
     year = time_params['year']
 
@@ -113,16 +98,17 @@ l
     dispatcher = ec.init_dispatcher_from_config(params_opf["grid_path"], input_folder)
 
     ## Launch proper scenarios generation
-    for i, seed in enumerate(seeds):
+    seeds_iterator = zip(seeds_for_loads, seeds_for_res, seeds_for_disp)
+    for i, (seed_load, seed_res, seed_disp) in enumerate(seeds_iterator):
         scenario_name = f'Scenario_{i}'
         scenario_dispatch_input_folder = os.path.join(dispatch_input_folder, scenario_name)
 
         print("================ Generating "+scenario_name+" ================")
         if 'L' in mode:
-            load, load_forecasted = gen_loads.main(scenario_dispatch_input_folder, seed, params, loads_charac, load_weekly_pattern, write_results = True)
+            load, load_forecasted = gen_loads.main(scenario_dispatch_input_folder, seed_load, params, loads_charac, load_weekly_pattern, write_results = True)
 
         if 'R' in mode:
-            prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = gen_enr.main(scenario_dispatch_input_folder, seed, params, prods_charac, solar_pattern, write_results = True)
+            prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = gen_enr.main(scenario_dispatch_input_folder, seed_res, params, prods_charac, solar_pattern, write_results = True)
         if 'T' in mode:
             input_scenario_folder, output_scneario_folder = du.make_scenario_input_output_directories(
                 dispatch_input_folder, dispatch_output_folder, scenario_name)
@@ -133,7 +119,50 @@ l
 
             dispatch_results = gen_dispatch.main(dispatcher, input_scenario_folder,
                                                  output_scneario_folder,
-                                                 seed, params_opf)
+                                                 seed_disp, params_opf)
         print('\n')
     return params, loads_charac, prods_charac
+
+
+def time_parameters(weeks, start_date):
+    result = dict()
+    start_date = pd.to_datetime(start_date, format='%Y-%m-%d')
+    result['weeks'] = weeks
+    result['start_date'] = start_date
+    result['year'] = start_date.year
+    return result
+
+
+def updated_time_parameters_with_timestep(time_parameters, timestep):
+    time_parameters['end_date'] = time_parameters['start_date'] + timedelta(
+        days=7 * int(time_parameters['weeks'])) - timedelta(minutes=timestep)
+    time_parameters['T'] = int(
+        pd.Timedelta(
+            time_parameters['end_date'] - time_parameters['start_date']
+        ).total_seconds() // 60
+    )
+    return time_parameters
+
+
+def generate_seeds(n_seeds, seed_for_loads=None, seed_for_res=None, seed_for_disp=None):
+    if seed_for_loads is not None:
+        np.random.seed(seed_for_loads)
+    else:
+        np.random.seed()
+    seeds_for_loads = [np.random.randint(low=0, high=2 ** 31) for _ in
+                       range(n_seeds)]
+    if seed_for_res is not None:
+        np.random.seed(seed_for_res)
+    else:
+        np.random.seed()
+    seeds_for_res = [np.random.randint(low=0, high=2 ** 31) for _ in
+                       range(n_seeds)]
+    if seed_for_disp is not None:
+        np.random.seed(seed_for_disp)
+    else:
+        np.random.seed()
+    seeds_for_disp = [np.random.randint(low=0, high=2 ** 31) for _ in
+                       range(n_seeds)]
+
+    return seeds_for_loads, seeds_for_res, seeds_for_disp
 
