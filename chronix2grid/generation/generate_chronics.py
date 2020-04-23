@@ -1,18 +1,11 @@
-# Native python libraries
 import os
-import json
 
-# Other Python libraries
 import pandas as pd
-import numpy as np
-from datetime import timedelta
 
-
-# Libraries developed for this module
 from .consumption import generate_load as gen_loads
 from .renewable import generate_solar_wind as gen_enr
-from .thermal import generate_dispatch as gen_dispatch
 from .dispatch import utils as du
+from .dispatch import generate_dispatch as gen_dispatch
 from .dispatch import EconomicDispatch as ec
 from . import generation_utils as gu
 from ..config import DispatchConfigManager, LoadsConfigManager, ResConfigManager
@@ -53,9 +46,6 @@ def main(case, n_scenarios, input_folder, output_folder, time_params, mode='LRTK
         n_scenarios, seed_for_loads, seed_for_res, seed_for_disp
     )
 
-    print(seeds_for_loads)
-    print(seeds_for_res)
-    print(seeds_for_disp)
     ## Folder settings
     year = time_params['year']
 

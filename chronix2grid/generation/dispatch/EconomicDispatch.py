@@ -8,15 +8,13 @@ import os
 
 import grid2op
 from grid2op.Chronics import ChangeNothing
-import numpy as np
 import pandas as pd
 import plotly.express as px
 import pypsa
 
-from chronix2grid.generation.dispatch.utils import RampMode
-from chronix2grid.generation.thermal.EDispatch_L2RPN2020.run_economic_dispatch import (
-    main_run_disptach)
-from chronix2grid.generation.thermal.EDispatch_L2RPN2020.utils import add_noise_gen
+from .utils import RampMode
+from .EDispatch_L2RPN2020.run_economic_dispatch import main_run_disptach
+from .EDispatch_L2RPN2020.utils import add_noise_gen
 
 DispatchResults = namedtuple('DispatchResults', ['chronix', 'terminal_conditions'])
 
@@ -324,7 +322,7 @@ if __name__ == "__main__":
     import os
     import grid2op
     from grid2op.Chronics import ChangeNothing
-    import chronix2grid.generation.thermal.EDispatch_L2RPN2020.run_economic_dispatch as run_economic_dispatch
+    import chronix2grid.generation.dispatch.EDispatch_L2RPN2020.run_economic_dispatch as run_economic_dispatch
 
     INPUT_FOLDER = 'chronix2grid/generation/input'
     CASE = 'case118_l2rpn'

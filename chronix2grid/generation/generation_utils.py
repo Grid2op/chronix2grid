@@ -158,22 +158,24 @@ def updated_time_parameters_with_timestep(time_parameters, timestep):
 
 
 def generate_seeds(n_seeds, seed_for_loads=None, seed_for_res=None, seed_for_disp=None):
+
+    default_seed = np.random.randint(low=0, high=2 ** 31)
     if seed_for_loads is not None:
         np.random.seed(seed_for_loads)
     else:
-        np.random.seed()
+        np.random.seed(default_seed)
     seeds_for_loads = [np.random.randint(low=0, high=2 ** 31) for _ in
                        range(n_seeds)]
     if seed_for_res is not None:
         np.random.seed(seed_for_res)
     else:
-        np.random.seed()
+        np.random.seed(default_seed)
     seeds_for_res = [np.random.randint(low=0, high=2 ** 31) for _ in
                        range(n_seeds)]
     if seed_for_disp is not None:
         np.random.seed(seed_for_disp)
     else:
-        np.random.seed()
+        np.random.seed(default_seed)
     seeds_for_disp = [np.random.randint(low=0, high=2 ** 31) for _ in
                        range(n_seeds)]
 

@@ -102,10 +102,11 @@ class LoadsConfigManager(ConfigManager):
                                                  output_directory, required_input_files)
 
     def read_configuration(self):
-        json1_file = open(os.path.join(
+        params_file_path = os.path.join(
             self.root_directory,
-            self.input_directories['case'], 'params.json'))
-        json1_str = json1_file.read()
+            self.input_directories['case'], 'params.json')
+        with open(params_file_path, 'r') as json1_file:
+            json1_str = json1_file.read()
         params = json.loads(json1_str)
         for key, value in params.items():
             try:
