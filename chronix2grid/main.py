@@ -7,6 +7,7 @@ import click
 from chronix2grid.generation import generate_chronics as gen
 from chronix2grid.generation import generation_utils as gu
 from chronix2grid.kpi import main as kpis
+from chronix2grid.output_processor import output_processor_to_chunks
 
 # ==============================================================
 ## CONSTANT VARIABLES
@@ -14,13 +15,20 @@ from chronix2grid.kpi import main as kpis
 @click.option('--case', default='case118_l2rpn', help='case folder to base generation on')
 @click.option('--start-date', default='2012-01-01', help='Start date to generate chronics')
 @click.option('--weeks', default=4, help='Number of weeks to generate')
+@click.option('--by-n-weeks', default=4, help='Size of the output chunks in weeks')
 @click.option('--n_scenarios', default=1, help='Number of scenarios to generate')
 @click.option('--mode', default='LRTK', help='Steps to execute : L for loads only (and KPI); R(K) for renewables (and KPI) only; LRTK for all generation')
 @click.option('--root-folder', default=os.path.normpath(os.getcwd()), help='root of all file generation and input')
 @click.option('--seed-for-loads', default=None, help='Input seed to ensure reproducibility of loads generation')
 @click.option('--seed-for-res', default=None, help='Input seed to ensure reproducibility of renewables generation')
 @click.option('--seed-for-dispatch', default=None, help='Input seed to ensure reproducibility of dispatch')
-def generate(case, start_date, weeks, n_scenarios, mode, root_folder,
+def generate(case, start_date, weeks, by_n_weeks, n_scenarios, mode, root_folder,
+             seed_for_loads, seed_for_res, seed_for_dispatch):
+    generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode, root_folder,
+             seed_for_loads, seed_for_res, seed_for_dispatch)
+
+
+def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode, root_folder,
              seed_for_loads, seed_for_res, seed_for_dispatch):
     INPUT_FOLDER = os.path.join(root_folder, 'generation', 'input')
     OUTPUT_FOLDER = os.path.join(root_folder, 'generation', 'output')
@@ -60,6 +68,9 @@ def generate(case, start_date, weeks, n_scenarios, mode, root_folder,
         kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, output_folder, images_folder,
                   year, case, n_scenarios, wind_solar_only, params,
                   loads_charac, prods_charac)
+
+    if by_n_weeks is not None:
+        output_processor_to_chunks(OUTPUT_FOLDER, case, year, by_n_weeks, n_scenarios)
 
 
 def parse_seed_arg(seed, arg_name):
