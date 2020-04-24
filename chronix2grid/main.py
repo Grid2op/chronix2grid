@@ -7,7 +7,8 @@ import click
 from chronix2grid.generation import generate_chronics as gen
 from chronix2grid.generation import generation_utils as gu
 from chronix2grid.kpi import main as kpis
-from chronix2grid.output_processor import output_processor_to_chunks
+from chronix2grid.output_processor import (
+    output_processor_to_chunks, write_start_dates_for_chunks)
 
 # ==============================================================
 ## CONSTANT VARIABLES
@@ -44,13 +45,17 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode, root_
     seed_for_res = parse_seed_arg(seed_for_res, '--seed-for-res')
     seed_for_dispatch = parse_seed_arg(seed_for_dispatch, '--seed-for-dispatch')
 
+    year = time_parameters['year']
+
     # Chronic generation
     if 'L' in mode or 'R' in mode:
         params, loads_charac, prods_charac = gen.main(
             case, n_scenarios, INPUT_FOLDER, output_folder, time_parameters,
             mode, seed_for_loads, seed_for_res, seed_for_dispatch)
-
-    year = time_parameters['year']
+        if by_n_weeks is not None:
+            output_processor_to_chunks(OUTPUT_FOLDER, case, year, by_n_weeks, n_scenarios)
+            write_start_dates_for_chunks(OUTPUT_FOLDER, case, year, weeks,
+                                         by_n_weeks, n_scenarios, start_date)
 
     # KPI formatting and computing
     if 'R' in mode and 'K' in mode and 'T' not in mode:
@@ -68,9 +73,6 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode, root_
         kpis.main(KPI_INPUT_FOLDER, INPUT_FOLDER, output_folder, images_folder,
                   year, case, n_scenarios, wind_solar_only, params,
                   loads_charac, prods_charac)
-
-    if by_n_weeks is not None:
-        output_processor_to_chunks(OUTPUT_FOLDER, case, year, by_n_weeks, n_scenarios)
 
 
 def parse_seed_arg(seed, arg_name):
