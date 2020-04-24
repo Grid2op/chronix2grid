@@ -52,7 +52,7 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode, root_
         params, loads_charac, prods_charac = gen.main(
             case, n_scenarios, INPUT_FOLDER, output_folder, time_parameters,
             mode, seed_for_loads, seed_for_res, seed_for_dispatch)
-        if by_n_weeks is not None:
+        if by_n_weeks is not None and 'T' in mode:
             output_processor_to_chunks(OUTPUT_FOLDER, case, year, by_n_weeks, n_scenarios)
             write_start_dates_for_chunks(OUTPUT_FOLDER, case, year, weeks,
                                          by_n_weeks, n_scenarios, start_date)
