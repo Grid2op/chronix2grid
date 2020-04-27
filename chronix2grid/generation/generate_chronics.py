@@ -89,8 +89,9 @@ def main(case, n_scenarios, input_folder, output_folder, time_params, mode='LRTK
 
     ## Launch proper scenarios generation
     seeds_iterator = zip(seeds_for_loads, seeds_for_res, seeds_for_disp)
+    scen_name_generator = gu.folder_name_pattern('Scenario', n_scenarios)
     for i, (seed_load, seed_res, seed_disp) in enumerate(seeds_iterator):
-        scenario_name = f'Scenario_{i}'
+        scenario_name = scen_name_generator(i)
         scenario_dispatch_input_folder = os.path.join(dispatch_input_folder, scenario_name)
 
         print("================ Generating "+scenario_name+" ================")

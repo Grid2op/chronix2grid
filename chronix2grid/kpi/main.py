@@ -6,6 +6,7 @@ import json
 # Chronix2grid modules
 from .preprocessing.pivot_KPI import pivot_format
 from .deterministic.kpis import EconomicDispatchValidator
+from ..generation import generation_utils as gu
 
 
 def main(kpi_input_folder, generation_input_folder, generation_output_folder, images_repo, year, case, n_scenarios, wind_solar_only, params,
@@ -42,9 +43,11 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
         prods_charac['zone'] = 'R1'
         loads_charac['zone'] = 'R1'
 
+    scen_name_generator = gu.folder_name_pattern('Scenario', n_scenarios)
     ## Format and compute KPI for each scenario
     for scenario_num in range(n_scenarios):
-        print('Scenario '+str(scenario_num)+'...')
+        scenario_name = scen_name_generator(scenario_num)
+        print(scenario_name+'...')
 
         # Return Warning if KPIs are not computed on full year. Yet, the computation will work
         if params['weeks'] != 52:
@@ -56,7 +59,7 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
             ref_dispatch, ref_consumption, syn_dispatch, syn_consumption, monthly_pattern, hours = pivot_format(generation_input_folder,
                                                                                                             kpi_input_folder,
                                                                                                             year,
-                                                                                                            scenario_num,
+                                                                                                            scenario_name,
                                                                                                             prods_charac,
                                                                                                             loads_charac,
                                                                                                             wind_solar_only,
@@ -69,7 +72,7 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
                                                                                                 generation_output_folder,
                                                                                                 kpi_input_folder,
                                                                                                 year,
-                                                                                                scenario_num,
+                                                                                                scenario_name,
                                                                                                 prods_charac,
                                                                                                 loads_charac,
                                                                                                 wind_solar_only,
@@ -84,7 +87,7 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
                                                        ref_dispatch,
                                                        syn_dispatch,
                                                        year,
-                                                       scenario_num,
+                                                       scenario_name,
                                                        images_repo,
                                                        prods_charac=prods_charac,
                                                        loads_charac=loads_charac,
@@ -137,7 +140,7 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
         kpi_output_folder = os.path.join(kpi_input_folder, os.pardir, 'output', str(year))
         if not os.path.exists(kpi_output_folder):
             os.makedirs(kpi_output_folder)
-        kpi_output_folder = os.path.join(kpi_output_folder,'Scenario_' + str(scenario_num))
+        kpi_output_folder = os.path.join(kpi_output_folder, scenario_name)
         if not os.path.exists(kpi_output_folder):
             os.makedirs(kpi_output_folder)
 

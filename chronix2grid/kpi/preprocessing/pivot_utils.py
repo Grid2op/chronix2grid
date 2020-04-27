@@ -105,6 +105,7 @@ def eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_char
         price = None
     return prod, conso_, price
 
+
 def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac, year, params, corresp_regions):
 
     # Initialize data frame for production
@@ -182,7 +183,8 @@ def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac
 
     return ninja, conso_
 
-def chronics_to_kpi(year, n_scenario, chronics_repo, timestep, params, thermal = True):
+
+def chronics_to_kpi(year, scenario_name, chronics_repo, timestep, params, thermal = True):
 
     print("Importing and formatting synthetic chronics")
 
@@ -190,7 +192,7 @@ def chronics_to_kpi(year, n_scenario, chronics_repo, timestep, params, thermal =
         ## Format when all dispatch is generated
 
         # Read generated chronics after dispatch phase
-        folder = os.path.join(chronics_repo, str(year), 'Scenario_' + str(n_scenario))
+        folder = os.path.join(chronics_repo, str(year), scenario_name)
         prod_p = pd.read_csv(os.path.join(folder, 'prod_p.csv.bz2'), sep=';', decimal='.')
         load_p = pd.read_csv(os.path.join(folder, 'load_p.csv.bz2'), sep=';', decimal='.')
         price = pd.read_csv(os.path.join(folder, 'prices.csv.bz2'), sep=';', decimal='.')
@@ -209,7 +211,7 @@ def chronics_to_kpi(year, n_scenario, chronics_repo, timestep, params, thermal =
         ## Format synthetic chronics when no dispatch has been done
 
         # Read generated chronics
-        folder = os.path.join(chronics_repo, 'dispatch', str(year), 'Scenario_' + str(n_scenario))
+        folder = os.path.join(chronics_repo, 'dispatch', str(year), scenario_name)
 
         solar_p = pd.read_csv(os.path.join(folder, 'solar_p.csv.bz2'), sep=';', decimal='.')
         wind_p = pd.read_csv(os.path.join(folder, 'wind_p.csv.bz2'), sep=';', decimal='.')

@@ -18,8 +18,10 @@ import seaborn as sns
 # Class definition
 class EconomicDispatchValidator:
 
-    def __init__(self, ref_consumption, syn_consumption, ref_dispatch, synthetic_dispatch, year, num_scenario,
-                 images_repo, prods_charac=None, loads_charac=None, ref_prices=None, syn_prices=None):
+    def __init__(self, ref_consumption, syn_consumption, ref_dispatch,
+                 synthetic_dispatch, year, scenario_name, images_repo,
+                 prods_charac=None, loads_charac=None, ref_prices=None,
+                 syn_prices=None):
 
         ## Constructor
 
@@ -32,7 +34,7 @@ class EconomicDispatchValidator:
         self.syn_prices = syn_prices
 
         # Constants
-        self.num_scenario = 'Scenario_'+str(num_scenario)
+        self.scenario_name = scenario_name
         self.year = year
         self.dt = (ref_dispatch.index.values[1] - ref_dispatch.index.values[0])/pd.Timedelta(minutes = 1)
 
@@ -40,7 +42,7 @@ class EconomicDispatchValidator:
         self.image_repo = images_repo+'/'+str(self.year)
         if not os.path.exists(self.image_repo):
             os.makedirs(self.image_repo, exist_ok=True)
-        self.image_repo += '/' + self.num_scenario
+        self.image_repo += '/' + self.scenario_name
         if not os.path.exists(self.image_repo):
             os.makedirs(self.image_repo, exist_ok=True)
             os.mkdir(os.path.join(self.image_repo,'dispatch_view'))

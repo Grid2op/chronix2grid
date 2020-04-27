@@ -1,4 +1,5 @@
 import datetime as dt
+from functools import partial
 import os
 import re
 
@@ -230,3 +231,13 @@ def read_all_configurations(weeks, start_date, case, root_dir):
 
     return (year, params, loads_charac, prods_charac, load_weekly_pattern,
             solar_pattern, params_opf)
+
+
+def folder_name_pattern(base_name, n_scenarios):
+    padding_size = len(str(int(n_scenarios)))
+    return name_pattern(base_name, padding_size)
+
+
+def name_pattern(base_name, padding_size):
+    prefix = str(base_name) + '_' + '{:0{width}d}'
+    return partial(prefix.format, width=padding_size)

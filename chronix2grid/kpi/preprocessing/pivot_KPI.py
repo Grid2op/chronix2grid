@@ -1,11 +1,11 @@
 import os
 import sys
 import json
-import pandas as pd
 
 from .pivot_utils import chronics_to_kpi, renewableninja_to_kpi, eco2mix_to_kpi_regional, nrel_to_kpi
 
-def pivot_format(chronics_folder, kpi_input_folder, year, scenario_num, prods_charac, loads_charac, wind_solar_only, params, case):
+
+def pivot_format(chronics_folder, kpi_input_folder, year, scenario_name, prods_charac, loads_charac, wind_solar_only, params, case):
     """
         This functions contains pivot formatting of reference and synthetic chronics, in a usable format by KPI computation.
 
@@ -14,7 +14,7 @@ def pivot_format(chronics_folder, kpi_input_folder, year, scenario_num, prods_ch
         chronics_folder (str): path to folder which contains generated chronics
         kpi_input_folder (str): path to folder of kpi inputs, which contains paramsKPI.json and benchmark folders. paramsKPI.json tells which benchmark to read as reference
         year (int): year in which results are written
-        scenario_num (int): numero of scenario to study (KPIs are computed for each scenario separately)
+        scenario_name (int): name of the scenario to study (KPIs are computed for each scenario separately)
         prods_charac (pandas.DataFrame): characteristics of generators such as Pmax, carrier and region
         loads_charac (pandas.DataFrame): characteristics of loads node such as Pmax, type of demand and region
         wind_solar_only (boolean): True if the generated chronics contain only wind, solar and load chronics, False otherwise
@@ -64,11 +64,11 @@ def pivot_format(chronics_folder, kpi_input_folder, year, scenario_num, prods_ch
 
     # Format generated chronics
     if wind_solar_only:
-        syn_prod, syn_load = chronics_to_kpi(year, scenario_num, os.path.join(chronics_folder, case), timestep, params,
+        syn_prod, syn_load = chronics_to_kpi(year, scenario_name, os.path.join(chronics_folder, case), timestep, params,
                                                      thermal=not wind_solar_only)
         return ref_prod, ref_load, syn_prod, syn_load, monthly_pattern, hours
     else:
-        syn_prod, syn_load, prices = chronics_to_kpi(year, scenario_num, chronics_folder, timestep, params,
+        syn_prod, syn_load, prices = chronics_to_kpi(year, scenario_name, chronics_folder, timestep, params,
                                              thermal=not wind_solar_only)
         return ref_prod, ref_load, syn_prod, syn_load, monthly_pattern, hours, ref_prices, prices
 
