@@ -11,16 +11,20 @@ def write_start_dates_for_chunks(intermediary_path, case, year, n_weeks, by_n_we
     output_path = os.path.join(intermediary_path, case, str(year))
     days_to_day = by_n_weeks * 7
     n_chunks = math.ceil(n_weeks / by_n_weeks)
+    start_date_time = pd.to_datetime(start_date, format='%Y-%m-%d')
+    file_name = 'start_datetime.info'
     for j in range(n_scenarios):
-        start_date_time = pd.to_datetime(start_date, format='%Y-%m-%d')
         scenario_name = f'Scenario_{j}'
+        write_start_datetime_info(output_path, file_name, start_date_time)
         for i in range(n_chunks):
             output_directory = os.path.join(output_path, scenario_name, f'chunk_{i}')
-            file_name = 'start_datetime.info'
-            with open(os.path.join(output_directory, file_name), 'w') as f:
-                f.write(start_date_time.strftime('%Y-%m-%d %H:%M'))
-
+            write_start_datetime_info(output_directory, file_name, start_date_time)
             start_date_time += dt.timedelta(days=days_to_day)
+
+
+def write_start_datetime_info(directory_path, file_name, start_date_time):
+    with open(os.path.join(directory_path, file_name), 'w') as f:
+        f.write(start_date_time.strftime('%Y-%m-%d %H:%M'))
 
 
 def output_processor_to_chunks(intermediary_path, case, year, by_n_weeks, n_scenarios):
