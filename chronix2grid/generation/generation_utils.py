@@ -241,3 +241,9 @@ def folder_name_pattern(base_name, n_scenarios):
 def name_pattern(base_name, padding_size):
     prefix = str(base_name) + '_' + '{:0{width}d}'
     return partial(prefix.format, width=padding_size)
+
+
+def warn_if_output_folder_not_empty(output_folder):
+    if os.listdir(output_folder):
+        input('The output folder is not empty, proceed with caution. '
+              'Press Enter to continue or Crtl-C to exit...')

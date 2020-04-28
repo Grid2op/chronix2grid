@@ -34,6 +34,8 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode, root_
     INPUT_FOLDER = os.path.join(root_folder, 'generation', 'input')
     OUTPUT_FOLDER = os.path.join(root_folder, 'generation', 'output')
 
+    gu.warn_if_output_folder_not_empty(OUTPUT_FOLDER)
+
     KPI_INPUT_FOLDER = os.path.join(root_folder, "kpi", "input")
     IMAGES_FOLDER = os.path.join(root_folder, "kpi", "images")
     # Folders are specific to studied case
