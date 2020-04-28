@@ -20,7 +20,6 @@ def main(case, n_scenarios, input_folder, output_folder, time_params, mode='LRTK
     Parameters
     ----------
     case (str): name of case to study (must be a folder within input_folder)
-    year (int): year of generation
     n_scenarios (int): number of desired scenarios to generate for the same timescale
     params (dict): parameters of generation, as returned by function chronix2grid.generation.generate_chronics.read_configuration
     input_folder (str): path of folder containing inputs
@@ -46,17 +45,14 @@ def main(case, n_scenarios, input_folder, output_folder, time_params, mode='LRTK
         n_scenarios, seed_for_loads, seed_for_res, seed_for_disp
     )
 
-    ## Folder settings
-    year = time_params['year']
-
-    dispatch_input_folder, dispatch_input_folder_case, dispatch_output_folder = gu.make_generation_input_output_directories(input_folder, case, year, output_folder)
+    # dispatch_input_folder, dispatch_input_folder_case, dispatch_output_folder = gu.make_generation_input_output_directories(input_folder, case, year, output_folder)
     load_config_manager = LoadsConfigManager(
         name="Loads Generation",
         root_directory=input_folder,
         input_directories=dict(case=case, patterns='patterns'),
         required_input_files=dict(case=['loads_charac.csv', 'params.json'],
                                   patterns=['load_weekly_pattern.csv']),
-        output_directory=dispatch_input_folder
+        output_directory=output_folder
     )
     load_config_manager.validate_configuration()
 
@@ -68,7 +64,7 @@ def main(case, n_scenarios, input_folder, output_folder, time_params, mode='LRTK
         input_directories=dict(case=case, patterns='patterns'),
         required_input_files=dict(case=['prods_charac.csv', 'params.json'],
                                   patterns=['solar_pattern.npy']),
-        output_directory=dispatch_input_folder
+        output_directory=output_folder
     )
 
     params, prods_charac, solar_pattern = res_config_manager.read_configuration()
@@ -78,10 +74,10 @@ def main(case, n_scenarios, input_folder, output_folder, time_params, mode='LRTK
 
     dispath_config_manager = DispatchConfigManager(
         name="Dispatch",
-        root_directory=os.path.join(input_folder, case),
-        output_directory=dispatch_output_folder,
-        input_directories=dict(params='.', year=os.path.join('dispatch', str(year))),
-        required_input_files=dict(params=['params_opf.json'], year=[])
+        root_directory=input_folder,
+        output_directory=output_folder,
+        input_directories=dict(params=case),
+        required_input_files=dict(params=['params_opf.json'])
     )
     dispath_config_manager.validate_configuration()
     params_opf = dispath_config_manager.read_configuration()
@@ -92,24 +88,22 @@ def main(case, n_scenarios, input_folder, output_folder, time_params, mode='LRTK
     scen_name_generator = gu.folder_name_pattern('Scenario', n_scenarios)
     for i, (seed_load, seed_res, seed_disp) in enumerate(seeds_iterator):
         scenario_name = scen_name_generator(i)
-        scenario_dispatch_input_folder = os.path.join(dispatch_input_folder, scenario_name)
+        scenario_folder_path = os.path.join(output_folder, scenario_name)
 
         print("================ Generating "+scenario_name+" ================")
         if 'L' in mode:
-            load, load_forecasted = gen_loads.main(scenario_dispatch_input_folder, seed_load, params, loads_charac, load_weekly_pattern, write_results = True)
+            load, load_forecasted = gen_loads.main(scenario_folder_path, seed_load, params, loads_charac, load_weekly_pattern, write_results = True)
 
         if 'R' in mode:
-            prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = gen_enr.main(scenario_dispatch_input_folder, seed_res, params, prods_charac, solar_pattern, write_results = True)
+            prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = gen_enr.main(scenario_folder_path, seed_res, params, prods_charac, solar_pattern, write_results = True)
         if 'T' in mode:
-            input_scenario_folder, output_scneario_folder = du.make_scenario_input_output_directories(
-                dispatch_input_folder, dispatch_output_folder, scenario_name)
             prods = pd.concat([prod_solar, prod_wind], axis=1)
             res_names = dict(wind=prod_wind.columns, solar=prod_solar.columns)
             dispatcher.chronix_scenario = ec.ChroniXScenario(load, prods, res_names,
                                                              scenario_name)
 
-            dispatch_results = gen_dispatch.main(dispatcher, input_scenario_folder,
-                                                 output_scneario_folder,
+            dispatch_results = gen_dispatch.main(dispatcher, scenario_folder_path,
+                                                 scenario_folder_path,
                                                  seed_disp, params_opf)
         print('\n')
     return params, loads_charac, prods_charac

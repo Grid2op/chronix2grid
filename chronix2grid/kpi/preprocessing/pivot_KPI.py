@@ -64,12 +64,12 @@ def pivot_format(chronics_folder, kpi_input_folder, year, scenario_name, prods_c
 
     # Format generated chronics
     if wind_solar_only:
-        syn_prod, syn_load = chronics_to_kpi(year, scenario_name, os.path.join(chronics_folder, case), timestep, params,
-                                                     thermal=not wind_solar_only)
+        syn_prod, syn_load = chronics_to_kpi(chronics_folder, timestep, params,
+                                             thermal=not wind_solar_only)
         return ref_prod, ref_load, syn_prod, syn_load, monthly_pattern, hours
     else:
-        syn_prod, syn_load, prices = chronics_to_kpi(year, scenario_name, chronics_folder, timestep, params,
-                                             thermal=not wind_solar_only)
+        syn_prod, syn_load, prices = chronics_to_kpi(
+            chronics_folder, timestep, params, thermal=not wind_solar_only)
         return ref_prod, ref_load, syn_prod, syn_load, monthly_pattern, hours, ref_prices, prices
 
 

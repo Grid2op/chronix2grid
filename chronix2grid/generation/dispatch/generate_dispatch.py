@@ -46,12 +46,6 @@ def main(dispatcher, input_folder, output_folder, seed, params_opf):
 
     dispatcher.save_results(output_folder)
 
-    files_to_move = ['load_p_forecasted.csv.bz2', 'load_q_forecasted.csv.bz2',
-                     'load_q.csv.bz2', 'prod_v.csv.bz2']
-    for file_to_move in files_to_move:
-        shutil.copy(os.path.join(input_folder, file_to_move),
-                    os.path.join(output_folder, file_to_move))
-
     return dispatch_results
 
 

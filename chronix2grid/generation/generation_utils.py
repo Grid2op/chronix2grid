@@ -244,6 +244,7 @@ def name_pattern(base_name, padding_size):
 
 
 def warn_if_output_folder_not_empty(output_folder):
-    if os.listdir(output_folder):
-        input('The output folder is not empty, proceed with caution. '
+    if len(os.listdir(output_folder)) != 0:
+        input(f'The output folder {output_folder} is not empty, '
+              f'proceed with caution. '
               'Press Enter to continue or Crtl-C to exit...')

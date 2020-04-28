@@ -7,9 +7,10 @@ import json
 from .preprocessing.pivot_KPI import pivot_format
 from .deterministic.kpis import EconomicDispatchValidator
 from ..generation import generation_utils as gu
+from .. import constants as cst
 
-
-def main(kpi_input_folder, generation_input_folder, generation_output_folder, images_repo, year, case, n_scenarios, wind_solar_only, params,
+def main(kpi_input_folder, generation_output_folder,
+         kpi_output_folder, year, case, n_scenarios, wind_solar_only, params,
          loads_charac, prods_charac):
     """
         This is the main function for KPI computation. It formats synthetic and reference chronics and then computes KPIs on it with 2 modes (wind solar and load only or full energy mix). It saves plots in png and html files. It writes a json output
@@ -48,7 +49,12 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
     for scenario_num in range(n_scenarios):
         scenario_name = scen_name_generator(scenario_num)
         print(scenario_name+'...')
-
+        scenario_generation_output_folder = os.path.join(
+            generation_output_folder, scenario_name
+        )
+        scenario_image_folder = os.path.join(
+            kpi_output_folder, scenario_name, cst.KPI_IMAGES_FOLDER_NAME
+        )
         # Return Warning if KPIs are not computed on full year. Yet, the computation will work
         if params['weeks'] != 52:
             print('Warning: KPI are incomplete. Computation has been made on '+str(params['weeks'])+' weeks, but are meant to be computed on 52 weeks')
@@ -56,28 +62,20 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
         # Read reference and synthetic chronics, but also KPI configuration, in pivot format. 2 modes: with or without full dispatch
         if wind_solar_only:
             # Get reference and synthetic dispatch and loads
-            ref_dispatch, ref_consumption, syn_dispatch, syn_consumption, monthly_pattern, hours = pivot_format(generation_input_folder,
-                                                                                                            kpi_input_folder,
-                                                                                                            year,
-                                                                                                            scenario_name,
-                                                                                                            prods_charac,
-                                                                                                            loads_charac,
-                                                                                                            wind_solar_only,
-                                                                                                            params, case)
+            (ref_dispatch, ref_consumption, syn_dispatch, syn_consumption,
+             monthly_pattern, hours) = pivot_format(
+                scenario_generation_output_folder, kpi_input_folder, year,
+                scenario_name, prods_charac, loads_charac, wind_solar_only,
+                params, case)
             ref_prices = None
             prices = None
         else:
             # Get reference and synthetic dispatch and loads
-            ref_dispatch, ref_consumption, syn_dispatch, syn_consumption, monthly_pattern, hours, ref_prices, prices = pivot_format(
-                                                                                                generation_output_folder,
-                                                                                                kpi_input_folder,
-                                                                                                year,
-                                                                                                scenario_name,
-                                                                                                prods_charac,
-                                                                                                loads_charac,
-                                                                                                wind_solar_only,
-                                                                                                params, case)
-
+            (ref_dispatch, ref_consumption, syn_dispatch, syn_consumption,
+             monthly_pattern, hours, ref_prices, prices) = pivot_format(
+                generation_output_folder, kpi_input_folder, year,
+                scenario_name, prods_charac, loads_charac, wind_solar_only,
+                params, case)
 
         ## Start and Run Economic dispatch validator
         # -- + -- + -- + -- + -- + -- + --
@@ -87,8 +85,7 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
                                                        ref_dispatch,
                                                        syn_dispatch,
                                                        year,
-                                                       scenario_name,
-                                                       images_repo,
+                                                       scenario_image_folder,
                                                        prods_charac=prods_charac,
                                                        loads_charac=loads_charac,
                                                        ref_prices=ref_prices,
@@ -137,14 +134,11 @@ def main(kpi_input_folder, generation_input_folder, generation_output_folder, im
         # -- + -- + -- + -- + --
         print ('(2) Generating json output file...')
 
-        kpi_output_folder = os.path.join(kpi_input_folder, os.pardir, 'output', str(year))
-        if not os.path.exists(kpi_output_folder):
-            os.makedirs(kpi_output_folder)
-        kpi_output_folder = os.path.join(kpi_output_folder, scenario_name)
-        if not os.path.exists(kpi_output_folder):
-            os.makedirs(kpi_output_folder)
-
-        with open(os.path.join(kpi_output_folder,'ec_validator_output.json'), 'w') as json_f:
+        kpi_scenario_output_folder = os.path.join(
+            kpi_output_folder, scenario_name)
+        ec_validator_path = os.path.join(
+            kpi_scenario_output_folder, 'ec_validator_output.json')
+        with open(ec_validator_path, 'w') as json_f:
             json.dump(dispatch_validator.output, json_f)
 
         print ('-Done-\n')

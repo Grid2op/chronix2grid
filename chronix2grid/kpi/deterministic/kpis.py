@@ -19,7 +19,7 @@ import seaborn as sns
 class EconomicDispatchValidator:
 
     def __init__(self, ref_consumption, syn_consumption, ref_dispatch,
-                 synthetic_dispatch, year, scenario_name, images_repo,
+                 synthetic_dispatch, year, images_repo,
                  prods_charac=None, loads_charac=None, ref_prices=None,
                  syn_prices=None):
 
@@ -34,18 +34,12 @@ class EconomicDispatchValidator:
         self.syn_prices = syn_prices
 
         # Constants
-        self.scenario_name = scenario_name
-        self.year = year
         self.dt = (ref_dispatch.index.values[1] - ref_dispatch.index.values[0])/pd.Timedelta(minutes = 1)
 
         # Create repos if necessary for plot saving
-        self.image_repo = images_repo+'/'+str(self.year)
-        if not os.path.exists(self.image_repo):
-            os.makedirs(self.image_repo, exist_ok=True)
-        self.image_repo += '/' + self.scenario_name
-        if not os.path.exists(self.image_repo):
-            os.makedirs(self.image_repo, exist_ok=True)
-            os.mkdir(os.path.join(self.image_repo,'dispatch_view'))
+        self.image_repo = images_repo
+        if not os.path.exists(os.path.join(self.image_repo, 'dispatch_view')):
+            os.mkdir(os.path.join(self.image_repo, 'dispatch_view'))
             os.mkdir(os.path.join(self.image_repo, 'wind_kpi'))
             os.mkdir(os.path.join(self.image_repo, 'wind_load_kpi'))
             os.mkdir(os.path.join(self.image_repo, 'solar_kpi'))
@@ -73,7 +67,7 @@ class EconomicDispatchValidator:
             self.quantile_mode = 'load'
             print("Warning: prices data have not been given for both synthetic and reference dispatch. "
                   "Quantiles will be computed on demand instead. "
-                  "Next time, you can provide kpi/input/France/eco2mix/prices_"+str(year)+".csv.bz2 \n")
+                  "Next time, you can provide .../France/eco2mix/prices_"+str(year)+".csv.bz2 \n")
 
 
         # Months are used in multiple KPI's
