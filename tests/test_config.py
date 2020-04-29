@@ -119,9 +119,10 @@ class TestConfigManager(unittest.TestCase):
         params_opf_filepath = os.path.join(self.root_directory, 'input1', 'params_opf.json')
         Path(params_opf_filepath).touch()
         with open(params_opf_filepath, 'w') as params_opf_file:
-            json.dump(dict(test=3), params_opf_file)
+            json.dump(dict(test=3, mode_opf=''), params_opf_file)
         json_dict = self.config_manager_multi.read_configuration()
         self.assertEqual(json_dict["test"], 3)
+        self.assertTrue(json_dict['mode_opf'] is None)
 
 
 

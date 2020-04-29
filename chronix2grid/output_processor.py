@@ -95,7 +95,7 @@ def dataframe_cutter(df, chunk_size):
         The list of cut dataframes
     """
     cut_df = []
-    if chunk_size > len(df):
+    if chunk_size < len(df):
         n_chunks = len(df) // chunk_size
         for i in range(n_chunks):
             cut_df.append(df.iloc[i*chunk_size:((i+1)*chunk_size)])
