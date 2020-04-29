@@ -11,3 +11,5 @@ DEFAULT_OUTPUT_FOLDER_NAME = 'output'
 DEFAULT_INPUT_FOLDER_NAME = 'input'
 
 SCENARIO_FOLDER_BASE_NAME = 'Scenario'
+
+SEEDS_FILE_NAME = 'seeds_info.json'

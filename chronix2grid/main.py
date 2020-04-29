@@ -1,7 +1,8 @@
-# Native python packages
+import json
 import os
 
 import click
+import numpy as np
 
 # Chronix2grid modules
 from chronix2grid.generation import generate_chronics as gen
@@ -11,8 +12,7 @@ from chronix2grid.output_processor import (
     output_processor_to_chunks, write_start_dates_for_chunks)
 from chronix2grid import constants as cst
 
-# ==============================================================
-## CONSTANT VARIABLES
+
 @click.command()
 @click.option('--case', default='case118_l2rpn', help='case folder to base generation on')
 @click.option('--start-date', default='2012-01-01', help='Start date to generate chronics')
@@ -48,11 +48,6 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
                    seed_for_dispatch, warn_user=True):
 
     time_parameters = gu.time_parameters(weeks, start_date)
-    seed_for_loads = parse_seed_arg(seed_for_loads, '--seed-for-loads')
-    seed_for_res = parse_seed_arg(seed_for_res, '--seed-for-res')
-    seed_for_dispatch = parse_seed_arg(seed_for_dispatch, '--seed-for-dispatch')
-
-    year = time_parameters['year']
 
     generation_output_folder, kpi_output_folder = create_directory_tree(
         case, start_date, output_folder, n_scenarios, mode, warn_user=warn_user)
@@ -63,6 +58,24 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
     kpi_input_folder = os.path.join(
         input_folder, cst.KPI_FOLDER_NAME
     )
+
+    default_seed = generate_default_seed()
+    seed_for_loads = parse_seed_arg(seed_for_loads, '--seed-for-loads',
+                                    default_seed)
+    seed_for_res = parse_seed_arg(seed_for_res, '--seed-for-res',
+                                  default_seed)
+    seed_for_dispatch = parse_seed_arg(seed_for_dispatch, '--seed-for-dispatch',
+                                       default_seed)
+
+    seeds = dict(
+        loads=seed_for_loads,
+        renewables=seed_for_res,
+        dispatch=seed_for_dispatch
+    )
+
+    dump_seeds(generation_output_folder, seeds)
+
+    year = time_parameters['year']
 
     # Chronic generation
     if 'L' in mode or 'R' in mode:
@@ -92,13 +105,24 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
                   loads_charac, prods_charac)
 
 
-def parse_seed_arg(seed, arg_name):
+def parse_seed_arg(seed, arg_name, default_seed):
     if seed is not None:
         try:
-            seed = int(seed)
+            casted_seed = int(seed)
         except TypeError:
             raise RuntimeError(f'The parameter {arg_name} must be an integer')
-    return seed
+    else:
+        casted_seed = default_seed
+    return casted_seed
+
+
+def generate_default_seed():
+    return np.random.randint(low=0, high=2 ** 31)
+
+
+def dump_seeds(output_directory, seeds):
+    with open(os.path.join(output_directory, cst.SEEDS_FILE_NAME), 'w') as f:
+        json.dump(seeds, f)
 
 
 def create_directory_tree(case, start_date, output_directory,
