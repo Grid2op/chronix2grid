@@ -116,7 +116,7 @@ class Dispatcher(pypsa.Network):
                     self._env.gen_max_ramp_down[i] / self._env.gen_pmax[i]
 
     def read_hydro_guide_curves(self, hydro_file_path):
-        dateparse = lambda x: dt.datetime.strptime(x, '%d/%m/%Y %H:%M')
+        dateparse = lambda x: dt.datetime.strptime(x, '%Y-%m-%d %H:%M')
         hydro_pattern = pd.read_csv(hydro_file_path, usecols=[0, 2, 3],
                                     parse_dates=[0], date_parser=dateparse)
         hydro_pattern.set_index(hydro_pattern.columns[0], inplace=True)
