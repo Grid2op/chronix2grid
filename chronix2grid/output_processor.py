@@ -11,7 +11,7 @@ from .generation import generation_utils as gu
 def write_start_dates_for_chunks(output_path, n_weeks, by_n_weeks,
                                  n_scenarios, start_date):
     days_to_day = by_n_weeks * 7
-    n_chunks = math.ceil(n_weeks / by_n_weeks)
+    n_chunks = compute_n_chunks(n_weeks, by_n_weeks)
     start_date_time = pd.to_datetime(start_date, format='%Y-%m-%d')
     file_name = 'start_datetime.info'
     scen_name_generator = gu.folder_name_pattern('Scenario', n_scenarios)
@@ -35,17 +35,25 @@ def write_start_datetime_info(directory_path, file_name, start_date_time):
         f.write(start_date_time.strftime('%Y-%m-%d %H:%M'))
 
 
-def output_processor_to_chunks(output_path, by_n_weeks, n_scenarios):
-    chunk_size = by_n_weeks * 7 * 24 * 12  # 5 min time step
-    scen_name_generator = gu.folder_name_pattern('Scenario', n_scenarios)
-    for i in range(n_scenarios):
-        scenario_name = scen_name_generator(i)
-        csv_files_to_process = os.listdir(os.path.join(output_path, scenario_name))
-        csv_files_to_process = [
-            os.path.join(output_path, scenario_name, csv_file) for csv_file in csv_files_to_process
-            if os.path.isfile(os.path.join(output_path, scenario_name, csv_file))
-        ]
-        generate_chunks(csv_files_to_process, chunk_size)
+def compute_n_chunks(n_weeks, by_n_weeks):
+    n_chunks = 0
+    if n_weeks > by_n_weeks:
+        n_chunks = math.ceil(n_weeks / by_n_weeks)
+    return n_chunks
+
+
+def output_processor_to_chunks(output_path, by_n_weeks, n_scenarios, n_weeks):
+    if by_n_weeks > by_n_weeks:
+        chunk_size = by_n_weeks * 7 * 24 * 12  # 5 min time step
+        scen_name_generator = gu.folder_name_pattern('Scenario', n_scenarios)
+        for i in range(n_scenarios):
+            scenario_name = scen_name_generator(i)
+            csv_files_to_process = os.listdir(os.path.join(output_path, scenario_name))
+            csv_files_to_process = [
+                os.path.join(output_path, scenario_name, csv_file) for csv_file in csv_files_to_process
+                if os.path.isfile(os.path.join(output_path, scenario_name, csv_file))
+            ]
+            generate_chunks(csv_files_to_process, chunk_size)
 
 
 def generate_chunks(csv_files_to_process, chunk_size, sep=','):
@@ -87,9 +95,10 @@ def dataframe_cutter(df, chunk_size):
         The list of cut dataframes
     """
     cut_df = []
-    n_chunks = len(df) // chunk_size
-    for i in range(n_chunks):
-        cut_df.append(df.iloc[i*chunk_size:((i+1)*chunk_size)])
-    if len(df) > chunk_size * n_chunks:
-        cut_df.append(df.iloc[chunk_size*n_chunks:])
+    if chunk_size > len(df):
+        n_chunks = len(df) // chunk_size
+        for i in range(n_chunks):
+            cut_df.append(df.iloc[i*chunk_size:((i+1)*chunk_size)])
+        if len(df) > chunk_size * n_chunks:
+            cut_df.append(df.iloc[chunk_size*n_chunks:])
     return cut_df

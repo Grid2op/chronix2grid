@@ -9,7 +9,7 @@ from chronix2grid.generation import generation_utils as gu
 from chronix2grid.kpi import main as kpis
 from chronix2grid.output_processor import (
     output_processor_to_chunks, write_start_dates_for_chunks)
-from . import constants as cst
+from chronix2grid import constants as cst
 
 # ==============================================================
 ## CONSTANT VARIABLES
@@ -72,7 +72,7 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
             mode, seed_for_loads, seed_for_res, seed_for_dispatch)
         if by_n_weeks is not None and 'T' in mode:
             output_processor_to_chunks(
-                generation_output_folder, by_n_weeks, n_scenarios)
+                generation_output_folder, by_n_weeks, n_scenarios, weeks)
             write_start_dates_for_chunks(generation_output_folder, weeks,
                                          by_n_weeks, n_scenarios, start_date)
 
@@ -133,4 +133,17 @@ def create_directory_tree(case, start_date, output_directory,
 
 
 if __name__ == "__main__":
-    generate()
+    case = 'case118_l2rpn'
+    start_date = '2012-01-01'
+    weeks = 1
+    by_n_weeks = 1
+    n_scenarios = 1
+    mode = 'LRK'
+    input_folder = '/home/vrenault/Projects/ChroniX2Grid/input'
+    output_folder = '/home/vrenault/Projects/ChroniX2Grid/output'
+    seed = 1
+    warn_user = True
+    generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
+                   input_folder, output_folder,
+                   seed, seed, seed,
+                   warn_user=warn_user)
