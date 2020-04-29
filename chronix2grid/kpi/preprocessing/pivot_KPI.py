@@ -5,7 +5,7 @@ import json
 from .pivot_utils import chronics_to_kpi, renewableninja_to_kpi, eco2mix_to_kpi_regional, nrel_to_kpi
 
 
-def pivot_format(chronics_folder, kpi_input_folder, year, scenario_name, prods_charac, loads_charac, wind_solar_only, params, case):
+def pivot_format(chronics_folder, kpi_input_folder, year, prods_charac, loads_charac, wind_solar_only, params, case):
     """
         This functions contains pivot formatting of reference and synthetic chronics, in a usable format by KPI computation.
 

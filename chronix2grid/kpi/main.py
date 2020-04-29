@@ -65,7 +65,7 @@ def main(kpi_input_folder, generation_output_folder,
             (ref_dispatch, ref_consumption, syn_dispatch, syn_consumption,
              monthly_pattern, hours) = pivot_format(
                 scenario_generation_output_folder, kpi_input_folder, year,
-                scenario_name, prods_charac, loads_charac, wind_solar_only,
+                prods_charac, loads_charac, wind_solar_only,
                 params, case)
             ref_prices = None
             prices = None
@@ -73,8 +73,8 @@ def main(kpi_input_folder, generation_output_folder,
             # Get reference and synthetic dispatch and loads
             (ref_dispatch, ref_consumption, syn_dispatch, syn_consumption,
              monthly_pattern, hours, ref_prices, prices) = pivot_format(
-                generation_output_folder, kpi_input_folder, year,
-                scenario_name, prods_charac, loads_charac, wind_solar_only,
+                scenario_generation_output_folder, kpi_input_folder, year,
+                prods_charac, loads_charac, wind_solar_only,
                 params, case)
 
         ## Start and Run Economic dispatch validator
