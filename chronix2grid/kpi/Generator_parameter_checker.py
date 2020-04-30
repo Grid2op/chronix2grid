@@ -136,28 +136,29 @@ def Ramps_Pmax_Pmin_APrioriCheckers(env118_withoutchron,Capacity, chronics_path_
     fileList=[f for f in os.listdir(chronics_path_gen) if not f.startswith('.')]
     for subpath in fileList:
         # Load consumption and prod
-        this_path = os.path.join(chronics_path_gen, subpath)
-        load_p = pd.read_csv(os.path.join(this_path, 'load_p.csv.bz2'), sep = ';')
-        prod_p = pd.read_csv(os.path.join(this_path, 'prod_p.csv.bz2'), sep = ';')
+        if(os.path.isdir(os.path.join(chronics_path_gen,subpath))):
+            this_path = os.path.join(chronics_path_gen, subpath)
+            load_p = pd.read_csv(os.path.join(this_path, 'load_p.csv.bz2'), sep = ';')
+            prod_p = pd.read_csv(os.path.join(this_path, 'prod_p.csv.bz2'), sep = ';')
 
-       # Retrieve wind and solar from prod_p (Balthazar's generator)
-        prod_p_wind = prod_p[[el for i, el in enumerate(env118_withoutchron.name_gen) if env118_withoutchron.gen_type[i] in ["wind"]]]
-        total_p_wind=prod_p_wind.sum(axis=1)
-        prod_p_solar = prod_p[[el for i, el in enumerate(env118_withoutchron.name_gen) if env118_withoutchron.gen_type[i] in ["solar"]]]
-        total_p_solar=prod_p_solar.sum(axis=1) 
+           # Retrieve wind and solar from prod_p (Balthazar's generator)
+            prod_p_wind = prod_p[[el for i, el in enumerate(env118_withoutchron.name_gen) if env118_withoutchron.gen_type[i] in ["wind"]]]
+            total_p_wind=prod_p_wind.sum(axis=1)
+            prod_p_solar = prod_p[[el for i, el in enumerate(env118_withoutchron.name_gen) if env118_withoutchron.gen_type[i] in ["solar"]]]
+            total_p_solar=prod_p_solar.sum(axis=1) 
 
-        total_renew = pd.concat([total_p_wind, total_p_solar], axis=1).sum(axis=1)    
+            total_renew = pd.concat([total_p_wind, total_p_solar], axis=1).sum(axis=1)    
 
-        # Compensate the reactive part in loads
-        #load_ = load_p.copy() * (1 + losses_pct/100)
-        load_ = load_p.sum(axis=1)
-        load_ = load_*(1 + losses_pct/100)
+            # Compensate the reactive part in loads
+            #load_ = load_p.copy() * (1 + losses_pct/100)
+            load_ = load_p.sum(axis=1)
+            load_ = load_*(1 + losses_pct/100)
 
-        # Demand for OPF (total - renewable)
-        agg_load_without_renew = (load_ - total_renew).to_frame()
-        Load_df[subpath]=load_
-        Wind_df[subpath]=total_p_wind
-        Solar_df[subpath]=total_p_solar
+            # Demand for OPF (total - renewable)
+            agg_load_without_renew = (load_ - total_renew).to_frame()
+            Load_df[subpath]=load_
+            Wind_df[subpath]=total_p_wind
+            Solar_df[subpath]=total_p_solar
 
     Load_net=Load_df-Wind_df-Solar_df
 
@@ -291,20 +292,22 @@ def Aposteriori_renewableCapacityFactor_Checkers(env118_withoutchron,Capacity, c
 
     fileList=[f for f in os.listdir(chronics_path_gen) if not f.startswith('.')]
     for subpath in fileList:
-        # Load consumption and prod
-        this_path = os.path.join(chronics_path_gen, subpath)
-        prod_p = pd.read_csv(os.path.join(this_path, 'prod_p.csv.bz2'), sep = ';')
-
-       # Retrieve wind and solar from prod_p (Balthazar's generator)
-        prod_p_wind = prod_p[[el for i, el in enumerate(env118_withoutchron.name_gen) if env118_withoutchron.gen_type[i] in ["wind"]]]
-        total_p_wind=prod_p_wind.sum(axis=1)
-        prod_p_solar = prod_p[[el for i, el in enumerate(env118_withoutchron.name_gen) if env118_withoutchron.gen_type[i] in ["solar"]]]
-        total_p_solar=prod_p_solar.sum(axis=1) 
-
-        # Demand for OPF (total - renewable)
         
-        Wind_df[subpath]=total_p_wind
-        Solar_df[subpath]=total_p_solar
+         if(os.path.isdir(os.path.join(chronics_path_gen,subpath))):
+            # Load consumption and prod
+            this_path = os.path.join(chronics_path_gen, subpath)
+            prod_p = pd.read_csv(os.path.join(this_path, 'prod_p.csv.bz2'), sep = ';')
+
+           # Retrieve wind and solar from prod_p (Balthazar's generator
+            prod_p_wind = prod_p[[el for i, el in enumerate(env118_withoutchron.name_gen) if env118_withoutchron.gen_type[i] in ["wind"]]]
+            total_p_wind=prod_p_wind.sum(axis=1)
+            prod_p_solar = prod_p[[el for i, el in enumerate(env118_withoutchron.name_gen) if env118_withoutchron.gen_type[i] in ["solar"]]]
+            total_p_solar=prod_p_solar.sum(axis=1) 
+
+            # Demand for OPF (total - renewable)
+
+            Wind_df[subpath]=total_p_wind
+            Solar_df[subpath]=total_p_solar
         
     MaxSolar=Solar_df.max().max()
     MaxWind=Wind_df.max().max()
