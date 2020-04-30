@@ -3,6 +3,8 @@ import sys
 import numpy as np
 import pandas as pd
 
+import chronix2grid.constants as cst
+
 
 def eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_charac, year, params, corresp_regions):
     # Initialize dataframes to fill
@@ -114,10 +116,13 @@ def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac,
     solar_file_name = f'solar_{case}_{str(year)}.csv'
     wind_file_name = f'wind_{case}_{str(year)}.csv'
     repo_in_solar = os.path.join(
-        kpi_input_folder, 'France', 'renewable_ninja', solar_file_name)
+        kpi_input_folder, cst.REFERENCE_ZONE,
+        cst.RENEWABLE_NINJA_REFERENCE_FOLDER, solar_file_name)
     ninja_solar = pd.read_csv(repo_in_solar, sep=';', encoding='latin1', decimal='.')
     repo_in_wind = os.path.join(
-        kpi_input_folder, 'France', 'renewable_ninja', wind_file_name)
+        kpi_input_folder, cst.REFERENCE_ZONE,
+        cst.RENEWABLE_NINJA_REFERENCE_FOLDER,
+        wind_file_name)
     ninja_wind = pd.read_csv(repo_in_wind, sep=';', encoding='latin1', decimal='.')
     timestep_ninja = 60 # Pas de temps une heure dans l'extraction renewable ninja
     ninja = pd.concat([ninja_solar, ninja_wind], axis = 1)
