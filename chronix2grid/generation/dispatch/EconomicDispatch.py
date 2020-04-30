@@ -15,6 +15,7 @@ import pypsa
 from .utils import RampMode
 from .EDispatch_L2RPN2020.run_economic_dispatch import main_run_disptach
 from .EDispatch_L2RPN2020.utils import add_noise_gen
+import chronix2grid.constants as cst
 
 DispatchResults = namedtuple('DispatchResults', ['chronix', 'terminal_conditions'])
 
@@ -274,19 +275,23 @@ class Dispatcher(pypsa.Network):
         print(f'Saving chronics into {output_folder}')
         full_opf_dispatch.to_csv(
             os.path.join(output_folder, "prod_p_forecasted.csv.bz2"),
-            sep=';', index=False
+            sep=';', index=False,
+            float_format=cst.FLOATING_POINT_PRECISION_FORMAT
         )
         prod_p_with_noise.to_csv(
             os.path.join(output_folder, "prod_p.csv.bz2"),
-            sep=';', index=False
+            sep=';', index=False,
+            float_format=cst.FLOATING_POINT_PRECISION_FORMAT
         )
         res_load_scenario.marginal_prices.to_csv(
             os.path.join(output_folder, "prices.csv.bz2"),
-            sep=';', index=False
+            sep=';', index=False,
+            float_format=cst.FLOATING_POINT_PRECISION_FORMAT
         )
         res_load_scenario.loads.to_csv(
             os.path.join(output_folder, "load_p.csv.bz2"),
-            sep=';', index=False
+            sep=';', index=False,
+            float_format=cst.FLOATING_POINT_PRECISION_FORMAT
         )
 
 

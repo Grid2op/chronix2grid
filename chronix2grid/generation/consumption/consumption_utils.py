@@ -1,8 +1,11 @@
-from scipy.interpolate import interp1d
+import os
+
 import numpy as np
 import pandas as pd
-import os
+from scipy.interpolate import interp1d
+
 from .. import generation_utils as utils
+import chronix2grid.constants as cst
 
 def compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern):
     # Compute active part of loads
@@ -116,10 +119,10 @@ def create_csv(dict_, path, forecasted=False, reordering=True, noise=None, shift
         file_extension = '_forecasted' if forecasted else ''
         df.to_csv(
             os.path.join(path, f'load_p{file_extension}.csv.bz2'),
-            index=index, sep=';', float_format='%.1f')
+            index=index, sep=';', float_format=cst.FLOATING_POINT_PRECISION_FORMAT)
         df_reactive_power.to_csv(
             os.path.join(path, f'load_q{file_extension}.csv.bz2'),
-            index=False, sep=';', float_format='%.1f')
+            index=False, sep=';', float_format=cst.FLOATING_POINT_PRECISION_FORMAT)
 
     return df
 

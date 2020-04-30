@@ -8,6 +8,7 @@ import numpy as np
 # Libraries developed for this module
 from . import solar_wind_utils as swutils
 from .. import generation_utils as utils
+import chronix2grid.constants as cst
 
 
 def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, write_results = True):
@@ -124,6 +125,7 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
     prod_v = prod_v.fillna(method='ffill') * 1.04
 
     prod_v.to_csv(os.path.join(scenario_destination_path, 'prod_v.csv.bz2'),
-                  sep=';', index=False)
+                  sep=';', index=False,
+                  float_format=cst.FLOATING_POINT_PRECISION_FORMAT)
 
     return prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted

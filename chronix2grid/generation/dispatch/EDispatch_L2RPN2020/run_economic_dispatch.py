@@ -13,6 +13,7 @@ from .utils import preprocess_net, filter_ramps
 from .utils import run_opf
 from .utils import update_gen_constrains, update_params
 from chronix2grid.generation.dispatch.utils import RampMode
+import chronix2grid.constants as cst
 
 
 def main_run_disptach(pypsa_net, 
@@ -181,6 +182,10 @@ if __name__ == "__main__":
         os.makedirs(destination_path)
 
     # Save as csv
-    prod_p_dispatch.to_csv(os.path.join(destination_path, 'prod_p.csv.bz2'), sep=';', float_format='%.2f', index=False)
+    prod_p_dispatch.to_csv(
+        os.path.join(destination_path, 'prod_p.csv.bz2'),
+        sep=';',
+        float_format=cst.FLOATING_POINT_PRECISION_FORMAT,
+        index=False)
     
     print('OPF Done......')

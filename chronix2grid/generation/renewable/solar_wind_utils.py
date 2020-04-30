@@ -1,8 +1,11 @@
-from scipy.interpolate import interp1d
+import copy
+
 import numpy as np
 import pandas as pd
-import copy
+from scipy.interpolate import interp1d
+
 from .. import generation_utils as utils
+import chronix2grid.constants as cst
 
 def compute_wind_series(locations, Pmax, long_noise, medium_noise, short_noise, params, smoothdist):
     # Compute refined signals
@@ -156,7 +159,8 @@ def create_csv(dict_, path, reordering=True, noise=None, shift=False, write_resu
         df = df.shift(-1)
         df = df.fillna(0)
     if write_results:
-        df.to_csv(path, index=index, sep=';', float_format='%.1f')
+        df.to_csv(path, index=index, sep=';',
+                  float_format=cst.FLOATING_POINT_PRECISION_FORMAT)
 
     return df
 
