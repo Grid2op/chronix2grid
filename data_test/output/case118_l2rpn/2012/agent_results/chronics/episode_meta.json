@@ -1,9 +1,0 @@
-{
-    "backend_type": "PandaPowerBackend",
-    "chronics_max_timestep": "2014",
-    "chronics_path": "/home/vrenault/Projects/ChroniX2Grid/chronix2grid/generation/output/case118_l2rpn/2012/Scenario_0/chronics",
-    "cumulative_reward": 605.3389146512357,
-    "env_type": "Environment",
-    "grid_path": "/home/vrenault/Projects/ChroniX2Grid/chronix2grid/generation/input/case118_l2rpn/L2RPN_2020_case118_redesigned.json",
-    "nb_timestep_played": 303
-}
