@@ -106,13 +106,18 @@ def eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_char
     return prod, conso_, price
 
 
-def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac, year, params, corresp_regions):
+def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac,
+                          prods_charac, year, params, corresp_regions, case):
 
     # Initialize data frame for production
     print("Importing and formatting data downloaded from Renewable Ninja API")
-    repo_in_solar = os.path.join(kpi_input_folder, 'France/renewable_ninja', 'solar_case118_' + str(year) + '.csv')
+    solar_file_name = f'solar_{case}_{str(year)}.csv'
+    wind_file_name = f'wind_{case}_{str(year)}.csv'
+    repo_in_solar = os.path.join(
+        kpi_input_folder, 'France', 'renewable_ninja', solar_file_name)
     ninja_solar = pd.read_csv(repo_in_solar, sep=';', encoding='latin1', decimal='.')
-    repo_in_wind = os.path.join(kpi_input_folder, 'France/renewable_ninja', 'wind_case118_' + str(year) + '.csv')
+    repo_in_wind = os.path.join(
+        kpi_input_folder, 'France', 'renewable_ninja', wind_file_name)
     ninja_wind = pd.read_csv(repo_in_wind, sep=';', encoding='latin1', decimal='.')
     timestep_ninja = 60 # Pas de temps une heure dans l'extraction renewable ninja
     ninja = pd.concat([ninja_solar, ninja_wind], axis = 1)

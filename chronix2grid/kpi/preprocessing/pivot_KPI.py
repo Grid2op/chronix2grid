@@ -47,7 +47,7 @@ def pivot_format(chronics_folder, kpi_input_folder, year, prods_charac, loads_ch
         corresp_regions = {'R1':"Hauts-de-France", "R2": "Nouvelle-Aquitaine", "R3": "PACA"}
         if wind_solar_only:
             ref_prod, ref_load = renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac, year,
-                                                       params, corresp_regions)
+                                                       params, corresp_regions, case)
         else:
             ref_prod, ref_load, ref_prices = eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_charac, year, params,
                                                          corresp_regions)
