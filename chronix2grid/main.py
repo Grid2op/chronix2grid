@@ -1,16 +1,15 @@
-import json
 import os
 
 import click
-import numpy as np
 
-# Chronix2grid modules
+from chronix2grid import constants as cst
 from chronix2grid.generation import generate_chronics as gen
 from chronix2grid.generation import generation_utils as gu
 from chronix2grid.kpi import main as kpis
 from chronix2grid.output_processor import (
     output_processor_to_chunks, write_start_dates_for_chunks)
-from chronix2grid import constants as cst
+from chronix2grid.seed_manager import (parse_seed_arg, generate_default_seed,
+                                       dump_seeds)
 
 
 @click.command()
@@ -103,26 +102,6 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
         kpis.main(kpi_input_folder, generation_output_folder, kpi_output_folder,
                   year, case, n_scenarios, wind_solar_only, params,
                   loads_charac, prods_charac)
-
-
-def parse_seed_arg(seed, arg_name, default_seed):
-    if seed is not None:
-        try:
-            casted_seed = int(seed)
-        except TypeError:
-            raise RuntimeError(f'The parameter {arg_name} must be an integer')
-    else:
-        casted_seed = default_seed
-    return casted_seed
-
-
-def generate_default_seed():
-    return np.random.randint(low=0, high=2 ** 31)
-
-
-def dump_seeds(output_directory, seeds):
-    with open(os.path.join(output_directory, cst.SEEDS_FILE_NAME), 'w') as f:
-        json.dump(seeds, f)
 
 
 def create_directory_tree(case, start_date, output_directory,
