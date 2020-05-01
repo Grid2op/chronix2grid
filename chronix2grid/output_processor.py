@@ -43,7 +43,7 @@ def compute_n_chunks(n_weeks, by_n_weeks):
 
 
 def output_processor_to_chunks(output_path, by_n_weeks, n_scenarios, n_weeks):
-    if by_n_weeks > by_n_weeks:
+    if n_weeks > by_n_weeks:
         chunk_size = by_n_weeks * 7 * 24 * 12  # 5 min time step
         scen_name_generator = gu.folder_name_pattern('Scenario', n_scenarios)
         for i in range(n_scenarios):
