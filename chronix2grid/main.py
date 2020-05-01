@@ -33,23 +33,25 @@ from chronix2grid.seed_manager import (parse_seed_arg, generate_default_seed,
 @click.option('--ignore-warnings', is_flag=True,
               help='Ignore the warnings related to the existence of data files '
                    'in the chosen output directory.')
+@click.option('--scenario_name', default='', help='subname to add to the generated scenario output folder, as Scenario_subname_i')
+
 def generate(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
-             input_folder, output_folder,
+             input_folder, output_folder, scenario_name,
              seed_for_loads, seed_for_res, seed_for_dispatch, ignore_warnings):
     generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
-                   input_folder, output_folder,
+                   input_folder, output_folder, scenario_name,
                    seed_for_loads, seed_for_res, seed_for_dispatch,
                    warn_user=not ignore_warnings)
 
 
 def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
-                   input_folder, output_folder, seed_for_loads, seed_for_res,
+                   input_folder, output_folder, scenario_name, seed_for_loads, seed_for_res,
                    seed_for_dispatch, warn_user=True):
 
     time_parameters = gu.time_parameters(weeks, start_date)
 
     generation_output_folder, kpi_output_folder = create_directory_tree(
-        case, start_date, output_folder, n_scenarios, mode, warn_user=warn_user)
+        case, start_date, output_folder, scenario_name, n_scenarios, mode, warn_user=warn_user)
 
     generation_input_folder = os.path.join(
         input_folder, cst.GENERATION_FOLDER_NAME
@@ -78,14 +80,15 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
 
     # Chronic generation
     if 'L' in mode or 'R' in mode:
+        print('here')
         params, loads_charac, prods_charac = gen.main(
             case, n_scenarios, generation_input_folder,
-            generation_output_folder, time_parameters,
+            generation_output_folder,scenario_name, time_parameters,
             mode, seed_for_loads, seed_for_res, seed_for_dispatch)
         if by_n_weeks is not None and 'T' in mode:
             output_processor_to_chunks(
-                generation_output_folder, by_n_weeks, n_scenarios, weeks)
-            write_start_dates_for_chunks(generation_output_folder, weeks,
+                generation_output_folder,scenario_name, by_n_weeks, n_scenarios, weeks)
+            write_start_dates_for_chunks(generation_output_folder,scenario_name, weeks,
                                          by_n_weeks, n_scenarios, start_date)
 
     # KPI formatting and computing
@@ -104,7 +107,7 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
                   loads_charac, prods_charac)
 
 
-def create_directory_tree(case, start_date, output_directory,
+def create_directory_tree(case, start_date, output_directory, scenario_name,
                           n_scenarios, mode, warn_user=True):
     gen_path_to_create = os.path.join(
         output_directory, cst.GENERATION_FOLDER_NAME, case, start_date)
@@ -120,8 +123,11 @@ def create_directory_tree(case, start_date, output_directory,
             gu.warn_if_output_folder_not_empty(kpi_path_to_create)
         os.makedirs(kpi_path_to_create, exist_ok=True)
 
+    sceanrioBaseName=cst.SCENARIO_FOLDER_BASE_NAME
+    if(len(scenario_name)!=0):
+        sceanrioBaseName+='_'+str(scenario_name)
     scen_name_generator = gu.folder_name_pattern(
-        cst.SCENARIO_FOLDER_BASE_NAME, n_scenarios)
+        sceanrioBaseName, n_scenarios)
     for i in range(n_scenarios):
         scenario_name = scen_name_generator(i)
         scenario_path_to_create = os.path.join(gen_path_to_create, scenario_name)
@@ -147,6 +153,6 @@ if __name__ == "__main__":
     seed = 1
     warn_user = True
     generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
-                   input_folder, output_folder,
+                   input_folder, output_folder,scenario_name,
                    seed, seed, seed,
                    warn_user=warn_user)

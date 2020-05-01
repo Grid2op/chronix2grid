@@ -9,10 +9,11 @@ from .dispatch import generate_dispatch as gen_dispatch
 from .dispatch import EconomicDispatch as ec
 from . import generation_utils as gu
 from ..config import DispatchConfigManager, LoadsConfigManager, ResConfigManager
+from .. import constants as cst
 
 
 # Call generation scripts n_scenario times with dedicated random seeds
-def main(case, n_scenarios, input_folder, output_folder, time_params, mode='LRTK',
+def main(case, n_scenarios, input_folder, output_folder, scenario_name, time_params, mode='LRTK',
          seed_for_loads=None, seed_for_res=None, seed_for_disp=None):
     """
     Main function for chronics generation. It works with three steps: load generation, renewable generation (solar and wind) and then dispatch computation to get the whole energy mix
@@ -85,7 +86,13 @@ def main(case, n_scenarios, input_folder, output_folder, time_params, mode='LRTK
 
     ## Launch proper scenarios generation
     seeds_iterator = zip(seeds_for_loads, seeds_for_res, seeds_for_disp)
-    scen_name_generator = gu.folder_name_pattern('Scenario', n_scenarios)
+    
+    sceanrioBaseName=cst.SCENARIO_FOLDER_BASE_NAME
+    if(len(scenario_name)!=0):
+        sceanrioBaseName+='_'+str(scenario_name)
+        
+    scen_name_generator = gu.folder_name_pattern(sceanrioBaseName, n_scenarios)
+    
     for i, (seed_load, seed_res, seed_disp) in enumerate(seeds_iterator):
         scenario_name = scen_name_generator(i)
         scenario_folder_path = os.path.join(output_folder, scenario_name)

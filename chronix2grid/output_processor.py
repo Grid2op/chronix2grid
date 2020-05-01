@@ -6,15 +6,21 @@ import pandas as pd
 import pathlib
 
 from .generation import generation_utils as gu
+from chronix2grid import constants as cst
 
 
-def write_start_dates_for_chunks(output_path, n_weeks, by_n_weeks,
+def write_start_dates_for_chunks(output_path,scenario_name, n_weeks, by_n_weeks,
                                  n_scenarios, start_date):
     days_to_day = by_n_weeks * 7
     n_chunks = compute_n_chunks(n_weeks, by_n_weeks)
     start_date_time = pd.to_datetime(start_date, format='%Y-%m-%d')
     file_name = 'start_datetime.info'
-    scen_name_generator = gu.folder_name_pattern('Scenario', n_scenarios)
+    
+    scenarioBaseName=cst.SCENARIO_FOLDER_BASE_NAME
+    if(len(scenario_name)!=0):
+        scenarioBaseName+='_'+str(scenario_name)
+    scen_name_generator = gu.folder_name_pattern(scenarioBaseName, n_scenarios)
+    
     chunk_folder_name_generator = gu.folder_name_pattern('chunk', n_chunks)
     for j in range(n_scenarios):
         scenario_name = scen_name_generator(j)
@@ -42,10 +48,15 @@ def compute_n_chunks(n_weeks, by_n_weeks):
     return n_chunks
 
 
-def output_processor_to_chunks(output_path, by_n_weeks, n_scenarios, n_weeks):
+def output_processor_to_chunks(output_path,scenario_name, by_n_weeks, n_scenarios, n_weeks):
     if n_weeks > by_n_weeks:
         chunk_size = by_n_weeks * 7 * 24 * 12  # 5 min time step
-        scen_name_generator = gu.folder_name_pattern('Scenario', n_scenarios)
+        
+        scenarioBaseName=cst.SCENARIO_FOLDER_BASE_NAME
+        if(len(scenario_name)!=0):
+            scenarioBaseName+='_'+str(scenario_name)
+    
+        scen_name_generator = gu.folder_name_pattern(scenarioBaseName, n_scenarios)
         for i in range(n_scenarios):
             scenario_name = scen_name_generator(i)
             csv_files_to_process = os.listdir(os.path.join(output_path, scenario_name))
