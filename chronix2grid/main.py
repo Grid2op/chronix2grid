@@ -80,7 +80,6 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
 
     # Chronic generation
     if 'L' in mode or 'R' in mode:
-        print('here')
         params, loads_charac, prods_charac = gen.main(
             case, n_scenarios, generation_input_folder,
             generation_output_folder,scenario_name, time_parameters,
