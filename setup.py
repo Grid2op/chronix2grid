@@ -112,5 +112,5 @@ setup(name='Chronix2Grid',
                         "zipp==3.1.0"
                         ],
       zip_safe=False,
-      entry_points={'console_scripts': ['chronix2grid=chronix2grid.main:generate']}
+      entry_points={'console_scripts': ['chronix2grid=chronix2grid.main:generate_mp']}
 )

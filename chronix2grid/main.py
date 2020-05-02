@@ -1,6 +1,9 @@
 import os
+import time
 
 import click
+import multiprocessing
+from functools import partial
 
 from chronix2grid import constants as cst
 from chronix2grid.generation import generate_chronics as gen
@@ -34,15 +37,62 @@ from chronix2grid.seed_manager import (parse_seed_arg, generate_default_seed,
               help='Ignore the warnings related to the existence of data files '
                    'in the chosen output directory.')
 @click.option('--scenario_name', default='', help='subname to add to the generated scenario output folder, as Scenario_subname_i')
+@click.option('--nb_core', default=1, help='number of cores to parallelize the number of scenarios')
 
+
+def generate_mp(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
+             input_folder, output_folder, scenario_name,
+             seed_for_loads, seed_for_res, seed_for_dispatch, nb_core, ignore_warnings):
+    
+    
+    starttime = time.time()
+    
+    seeds_for_loads, seeds_for_res, seeds_for_disp = gu.generate_seeds(
+        n_scenarios, seed_for_loads, seed_for_res, seed_for_dispatch
+    )
+    
+    pool = multiprocessing.Pool(nb_core)
+    iterable=[i for i in range(n_scenarios)]
+    multiprocessing_func = partial(generate_per_scenario,case, start_date, weeks, by_n_weeks, mode,
+             input_folder, output_folder, scenario_name,
+             seeds_for_loads, seeds_for_res, seeds_for_disp, ignore_warnings)
+    
+    pool.map(multiprocessing_func, iterable)
+    pool.close()
+    print('multiprocessing done')  
+    print('Time taken = {} seconds'.format(time.time() - starttime))
+
+#################
+###not needed anymore with generate_mp
 def generate(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
              input_folder, output_folder, scenario_name,
-             seed_for_loads, seed_for_res, seed_for_dispatch, ignore_warnings):
-    generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
+             seed_for_loads, seed_for_res, seed_for_dispatch, nb_core, ignore_warnings):
+    
+        generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
                    input_folder, output_folder, scenario_name,
                    seed_for_loads, seed_for_res, seed_for_dispatch,
                    warn_user=not ignore_warnings)
+###########
 
+def generate_per_scenario(case, start_date, weeks, by_n_weeks, mode,
+             input_folder, output_folder, scenario_name,
+             seeds_for_loads, seeds_for_res, seeds_for_dispatch, ignore_warnings, scenario_id):
+    
+    n_scenarios_subP=1 #one scenario to compute per process``
+    scenario_name_subId=str(scenario_id)
+
+    if(len(scenario_name)!=0):
+        scenario_name_subId=scenario_name+'_'+str(scenario_id)
+    
+    seed_for_loads=seeds_for_loads[scenario_id]
+    seed_for_res=seeds_for_res[scenario_id]
+    seed_for_dispatch=seeds_for_dispatch[scenario_id]
+    
+    generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios_subP, mode,
+                   input_folder, output_folder, scenario_name_subId,
+                   seed_for_loads, seed_for_res, seed_for_dispatch,
+                   warn_user=not ignore_warnings)
+    
 
 def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
                    input_folder, output_folder, scenario_name, seed_for_loads, seed_for_res,
@@ -73,14 +123,17 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
         renewables=seed_for_res,
         dispatch=seed_for_dispatch
     )
-
+    
+    print('seeds for scenario: '+scenario_name)
+    print(seeds)
+    
+    #TODO: need to dump seed info in each scenario folder
     dump_seeds(generation_output_folder, seeds)
 
     year = time_parameters['year']
 
     # Chronic generation
     if 'L' in mode or 'R' in mode:
-        print('here')
         params, loads_charac, prods_charac = gen.main(
             case, n_scenarios, generation_input_folder,
             generation_output_folder,scenario_name, time_parameters,
