@@ -43,9 +43,15 @@ def main(case, n_scenarios, input_folder, output_folder, scenario_name, time_par
     print('============================================== CHRONICS GENERATION ==================================================================')
     print('=====================================================================================================================================')
 
-    seeds_for_loads, seeds_for_res, seeds_for_disp = gu.generate_seeds(
-        n_scenarios, seed_for_loads, seed_for_res, seed_for_disp
-    )
+    #in multiprocessing, n_scenarios=1 here
+    if(n_scenarios>=2):
+        seeds_for_loads, seeds_for_res, seeds_for_disp = gu.generate_seeds(
+            n_scenarios, seed_for_loads, seed_for_res, seed_for_dispatch
+        )
+    else:
+        seeds_for_loads=[seed_for_loads]
+        seeds_for_res=[seed_for_res]
+        seeds_for_disp=[seed_for_disp]
 
     # dispatch_input_folder, dispatch_input_folder_case, dispatch_output_folder = gu.make_generation_input_output_directories(input_folder, case, year, output_folder)
     load_config_manager = LoadsConfigManager(
@@ -88,14 +94,13 @@ def main(case, n_scenarios, input_folder, output_folder, scenario_name, time_par
     ## Launch proper scenarios generation
     seeds_iterator = zip(seeds_for_loads, seeds_for_res, seeds_for_disp)
     
-    sceanrioBaseName=cst.SCENARIO_FOLDER_BASE_NAME
-    if(len(scenario_name)!=0):
-        sceanrioBaseName+='_'+str(scenario_name)
-        
-    scen_name_generator = gu.folder_name_pattern(sceanrioBaseName, n_scenarios)
+    scen_name_generator = gu.folder_name_pattern(scenario_name, n_scenarios)
     
     for i, (seed_load, seed_res, seed_disp) in enumerate(seeds_iterator):
-        scenario_name = scen_name_generator(i)
+        
+        if(n_scenarios>1):#otherwise keep scenario_name as defined
+            scenario_name = scen_name_generator(i)
+            
         scenario_folder_path = os.path.join(output_folder, scenario_name)
         
         #####dump seeds in scenario folder

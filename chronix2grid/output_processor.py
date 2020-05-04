@@ -19,14 +19,12 @@ def write_start_dates_for_chunks(output_path,scenario_name, n_weeks, by_n_weeks,
     time_step = pd.to_datetime(cst.TIME_STEP, format='%H:%M')
     file_name_ts = cst.TIME_STEP_FILE_NAME
     
-    scenarioBaseName=cst.SCENARIO_FOLDER_BASE_NAME
-    if(len(scenario_name)!=0):
-        scenarioBaseName+='_'+str(scenario_name)
-    scen_name_generator = gu.folder_name_pattern(scenarioBaseName, n_scenarios)
+    scen_name_generator = gu.folder_name_pattern(scenario_name, n_scenarios)
     
     chunk_folder_name_generator = gu.folder_name_pattern('chunk', n_chunks)
     for j in range(n_scenarios):
-        scenario_name = scen_name_generator(j)
+        if (n_scenarios>1):#otherwise keep scenario_name as defined
+            scenario_name = scen_name_generator(j)
         write_start_datetime_info(
             os.path.join(output_path, scenario_name),
             file_name,
@@ -60,14 +58,11 @@ def compute_n_chunks(n_weeks, by_n_weeks):
 def output_processor_to_chunks(output_path,scenario_name, by_n_weeks, n_scenarios, n_weeks):
     if n_weeks > by_n_weeks:
         chunk_size = by_n_weeks * 7 * 24 * 12  # 5 min time step
-        
-        scenarioBaseName=cst.SCENARIO_FOLDER_BASE_NAME
-        if(len(scenario_name)!=0):
-            scenarioBaseName+='_'+str(scenario_name)
     
-        scen_name_generator = gu.folder_name_pattern(scenarioBaseName, n_scenarios)
+        scen_name_generator = gu.folder_name_pattern(scenario_name, n_scenarios)
         for i in range(n_scenarios):
-            scenario_name = scen_name_generator(i)
+            if (n_scenarios>1):#otherwise keep scenario_name as defined
+                scenario_name = scen_name_generator(i)
             csv_files_to_process = os.listdir(os.path.join(output_path, scenario_name))
             csv_files_to_process = [
                 os.path.join(output_path, scenario_name, csv_file) for csv_file in csv_files_to_process

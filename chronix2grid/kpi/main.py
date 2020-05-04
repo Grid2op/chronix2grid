@@ -44,16 +44,14 @@ def main(kpi_input_folder, generation_output_folder,scenario_name,
         prods_charac['zone'] = 'R1'
         loads_charac['zone'] = 'R1'
 
-    sceanrioBaseName=cst.SCENARIO_FOLDER_BASE_NAME
-    if(len(scenario_name)!=0):
-        sceanrioBaseName+='_'+str(scenario_name)
-        
-    scen_name_generator = gu.folder_name_pattern(sceanrioBaseName, n_scenarios)
+    
+    scen_name_generator = gu.folder_name_pattern(scenario_name, n_scenarios)
     
     #scen_name_generator = gu.folder_name_pattern('Scenario', n_scenarios)
     ## Format and compute KPI for each scenario
     for scenario_num in range(n_scenarios):
-        scenario_name = scen_name_generator(scenario_num)
+        if(n_scenarios>1):#otherwise keep scenario_name as defined
+            scenario_name = scen_name_generator(scenario_num)
         print(scenario_name+'...')
         scenario_generation_output_folder = os.path.join(
             generation_output_folder, scenario_name

@@ -21,6 +21,6 @@ def generate_default_seed():
     return np.random.randint(low=0, high=2 ** 31)
 
 
-def dump_seeds(output_directory, seeds):
-    with open(os.path.join(output_directory, cst.SEEDS_FILE_NAME), 'w') as f:
+def dump_seeds(output_directory, seeds, scenario_name=''):
+    with open(os.path.join(output_directory, scenario_name+'_'+cst.SEEDS_FILE_NAME), 'w') as f:
         json.dump(seeds, f)
