@@ -9,7 +9,7 @@ from .deterministic.kpis import EconomicDispatchValidator
 from ..generation import generation_utils as gu
 from .. import constants as cst
 
-def main(kpi_input_folder, generation_output_folder,
+def main(kpi_input_folder, generation_output_folder,scenario_name,
          kpi_output_folder, year, case, n_scenarios, wind_solar_only, params,
          loads_charac, prods_charac):
     """
@@ -44,7 +44,13 @@ def main(kpi_input_folder, generation_output_folder,
         prods_charac['zone'] = 'R1'
         loads_charac['zone'] = 'R1'
 
-    scen_name_generator = gu.folder_name_pattern('Scenario', n_scenarios)
+    sceanrioBaseName=cst.SCENARIO_FOLDER_BASE_NAME
+    if(len(scenario_name)!=0):
+        sceanrioBaseName+='_'+str(scenario_name)
+        
+    scen_name_generator = gu.folder_name_pattern(sceanrioBaseName, n_scenarios)
+    
+    #scen_name_generator = gu.folder_name_pattern('Scenario', n_scenarios)
     ## Format and compute KPI for each scenario
     for scenario_num in range(n_scenarios):
         scenario_name = scen_name_generator(scenario_num)
@@ -93,6 +99,7 @@ def main(kpi_input_folder, generation_output_folder,
 
 
         # Compute dispatch temporal view
+        print('dispatch_validator created')
         if wind_solar_only:
             max_col = 1
         else:
@@ -102,17 +109,23 @@ def main(kpi_input_folder, generation_output_folder,
         dispatch_validator.plot_carriers_pw(curve='synthetic', stacked=True, max_col_splot=max_col, save_html=True,
                                             wind_solar_only=wind_solar_only)
 
+        print('dispatch_validator running')
         # Get Load KPI
         dispatch_validator.load_kpi()
+        
+        print('dispatch_validator load ok')
 
         # Get Wind KPI
         dispatch_validator.wind_kpi()
+        print('dispatch_validator wind ok')
 
         # Get Solar KPI
         dispatch_validator.solar_kpi(monthly_pattern=monthly_pattern, hours=hours)
+        print('dispatch_validator solar ok')
 
         # Wind - Solar KPI
         dispatch_validator.wind_load_kpi()
+        print('dispatch_validator load wind ok')
 
         # These KPI only if dispatch has been made
         if not wind_solar_only:
