@@ -16,6 +16,9 @@ def write_start_dates_for_chunks(output_path,scenario_name, n_weeks, by_n_weeks,
     start_date_time = pd.to_datetime(start_date, format='%Y-%m-%d')
     file_name = 'start_datetime.info'
     
+    time_step = pd.to_datetime(cst.TIME_STEP, format='%H:%M')
+    file_name_ts = cst.TIME_STEP_FILE_NAME
+    
     scenarioBaseName=cst.SCENARIO_FOLDER_BASE_NAME
     if(len(scenario_name)!=0):
         scenarioBaseName+='_'+str(scenario_name)
@@ -28,17 +31,23 @@ def write_start_dates_for_chunks(output_path,scenario_name, n_weeks, by_n_weeks,
             os.path.join(output_path, scenario_name),
             file_name,
             start_date_time)
+        write_timestep_info(os.path.join(output_path, scenario_name), file_name_ts, time_step)
         for i in range(n_chunks):
             chunk_folder_name = chunk_folder_name_generator(i)
             output_directory = os.path.join(
                 output_path, scenario_name, chunk_folder_name)
             write_start_datetime_info(output_directory, file_name, start_date_time)
+            write_timestep_info(output_directory, file_name_ts, time_step)
             start_date_time += dt.timedelta(days=days_to_day)
 
 
 def write_start_datetime_info(directory_path, file_name, start_date_time):
     with open(os.path.join(directory_path, file_name), 'w') as f:
         f.write(start_date_time.strftime('%Y-%m-%d %H:%M'))
+        
+def write_timestep_info(directory_path, file_name, time_interval):
+    with open(os.path.join(directory_path, file_name), 'w') as f:
+        f.write(time_interval.strftime('%H:%M'))
 
 
 def compute_n_chunks(n_weeks, by_n_weeks):

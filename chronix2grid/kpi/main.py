@@ -99,7 +99,6 @@ def main(kpi_input_folder, generation_output_folder,scenario_name,
 
 
         # Compute dispatch temporal view
-        print('dispatch_validator created')
         if wind_solar_only:
             max_col = 1
         else:
@@ -109,23 +108,17 @@ def main(kpi_input_folder, generation_output_folder,scenario_name,
         dispatch_validator.plot_carriers_pw(curve='synthetic', stacked=True, max_col_splot=max_col, save_html=True,
                                             wind_solar_only=wind_solar_only)
 
-        print('dispatch_validator running')
         # Get Load KPI
         dispatch_validator.load_kpi()
-        
-        print('dispatch_validator load ok')
 
         # Get Wind KPI
         dispatch_validator.wind_kpi()
-        print('dispatch_validator wind ok')
 
         # Get Solar KPI
         dispatch_validator.solar_kpi(monthly_pattern=monthly_pattern, hours=hours)
-        print('dispatch_validator solar ok')
 
         # Wind - Solar KPI
         dispatch_validator.wind_load_kpi()
-        print('dispatch_validator load wind ok')
 
         # These KPI only if dispatch has been made
         if not wind_solar_only:

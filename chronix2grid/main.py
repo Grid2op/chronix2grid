@@ -63,9 +63,17 @@ def generate_mp(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
         dispatch=seed_for_dispatch
     )
     
-    seeds_for_loads, seeds_for_res, seeds_for_disp = gu.generate_seeds(
-        n_scenarios, seed_for_loads, seed_for_res, seed_for_dispatch
-    )
+    print('initial_seeds')
+    print(initial_seeds)
+    
+    if(n_scenarios>=2):
+        seeds_for_loads, seeds_for_res, seeds_for_disp = gu.generate_seeds(
+            n_scenarios, seed_for_loads, seed_for_res, seed_for_dispatch
+        )
+    else:#in case uou want to reproduce a specific scenario already generated with the seeds to consider
+        seeds_for_loads=[seed_for_loads]
+        seeds_for_res=[seed_for_res]
+        seeds_for_disp=[seed_for_dispatch]
     
     ###############
     ## multi processing
@@ -118,15 +126,15 @@ def generate_per_scenario(case, start_date, weeks, by_n_weeks, mode,
     print(scenario_seeds)
     
     #dump scenario seeds
+    noScenarioDirectoryHere=''
     generation_output_folder, kpi_output_folder = create_directory_tree(
-        case, start_date, output_folder, scenario_name, n_scenarios_subP, mode, warn_user=not ignore_warnings)
+        case, start_date, output_folder, noScenarioDirectoryHere, n_scenarios_subP, mode, warn_user=not ignore_warnings)
     
     sceanrioBaseName=cst.SCENARIO_FOLDER_BASE_NAME
     if(len(scenario_name)!=0):
         sceanrioBaseName+='_'+scenario_name_subId
         
     scen_name_generator = gu.folder_name_pattern(sceanrioBaseName, n_scenarios_subP)#n_scenarios=1
-    print(scen_name_generator)
     dump_seeds(generation_output_folder, scenario_seeds)
     #dump_seeds(scen_name_generator, scenario_seeds)
 
@@ -167,9 +175,6 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
         renewables=seed_for_res,
         dispatch=seed_for_dispatch
     )
-    
-    print('seeds for scenario: '+scenario_name)
-    print(seeds)
     
     #TODO: need to dump seed info in each scenario folder
     dump_seeds(generation_output_folder, seeds)
@@ -229,6 +234,7 @@ def create_directory_tree(case, start_date, output_directory, scenario_name,
         scenario_name = scen_name_generator(i)
         scenario_path_to_create = os.path.join(gen_path_to_create, scenario_name)
         os.makedirs(scenario_path_to_create, exist_ok=True)
+
         if 'K' in mode:
             scenario_kpi_path_to_create = os.path.join(
                 kpi_path_to_create, scenario_name, cst.KPI_IMAGES_FOLDER_NAME
