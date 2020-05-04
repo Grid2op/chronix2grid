@@ -47,9 +47,28 @@ def generate_mp(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
     
     starttime = time.time()
     
+    ###############
+    #seeds
+    default_seed = generate_default_seed()
+    seed_for_loads = parse_seed_arg(seed_for_loads, '--seed-for-loads',
+                                    default_seed)
+    seed_for_res = parse_seed_arg(seed_for_res, '--seed-for-res',
+                                  default_seed)
+    seed_for_dispatch = parse_seed_arg(seed_for_dispatch, '--seed-for-dispatch',
+                                       default_seed)
+
+    initial_seeds = dict(
+        loads=seed_for_loads,
+        renewables=seed_for_res,
+        dispatch=seed_for_dispatch
+    )
+    
     seeds_for_loads, seeds_for_res, seeds_for_disp = gu.generate_seeds(
         n_scenarios, seed_for_loads, seed_for_res, seed_for_dispatch
     )
+    
+    ###############
+    ## multi processing
     
     pool = multiprocessing.Pool(nb_core)
     iterable=[i for i in range(n_scenarios)]
@@ -84,10 +103,35 @@ def generate_per_scenario(case, start_date, weeks, by_n_weeks, mode,
     if(len(scenario_name)!=0):
         scenario_name_subId=scenario_name+'_'+str(scenario_id)
     
+    #############
+    #get scenario seeds
     seed_for_loads=seeds_for_loads[scenario_id]
     seed_for_res=seeds_for_res[scenario_id]
     seed_for_dispatch=seeds_for_dispatch[scenario_id]
     
+    scenario_seeds = dict(
+        loads=seed_for_loads,
+        renewables=seed_for_res,
+        dispatch=seed_for_dispatch
+    )
+    print('seeds for scenario: '+scenario_name_subId)
+    print(scenario_seeds)
+    
+    #dump scenario seeds
+    generation_output_folder, kpi_output_folder = create_directory_tree(
+        case, start_date, output_folder, scenario_name, n_scenarios_subP, mode, warn_user=not ignore_warnings)
+    
+    sceanrioBaseName=cst.SCENARIO_FOLDER_BASE_NAME
+    if(len(scenario_name)!=0):
+        sceanrioBaseName+='_'+scenario_name_subId
+        
+    scen_name_generator = gu.folder_name_pattern(sceanrioBaseName, n_scenarios_subP)#n_scenarios=1
+    print(scen_name_generator)
+    dump_seeds(generation_output_folder, scenario_seeds)
+    #dump_seeds(scen_name_generator, scenario_seeds)
+
+    #####
+    #go to generate chronics
     generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios_subP, mode,
                    input_folder, output_folder, scenario_name_subId,
                    seed_for_loads, seed_for_res, seed_for_dispatch,

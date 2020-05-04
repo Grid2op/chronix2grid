@@ -10,6 +10,7 @@ from .dispatch import EconomicDispatch as ec
 from . import generation_utils as gu
 from ..config import DispatchConfigManager, LoadsConfigManager, ResConfigManager
 from .. import constants as cst
+from ..seed_manager import dump_seeds
 
 
 # Call generation scripts n_scenario times with dedicated random seeds
@@ -96,6 +97,15 @@ def main(case, n_scenarios, input_folder, output_folder, scenario_name, time_par
     for i, (seed_load, seed_res, seed_disp) in enumerate(seeds_iterator):
         scenario_name = scen_name_generator(i)
         scenario_folder_path = os.path.join(output_folder, scenario_name)
+        
+        #####dump seeds in scenario folder
+        scenario_seeds = dict(
+            loads=seed_for_loads,
+            renewables=seed_for_res,
+            dispatch=seed_for_disp
+        )
+        dump_seeds(scenario_folder_path, scenario_seeds)
+        #######
 
         print("================ Generating "+scenario_name+" ================")
         if 'L' in mode:
