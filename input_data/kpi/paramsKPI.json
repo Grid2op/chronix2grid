@@ -1,0 +1,16 @@
+{
+  "comparison": "France",
+  "timestep": "60min",
+  "night_hours": {
+    "summer": ["06:00", "23:00"],
+    "fall": ["06:00", "23:00"],
+    "winter": ["06:00", "23:00"],
+    "spring": ["06:00", "23:00"]
+  },
+  "seasons": {
+    "summer": [6,7,8],
+    "fall": [9,10,11],
+    "winter": [12,1,2],
+    "spring": [3,4,5]
+  }
+}
