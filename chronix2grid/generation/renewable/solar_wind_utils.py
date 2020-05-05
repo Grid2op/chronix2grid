@@ -82,8 +82,6 @@ def compute_solar_pattern(params, solar_pattern):
     Output:
         (np.array) A smooth solar pattern
     """
-    # solar_pattern resolution : 1H, 8761
-    solar_pattern = solar_pattern[:-1]
 
     start_year = pd.to_datetime(str(params['start_date'].year) + '/01/01', format='%Y-%m-%d')
     end_min = int(pd.Timedelta(params['end_date'] - start_year).total_seconds() // 60)

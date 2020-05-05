@@ -43,6 +43,17 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
         end=params['end_date'],
         freq=str(params['dt']) + 'min')
 
+    # Solar_pattern management
+    # Extra value (resolution 1H, 8761)
+    solar_pattern = solar_pattern[:-1]
+
+    # Realistic first day of year
+    start_date = params['start_date']
+    start_date_day = start_date.weekday()
+    pattern_day_1 = 0
+    to_shift = start_date_day - pattern_day_1
+    solar_pattern = np.roll(solar_pattern, to_shift)
+
     # Generate GLOBAL temperature noise
     print('Computing global auto-correlated spatio-temporal noise for sun and wind...')
     solar_noise = utils.generate_coarse_noise(params, 'solar')

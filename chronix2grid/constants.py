@@ -19,6 +19,6 @@ FLOATING_POINT_PRECISION_FORMAT = '%.1f'
 TIME_STEP_FILE_NAME = 'time_interval.info'
 TIME_STEP = '00:05' #format %H:%M
 
-RENEWABLE_NINJA_REFERENCE_FOLDER = 'renewable_ninja/case118_l2rpn_new'
+RENEWABLE_NINJA_REFERENCE_FOLDER = 'renewable_ninja'
 
 REFERENCE_ZONE = 'France'

@@ -525,7 +525,8 @@ class EconomicDispatchValidator:
             else:
                 ax = axes[0,i]
             ax.acorr(ts, maxlags=maxlags)
-            ax.set(title = 'Reference '+gen + ' ACF')
+            ax.set_title('Reference '+gen + ' ACF', fontsize = 8)
+            ax.set_xlim(1,maxlags)
         for i, gen in enumerate(wind_syn.columns):
             ts = wind_syn[gen].values
             if n==1:
@@ -533,7 +534,8 @@ class EconomicDispatchValidator:
             else:
                 ax = axes[1,i]
             ax.acorr(ts, maxlags=maxlags)
-            ax.set(title = 'Synthetic '+gen + ' ACF')
+            ax.set_title('Synthetic '+gen + ' ACF', fontsize = 8)
+            ax.set_xlim(1, maxlags)
         if save_plots:
             fig.savefig(os.path.join(self.image_repo, 'wind_kpi', 'generators_autocorrelation.png'))
 
@@ -608,6 +610,29 @@ class EconomicDispatchValidator:
                 season_at_night.update({season : percen_over_season})
                 
         return season_at_night
+
+    def __solar_by_day(self,solar_df,params):
+        # Extract parameters
+        monthly_pattern = params['monthly_pattern']
+        hours = params['hours']
+
+        # Add month variable solar df
+        solar_df_month = pd.concat([solar_df, self.months], axis=1)
+        solar_df_by_day = pd.DataFrame(columns = solar_df.columns)
+
+        for season, month in monthly_pattern.items():
+
+            # Filter by season (including all possible months avaible in season)
+            month_filter = solar_df_month.month.isin(month)
+            season_solar = solar_df_month.loc[month_filter, solar_df_month.columns != 'month']
+
+            if not season_solar.empty:
+                # Filter by season and hours
+                day_index = season_solar.between_time(hours[season][0], hours[season][1]).index
+                season_solar_by_day = season_solar.loc[day_index,:]
+                solar_df_by_day = pd.concat([solar_df_by_day,season_solar_by_day], axis = 0)
+        return solar_df_by_day
+
         
     def __solar_cloudiness(self,
                            solar_df,
@@ -615,32 +640,20 @@ class EconomicDispatchValidator:
                            factor_cloud):
 
         
-        # Using all data, we get a unique x quantile
-        # in order to grab a long term value
-        solar_q = solar_df.quantile(cloud_quantile)
-        
         # Per day, we are interested to get x quantile only when
         # generators are producing energy
         solar_q_perday = solar_df.replace(0, np.nan).resample('D').quantile(cloud_quantile)
 
-        # Measure cloudiness: we compare the quantile values per
-        # day with a long them x quantile truncated it a factor
-        # cloudiness = solar_q_perday <= (solar_q * factor_cloud)
-        thresholds = solar_q * factor_cloud
-        cloudiness = pd.DataFrame({col: solar_q_perday[col]<=thresholds[col] for col in solar_q_perday.columns})
+        # Compute quantile per month and diminuate with factor (thresholds)
+        solar_q_permonth = solar_q_perday.copy()
+        for month in self.months['month'].unique():
+            for col in solar_df.columns:
+                threshold = solar_q_perday.loc[solar_q_perday.index.month == month, col].quantile(cloud_quantile)
+                solar_q_permonth.loc[solar_q_permonth.index.month == month, col] = (threshold * factor_cloud)
 
-        # # Add month column to get some particular stats
-        # # Add months to solar cloudiness measure df
-        # month = cloudiness.index.month.to_frame()
-        # month.index = cloudiness.index
-        # cloudiness['month'] = month
-        
-        # Get in percentage the number of days solar
-        # generators have been producing below the factor
-        # (We considerer as a cloudiness's day)
-        # percen_cloud = 100 * cloudiness.groupby('month').drop('month', axis=1).sum() \
-        #                    / cloudiness.groupby('month').drop('month', axis=1).count()
-        # percen_cloud = percen_cloud.round(self.precision)
+        # Measure cloudiness: we compare the quantile values per
+        # day with a monthly x quantile truncated with a factor
+        cloudiness = pd.DataFrame(solar_q_perday.values <= solar_q_permonth.values, index=solar_q_perday.index)
         
         percen_cloud = 100 * cloudiness.groupby(pd.Grouper(freq='M')).sum() \
                              / cloudiness.groupby(pd.Grouper(freq='M')).count()
@@ -652,7 +665,8 @@ class EconomicDispatchValidator:
         
     def solar_kpi(self, 
                   cloud_quantile=0.95,
-                  cond_below_cloud=0.57, save_plots = True,
+                  cond_below_cloud=0.85
+                  , save_plots = True,
                   **kwargs):
 
         '''
@@ -673,17 +687,6 @@ class EconomicDispatchValidator:
 
         # First KPI
         # -- + -- +
-        # Get correlation matrix (10 x 10)
-        ref_corr_solar = self._pairwise_corr_different_dfs(solar_ref, solar_ref)
-        syn_corr_solar = self._pairwise_corr_different_dfs(solar_syn, solar_syn)
-
-        # Plot results
-        # Correlation heatmaps
-        fig, axes = plt.subplots(1, 2, figsize=(17, 5))
-        sns.heatmap(ref_corr_solar, annot=True, linewidths=.5, ax=axes[0])
-        sns.heatmap(syn_corr_solar, annot=True, linewidths=.5, ax=axes[1])
-        if save_plots:
-            fig.savefig(os.path.join(self.image_repo, 'solar_kpi', 'solar_corr_heatmap.png'))
 
         # Distribution of prod
         fig, axes = plt.subplots(1, 2, figsize=(17, 5))
@@ -733,7 +736,20 @@ class EconomicDispatchValidator:
                             path_name=os.path.join(self.image_repo,'solar_kpi','solar_at_night.png'),
                             title_component='Mean % of production at night per season', normalized = False)
 
+        ## Correlation Matrix by day
+        # Get correlation matrix (10 x 10)
+        solar_ref_by_day = self.__solar_by_day(solar_ref, params)
+        solar_syn_by_day = self.__solar_by_day(solar_syn, params)
+        ref_corr_solar = self._pairwise_corr_different_dfs(solar_ref_by_day, solar_ref_by_day)
+        syn_corr_solar = self._pairwise_corr_different_dfs(solar_syn_by_day, solar_syn_by_day)
 
+        # Plot results
+        # Correlation heatmaps
+        fig, axes = plt.subplots(1, 2, figsize=(17, 5))
+        sns.heatmap(ref_corr_solar, annot=True, linewidths=.5, ax=axes[0])
+        sns.heatmap(syn_corr_solar, annot=True, linewidths=.5, ax=axes[1])
+        if save_plots:
+            fig.savefig(os.path.join(self.image_repo, 'solar_kpi', 'solar_corr_heatmap.png'))
 
         # Third KPI
         # -- + -- +
@@ -749,10 +765,10 @@ class EconomicDispatchValidator:
                                                  cloud_quantile=cloud_quantile,
                                                  factor_cloud=cond_below_cloud)
 
-        self.plot_barcharts(cloudiness_ref.sum(axis=1), cloudiness_syn.sum(axis=1), save_plots=True,
+        self.plot_barcharts(cloudiness_ref.mean(axis=1), cloudiness_syn.mean(axis=1), save_plots=True,
                             path_name=os.path.join(self.image_repo,'solar_kpi','cloudiness.png'),
                             title_component='Cloudiness per month (number of daily quantile '+str(cloud_quantile)+' below '+str(round(cond_below_cloud*100))+
-                                            ' % of general quantile '+str(cloud_quantile)+')', normalized = False)
+                                            ' % of monthly quantile '+str(cloud_quantile)+')', normalized = False)
 
 
         ## Fourth KPI: Correlation between ref and syn (agregates)
