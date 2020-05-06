@@ -5,7 +5,7 @@
   "losses_pct": 1,
   "dispatch_by_carrier": false,
   "ramp_mode": "hard",
-  "grid_path": "input_data/generation/case118_l2rpn_wcci/L2RPN_2020_case118_redesigned.json",
+  "grid_path": "input_data/generation/case118_l2rpn_wcci_modifySlackBeforeChronixGeneration/L2RPN_2020_case118_redesigned.json",
   "pyomo": false,
   "solver_name": "cbc"
 }
