@@ -39,8 +39,6 @@ def pivot_format(chronics_folder, kpi_input_folder, year, prods_charac, loads_ch
     paramsKPI = json.loads(json1_str)
     comparison = paramsKPI['comparison']
     timestep = paramsKPI['timestep']
-    monthly_pattern = paramsKPI['seasons']
-    hours = paramsKPI['night_hours']
 
     ## Format chosen benchmark chronics calling designed pivot functions
     if comparison == 'France':
@@ -66,10 +64,10 @@ def pivot_format(chronics_folder, kpi_input_folder, year, prods_charac, loads_ch
     if wind_solar_only:
         syn_prod, syn_load = chronics_to_kpi(chronics_folder, timestep, params,
                                              thermal=not wind_solar_only)
-        return ref_prod, ref_load, syn_prod, syn_load, monthly_pattern, hours
+        return ref_prod, ref_load, syn_prod, syn_load, paramsKPI
     else:
         syn_prod, syn_load, prices = chronics_to_kpi(
             chronics_folder, timestep, params, thermal=not wind_solar_only)
-        return ref_prod, ref_load, syn_prod, syn_load, monthly_pattern, hours, ref_prices, prices
+        return ref_prod, ref_load, syn_prod, syn_load, ref_prices, prices, paramsKPI
 
 

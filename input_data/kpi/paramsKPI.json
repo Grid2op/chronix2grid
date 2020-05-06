@@ -1,6 +1,8 @@
 {
   "comparison": "France",
   "timestep": "60min",
+  "cloudiness_quantile":0.95,
+  "cloudiness_factor":0.85,
   "night_hours": {
     "summer": ["06:00", "23:00"],
     "fall": ["06:00", "23:00"],

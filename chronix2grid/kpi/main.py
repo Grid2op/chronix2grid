@@ -67,7 +67,7 @@ def main(kpi_input_folder, generation_output_folder,scenario_name,
         if wind_solar_only:
             # Get reference and synthetic dispatch and loads
             (ref_dispatch, ref_consumption, syn_dispatch, syn_consumption,
-             monthly_pattern, hours) = pivot_format(
+             paramsKPI) = pivot_format(
                 scenario_generation_output_folder, kpi_input_folder, year,
                 prods_charac, loads_charac, wind_solar_only,
                 params, case)
@@ -76,7 +76,7 @@ def main(kpi_input_folder, generation_output_folder,scenario_name,
         else:
             # Get reference and synthetic dispatch and loads
             (ref_dispatch, ref_consumption, syn_dispatch, syn_consumption,
-             monthly_pattern, hours, ref_prices, prices) = pivot_format(
+             ref_prices, prices, paramsKPI) = pivot_format(
                 scenario_generation_output_folder, kpi_input_folder, year,
                 prods_charac, loads_charac, wind_solar_only,
                 params, case)
@@ -113,7 +113,12 @@ def main(kpi_input_folder, generation_output_folder,scenario_name,
         dispatch_validator.wind_kpi()
 
         # Get Solar KPI
-        dispatch_validator.solar_kpi(monthly_pattern=monthly_pattern, hours=hours)
+        cloud_quantile = float(paramsKPI['cloudiness_quantile'])
+        cond_below_cloud = float(paramsKPI['cloudiness_factor'])
+        hours = paramsKPI["night_hours"]
+        monthly_pattern = paramsKPI["seasons"]
+        dispatch_validator.solar_kpi(cloud_quantile=cloud_quantile, cond_below_cloud=cond_below_cloud,
+                                     monthly_pattern=monthly_pattern, hours=hours)
 
         # Wind - Solar KPI
         dispatch_validator.wind_load_kpi()

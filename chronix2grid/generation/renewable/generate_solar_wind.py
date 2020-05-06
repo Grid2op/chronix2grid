@@ -47,11 +47,12 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
     # Extra value (resolution 1H, 8761)
     solar_pattern = solar_pattern[:-1]
 
-    # Realistic first day of year
+    # Realistic first day of year: have to roll the pattern to fit first day of week
     start_date = params['start_date']
     start_date_day = start_date.weekday()
-    pattern_day_1 = 0
-    to_shift = start_date_day - pattern_day_1
+    pattern_start_date = pd.Timestamp("01-01-"+str(int(params['year_solar_pattern'])))
+    pattern_start_date_day = pattern_start_date.weekday()
+    to_shift = start_date_day - pattern_start_date_day
     solar_pattern = np.roll(solar_pattern, to_shift)
 
     # Generate GLOBAL temperature noise

@@ -20,5 +20,6 @@
   "std_solar_noise": 0.1,
   "std_short_wind_noise": 0.04,
   "std_medium_wind_noise": 0.3,
-  "std_long_wind_noise": 0.3
+  "std_long_wind_noise": 0.3,
+  "year_solar_pattern": 2007
 }
