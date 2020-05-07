@@ -103,15 +103,6 @@ def main(case, n_scenarios, input_folder, output_folder, scenario_name, time_par
             
         scenario_folder_path = os.path.join(output_folder, scenario_name)
         
-        #####dump seeds in scenario folder
-        scenario_seeds = dict(
-            loads=seed_for_loads,
-            renewables=seed_for_res,
-            dispatch=seed_for_disp
-        )
-        dump_seeds(scenario_folder_path, scenario_seeds)
-        #######
-        
 
         print("================ Generating "+scenario_name+" ================")
         if 'L' in mode:
@@ -127,7 +118,7 @@ def main(case, n_scenarios, input_folder, output_folder, scenario_name, time_par
 
             dispatch_results = gen_dispatch.main(dispatcher, scenario_folder_path,
                                                  scenario_folder_path,
-                                                 seed_disp, params_opf)
+                                                 seed_disp,params, params_opf)
         print('\n')
     return params, loads_charac, prods_charac
 

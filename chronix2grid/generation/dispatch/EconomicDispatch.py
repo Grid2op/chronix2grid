@@ -22,6 +22,10 @@ DispatchResults = namedtuple('DispatchResults', ['chronix', 'terminal_conditions
 
 def init_dispatcher_from_config(grid_path, input_folder):
 
+    #Patch: we need to modify slighty Pmax and ramps according to the floating point number precision we have
+    #
+    
+    #read Prod Caracts
     env118_withoutchron = grid2op.make("blank",
                                        grid_path=grid_path,
                                        chronics_class=ChangeNothing)
@@ -91,16 +95,26 @@ class Dispatcher(pypsa.Network):
         net._env = grid2op_env
 
         carrier_types_to_exclude = ['wind', 'solar']
+        
+        #PATCH
+        #to avoid problems for respecting pmax and ramps when rounding production values in chronics at the end, we apply a correcting factor
+        PmaxCorrectingFactor=1
+        RampCorrectingFactor=0.1
 
         for i, generator in enumerate(grid2op_env.name_gen):
             gen_type = grid2op_env.gen_type[i]
             if gen_type not in carrier_types_to_exclude:
+                p_max=grid2op_env.gen_pmax[i]
+                pnom=p_max-PmaxCorrectingFactor
+                rampUp=(grid2op_env.gen_max_ramp_up[i]-RampCorrectingFactor) / p_max
+                RampDown=(grid2op_env.gen_max_ramp_down[i]-RampCorrectingFactor) / p_max
+                
                 net.add(
                     class_name='Generator', name=generator, bus='node',
-                    p_nom=grid2op_env.gen_pmax[i], carrier=grid2op_env.gen_type[i],
+                    p_nom=pnom, carrier=grid2op_env.gen_type[i],
                     marginal_cost=grid2op_env.gen_cost_per_MW[i],
-                    ramp_limit_up=grid2op_env.gen_max_ramp_up[i] / grid2op_env.gen_pmax[i],
-                    ramp_limit_down=grid2op_env.gen_max_ramp_down[i] / grid2op_env.gen_pmax[i],
+                    ramp_limit_up=rampUp,
+                    ramp_limit_down=RampDown,
                 )
 
         return net
@@ -245,7 +259,7 @@ class Dispatcher(pypsa.Network):
         self.reset_ramps_from_grid2op_env()
         return DispatchResults(chronix=results, terminal_conditions=terminal_conditions)
 
-    def save_results(self, output_folder):
+    def save_results(self,params, output_folder):
         if not self._has_results and not self._has_simplified_results:
             print('The optimization has first to run successfully in order to '
                   'save results.')
@@ -270,15 +284,18 @@ class Dispatcher(pypsa.Network):
 
         gen_cap = pd.Series({gen_name: gen_pmax for gen_name, gen_pmax in
                              zip(self._env.name_gen, self._env.gen_pmax)})
-        prod_p_with_noise = add_noise_gen(full_opf_dispatch, gen_cap, noise_factor=0.0007)
+        
+        prod_p_forecasted_with_noise = add_noise_gen(full_opf_dispatch, gen_cap, noise_factor=params['planned_std'])
 
-        print(f'Saving chronics into {output_folder}')
-        full_opf_dispatch.to_csv(
+          
+        #prod_p_forecasted_with_noise.to_csv(
+        prod_p_forecasted_with_noise.to_csv(
             os.path.join(output_folder, "prod_p_forecasted.csv.bz2"),
             sep=';', index=False,
             float_format=cst.FLOATING_POINT_PRECISION_FORMAT
         )
-        prod_p_with_noise.to_csv(
+        #prod_p_with_noise.to_csv(
+        full_opf_dispatch.to_csv(
             os.path.join(output_folder, "prod_p.csv.bz2"),
             sep=';', index=False,
             float_format=cst.FLOATING_POINT_PRECISION_FORMAT
@@ -368,7 +385,7 @@ if __name__ == "__main__":
         by_carrier=False  # True to run the dispatch only aggregated generators by carrier
     )
 
-    dispatch.save_results('.')
+    dispatch.save_results(params,'.')
     test_prods = pd.read_csv('./Scenario_0/prod_p.csv.bz2', sep=";")
     test_prices = pd.read_csv('./Scenario_0/prices.csv.bz2', sep=";")
 

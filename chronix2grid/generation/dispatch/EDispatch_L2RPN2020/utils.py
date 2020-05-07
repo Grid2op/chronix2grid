@@ -4,6 +4,7 @@ from enum import Enum
 import numpy as np
 import pandas as pd
 import pypsa
+import copy 
 
 from chronix2grid.generation.dispatch.utils import RampMode
 
@@ -320,6 +321,7 @@ def run_opf(net, demand, gen_max, gen_min, params, **kwargs):
 
     return net.generators_t.p.copy(), termination_condition
 
+                           
 def add_noise_gen(dispatch, gen_cap, noise_factor):
     """ Add noise to opf dispatch to have more
     realistic real-time data
@@ -338,14 +340,19 @@ def add_noise_gen(dispatch, gen_cap, noise_factor):
     dataframe
         Distpach with noise
     """    
-    variance_per_col = gen_cap * noise_factor
-    for col in dispatch:
+    dispatch_new=copy.deepcopy(dispatch)#dispatch.copy(deep=True)
+
+    #variance_per_col = gen_cap * noise_factor
+    print('applying noise to forecast of '+str(noise_factor)+' %')
+    for col in list(dispatch_new):
         # Check for values greater than zero 
         # (means unit has been distpached)
-        only_dispatched_steps = dispatch[col][dispatch[col] > 0]
-        noise = np.random.normal(0, variance_per_col.loc[col], only_dispatched_steps.shape[0])
-        dispatch.loc[only_dispatched_steps.index, col] = only_dispatched_steps + noise
-    return dispatch.round(2)
+        #only_dispatched_steps = dispatch_new[col][dispatch_new[col] > 0]
+        #print(only_dispatched_steps)
+        
+        noise = np.random.lognormal(mean=0.0,sigma=noise_factor, size=dispatch_new.shape[0])
+        dispatch_new[col] = dispatch[col] * noise
+    return dispatch_new.round(2)
 
 def interpolate_dispatch(dispatch, method='quadratic'):
     """Function to interpolate in case opf in running for 

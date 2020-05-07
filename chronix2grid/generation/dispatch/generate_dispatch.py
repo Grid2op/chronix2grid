@@ -6,7 +6,7 @@ import numpy as np
 from .EDispatch_L2RPN2020 import run_economic_dispatch
 
 
-def main(dispatcher, input_folder, output_folder, seed, params_opf):
+def main(dispatcher, input_folder, output_folder, seed, params,params_opf):
     """
 
     Parameters
@@ -28,7 +28,7 @@ def main(dispatcher, input_folder, output_folder, seed, params_opf):
         The namedtuple return by Dispatcher.run method
     """
 
-    np.random.seed(seed)
+    #np.random.seed(seed) # already done before
 
     hydro_constraints = dispatcher.make_hydro_constraints_from_res_load_scenario()
     agg_load_without_renew = dispatcher.net_load(params_opf['losses_pct'],
@@ -43,8 +43,7 @@ def main(dispatcher, input_folder, output_folder, seed, params_opf):
         pyomo=params_opf['pyomo'],
         solver_name=params_opf['solver_name']
     )
-
-    dispatcher.save_results(output_folder)
+    dispatcher.save_results(params,output_folder)
 
     return dispatch_results
 
