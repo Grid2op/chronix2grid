@@ -17,7 +17,6 @@ SEEDS_FILE_NAME = 'seeds_info.json'
 FLOATING_POINT_PRECISION_FORMAT = '%.1f'
 
 TIME_STEP_FILE_NAME = 'time_interval.info'
-TIME_STEP = '00:05' #format %H:%M
 
 RENEWABLE_NINJA_REFERENCE_FOLDER = 'renewable_ninja'
 

@@ -186,9 +186,11 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
             mode, seed_for_loads, seed_for_res, seed_for_dispatch)
         if by_n_weeks is not None and 'T' in mode:
             output_processor_to_chunks(
-                generation_output_folder,scenario_name, by_n_weeks, n_scenarios, weeks)
-            write_start_dates_for_chunks(generation_output_folder,scenario_name, weeks,
-                                         by_n_weeks, n_scenarios, start_date)
+                generation_output_folder, scenario_name, by_n_weeks,
+                n_scenarios, weeks)
+            write_start_dates_for_chunks(
+                generation_output_folder, scenario_name, weeks, by_n_weeks,
+                n_scenarios, start_date, int(params['dt']))
 
     # KPI formatting and computing
     if 'R' in mode and 'K' in mode and 'T' not in mode:

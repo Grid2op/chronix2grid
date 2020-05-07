@@ -9,14 +9,14 @@ from .generation import generation_utils as gu
 from chronix2grid import constants as cst
 
 
-def write_start_dates_for_chunks(output_path,scenario_name, n_weeks, by_n_weeks,
-                                 n_scenarios, start_date):
+def write_start_dates_for_chunks(output_path, scenario_name, n_weeks, by_n_weeks,
+                                 n_scenarios, start_date, time_step):
     days_to_day = by_n_weeks * 7
     n_chunks = compute_n_chunks(n_weeks, by_n_weeks)
     start_date_time = pd.to_datetime(start_date, format='%Y-%m-%d')
     file_name = 'start_datetime.info'
     
-    time_step = pd.to_datetime(cst.TIME_STEP, format='%H:%M')
+    time_step = pd.to_datetime(f'00:{str(time_step)}', format='%H:%M')
     file_name_ts = cst.TIME_STEP_FILE_NAME
     
     scen_name_generator = gu.folder_name_pattern(scenario_name, n_scenarios)
