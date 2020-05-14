@@ -11,7 +11,7 @@
   "long_wind_corr": 20160,
   "medium_wind_corr": 1440,
   "nuclear_smoothing": 10080,
-  "planned_std": "0.03",
+  "planned_std": "0.01",
   "short_wind_corr": 300,
   "solar_corr": 100,
   "temperature_corr": 400,
