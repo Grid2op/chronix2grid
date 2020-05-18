@@ -38,28 +38,27 @@ from chronix2grid.seed_manager import (parse_seed_arg, generate_default_seed,
                    'in the chosen output directory.')
 @click.option('--scenario_name', default='', help='subname to add to the generated scenario output folder, as Scenario_subname_i')
 @click.option('--nb_core', default=1, help='number of cores to parallelize the number of scenarios')
-
-
 def generate_mp(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
              input_folder, output_folder, scenario_name,
              seed_for_loads, seed_for_res, seed_for_dispatch, nb_core, ignore_warnings):
-    
-    
-    starttime = time.time()
-    
-    #create folders
+
+    start_time = time.time()
+    print('x'*100)
+    print(case)
+    # create folders
+
+    # get scenario name ids
+    scenario_base_name = cst.SCENARIO_FOLDER_BASE_NAME
+    if scenario_name:
+        scenario_base_name = '_'.join([scenario_base_name, str(scenario_name)])
+
+    scen_names = gu.folder_name_pattern(scenario_base_name, n_scenarios)
+
     generation_output_folder, kpi_output_folder = create_directory_tree(
-        case, start_date, output_folder, scenario_name, n_scenarios, mode, warn_user=not ignore_warnings)
-    
-    #get scenario name ids 
-    scenarioBaseName=cst.SCENARIO_FOLDER_BASE_NAME
-    if(len(scenario_name)!=0):
-        scenarioBaseName+='_'+str(scenario_name)
-    scen_names = gu.folder_name_pattern(
-        scenarioBaseName, n_scenarios)
-    
-    ###############
-    #seeds
+        case, start_date, output_folder, scenario_base_name, n_scenarios, mode,
+        warn_user=not ignore_warnings)
+
+    # seeds
     default_seed = generate_default_seed()
     seed_for_loads = parse_seed_arg(seed_for_loads, '--seed-for-loads',
                                     default_seed)
@@ -76,45 +75,45 @@ def generate_mp(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
     
     print('initial_seeds')
     print(initial_seeds)
-    dump_seeds(generation_output_folder, initial_seeds,scenario_name)
+    dump_seeds(generation_output_folder, initial_seeds, scenario_name)
     
-    if(n_scenarios>=2):
+    if n_scenarios >= 2:
         seeds_for_loads, seeds_for_res, seeds_for_disp = gu.generate_seeds(
             n_scenarios, seed_for_loads, seed_for_res, seed_for_dispatch
         )
-    else:#in case uou want to reproduce a specific scenario already generated with the seeds to consider
-        seeds_for_loads=[seed_for_loads]
-        seeds_for_res=[seed_for_res]
-        seeds_for_disp=[seed_for_dispatch]
-    
-    
-    ###############
-    ## multi processing
+    else:
+        # in case uou want to reproduce a specific scenario already generated
+        # with the seeds to consider
+        seeds_for_loads = [seed_for_loads]
+        seeds_for_res = [seed_for_res]
+        seeds_for_disp = [seed_for_dispatch]
+
+    # multi-processing
     pool = multiprocessing.Pool(nb_core)
-    iterable=[i for i in range(n_scenarios)]
-    multiprocessing_func = partial(generate_per_scenario,case, start_date, weeks, by_n_weeks, mode,
-             input_folder, kpi_output_folder, generation_output_folder, scen_names,
-             seeds_for_loads, seeds_for_res, seeds_for_disp, ignore_warnings)
+    iterable = [i for i in range(n_scenarios)]
+    multiprocessing_func = partial(
+        generate_per_scenario,
+        case, start_date, weeks, by_n_weeks, mode, input_folder,
+        kpi_output_folder, generation_output_folder, scen_names,
+        seeds_for_loads, seeds_for_res, seeds_for_disp, ignore_warnings)
     
     pool.map(multiprocessing_func, iterable)
     pool.close()
     print('multiprocessing done')  
-    print('Time taken = {} seconds'.format(time.time() - starttime))
+    print('Time taken = {} seconds'.format(time.time() - start_time))
 
 
 def generate_per_scenario(case, start_date, weeks, by_n_weeks, mode,
              input_folder, kpi_output_folder, generation_output_folder, scen_names,
              seeds_for_loads, seeds_for_res, seeds_for_dispatch, ignore_warnings, scenario_id):
     
-    n_scenarios_subP=1 #one scenario to compute per process``
-    scenario_name=scen_names(scenario_id)
+    n_scenarios_sub_p = 1  # one scenario to compute per process``
+    scenario_name = scen_names(scenario_id)
 
-    
-    #############
-    #get scenario seeds
-    seed_for_loads=seeds_for_loads[scenario_id]
-    seed_for_res=seeds_for_res[scenario_id]
-    seed_for_dispatch=seeds_for_dispatch[scenario_id]
+    # get scenario seeds
+    seed_for_loads = seeds_for_loads[scenario_id]
+    seed_for_res = seeds_for_res[scenario_id]
+    seed_for_dispatch = seeds_for_dispatch[scenario_id]
     
     scenario_seeds = dict(
         loads=seed_for_loads,
@@ -124,33 +123,29 @@ def generate_per_scenario(case, start_date, weeks, by_n_weeks, mode,
     print('seeds for scenario: '+scenario_name)
     print(scenario_seeds)
     
-    #dump scenario seeds
-    #noScenarioDirectoryHere=''
-    #generation_output_folder, kpi_output_folder = create_directory_tree(
-    #    case, start_date, output_folder, noScenarioDirectoryHere, n_scenarios_subP, mode, warn_user=not ignore_warnings)
-    
+    # dump scenario seeds
+    # noScenarioDirectoryHere=''
+    # generation_output_folder, kpi_output_folder = create_directory_tree(
+    #    case, start_date, output_folder, noScenarioDirectoryHere,
+    #    n_scenarios_sub_p, mode, warn_user=not ignore_warnings)
 
     scenario_path = os.path.join(generation_output_folder, scenario_name)
     print('scenarion_path: '+scenario_path)
-    #dump_seeds(generation_output_folder, scenario_seeds)
     dump_seeds(scenario_path, scenario_seeds)
 
-    #####
-    #go to generate chronics
-    generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios_subP, mode,
-                   input_folder, kpi_output_folder, generation_output_folder, scenario_name,
-                   seed_for_loads, seed_for_res, seed_for_dispatch,
-                   warn_user=not ignore_warnings)
+    # go to generate chronics
+    generate_inner(
+        case, start_date, weeks, by_n_weeks, n_scenarios_sub_p, mode,
+        input_folder, kpi_output_folder, generation_output_folder,
+        scenario_name, seed_for_loads, seed_for_res, seed_for_dispatch)
     
 
 def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
-                   input_folder, kpi_output_folder, generation_output_folder, scenario_name, seed_for_loads, seed_for_res,
-                   seed_for_dispatch, warn_user=True):
+                   input_folder, kpi_output_folder, generation_output_folder,
+                   scenario_name, seed_for_loads, seed_for_res,
+                   seed_for_dispatch):
 
     time_parameters = gu.time_parameters(weeks, start_date)
-
-    #generation_output_folder, kpi_output_folder = create_directory_tree(
-    #    case, start_date, output_folder, scenario_name, n_scenarios, mode, warn_user=warn_user)
 
     generation_input_folder = os.path.join(
         input_folder, cst.GENERATION_FOLDER_NAME
@@ -158,23 +153,6 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
     kpi_input_folder = os.path.join(
         input_folder, cst.KPI_FOLDER_NAME
     )
-
-    #default_seed = generate_default_seed()
-    #seed_for_loads = parse_seed_arg(seed_for_loads, '--seed-for-loads',
-    #                                default_seed)
-    #seed_for_res = parse_seed_arg(seed_for_res, '--seed-for-res',
-    #                              default_seed)
-    #seed_for_dispatch = parse_seed_arg(seed_for_dispatch, '--seed-for-dispatch',
-    #                                   default_seed)
-#
-    #seeds = dict(
-    #    loads=seed_for_loads,
-    #    renewables=seed_for_res,
-    #    dispatch=seed_for_dispatch
-    #)
-    #
-    ##TODO: need to dump seed info in each scenario folder
-    #dump_seeds(generation_output_folder, seeds)
 
     year = time_parameters['year']
 
@@ -203,9 +181,9 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
     elif 'T' in mode and 'K' in mode:
         # Get and format dispatched chronics, then compute KPI and save plots
         wind_solar_only = False
-        kpis.main(kpi_input_folder, generation_output_folder,scenario_name, kpi_output_folder,
-                  year, case, n_scenarios, wind_solar_only, params,
-                  loads_charac, prods_charac)
+        kpis.main(kpi_input_folder, generation_output_folder,scenario_name,
+                  kpi_output_folder, year, case, n_scenarios, wind_solar_only,
+                  params, loads_charac, prods_charac)
 
 
 def create_directory_tree(case, start_date, output_directory, scenario_name,
@@ -224,11 +202,8 @@ def create_directory_tree(case, start_date, output_directory, scenario_name,
             gu.warn_if_output_folder_not_empty(kpi_path_to_create)
         os.makedirs(kpi_path_to_create, exist_ok=True)
 
-    sceanrioBaseName=cst.SCENARIO_FOLDER_BASE_NAME
-    if(len(scenario_name)!=0):
-        sceanrioBaseName+='_'+str(scenario_name)
     scen_name_generator = gu.folder_name_pattern(
-        sceanrioBaseName, n_scenarios)
+        scenario_name, n_scenarios)
     for i in range(n_scenarios):
         s_name = scen_name_generator(i)
         scenario_path_to_create = os.path.join(gen_path_to_create, s_name)
@@ -251,10 +226,11 @@ if __name__ == "__main__":
     n_scenarios = 1
     mode = 'LRK'
     input_folder = '/home/vrenault/Projects/ChroniX2Grid/input'
-    output_folder = '/home/vrenault/Projects/ChroniX2Grid/output'
+    generation_output_folder = '/home/vrenault/Projects/ChroniX2Grid/output/generation'
+    kpi_output_folder = '/home/vrenault/Projects/ChroniX2Grid/output/generation/kpi'
     seed = 1
-    warn_user = True
+    scenario_name = ''
     generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
-                   input_folder, output_folder,scenario_name,
-                   seed, seed, seed,
-                   warn_user=warn_user)
+                   input_folder, kpi_output_folder, generation_output_folder,
+                   scenario_name,
+                   seed, seed, seed)
