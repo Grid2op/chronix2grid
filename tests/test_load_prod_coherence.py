@@ -96,4 +96,29 @@ class TestLoadProdCoherence(unittest.TestCase):
         self.assertEqual((prods.sum(axis=1) - loads.sum(axis=1) < 0).sum(),
                          0)
 
-        # 'Pmax', 'Pmin', 'max_ramp_up', 'max_ramp_down' 'name' 'type'
+        prods_dispatch = prods_charac.loc[
+            ~prods_charac.type.isin(['wind', 'solar']), :
+        ]
+
+        # Make sure physical constraints are respected
+        for gen_name in prods_dispatch.name:
+            max_ramp_up = prods.loc[:, gen_name].diff().max()
+            max_ramp_down = - prods.loc[:, gen_name].diff().min()
+            p_max = prods.loc[:, gen_name].max()
+            p_min = prods.loc[:, gen_name].min()
+            self.assertGreaterEqual(
+                prods_dispatch.loc[prods_dispatch.name == gen_name, 'max_ramp_up'].values[0],
+                max_ramp_up
+            )
+            self.assertGreaterEqual(
+                prods_dispatch.loc[prods_dispatch.name == gen_name, 'max_ramp_down'].values[0],
+                max_ramp_down
+            )
+            self.assertGreaterEqual(
+                prods_dispatch.loc[prods_dispatch.name == gen_name, 'Pmax'].values[0],
+                p_max
+            )
+            self.assertGreaterEqual(
+                p_min,
+                prods_dispatch.loc[prods_dispatch.name == gen_name, 'Pmin'].values[0]
+            )
