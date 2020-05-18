@@ -34,9 +34,9 @@ def pivot_format(chronics_folder, kpi_input_folder, year, prods_charac, loads_ch
         """
 
     # Read json parameters for KPI configuration
-    json1_file = open(os.path.join(kpi_input_folder, 'paramsKPI.json'))
-    json1_str = json1_file.read()
-    paramsKPI = json.loads(json1_str)
+    json_filepath = os.path.join(kpi_input_folder, 'paramsKPI.json')
+    with open(json_filepath, 'r') as json_file:
+        paramsKPI = json.load(json_file)
     comparison = paramsKPI['comparison']
     timestep = paramsKPI['timestep']
 

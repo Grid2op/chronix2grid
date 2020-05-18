@@ -143,11 +143,11 @@ class ResConfigManager(ConfigManager):
                                                  output_directory, required_input_files)
 
     def read_configuration(self):
-        json1_file = open(os.path.join(
+        params_filepath = os.path.join(
             self.root_directory,
-            self.input_directories['case'], 'params.json'))
-        json1_str = json1_file.read()
-        params = json.loads(json1_str)
+            self.input_directories['case'], 'params.json')
+        with open(params_filepath, 'r') as params_json:
+            params = json.load(params_json)
         for key, value in params.items():
             try:
                 params[key] = float(value)
