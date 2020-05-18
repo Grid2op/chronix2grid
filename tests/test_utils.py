@@ -18,7 +18,7 @@ class TestUtils(unittest.TestCase):
 
     def test_create_directory_tree(self):
         create_directory_tree('case', 'start_date', self.output_directory,
-                              self.n_scenarios, 'L')
+                              cst.SCENARIO_FOLDER_BASE_NAME, self.n_scenarios, 'L')
         self.assertTrue(os.path.isdir(os.path.join(
             self.output_directory, cst.GENERATION_FOLDER_NAME, 'case', 'start_date'
         )))
@@ -26,7 +26,7 @@ class TestUtils(unittest.TestCase):
             self.output_directory, cst.KPI_FOLDER_NAME, 'case', 'start_date'
         )))
         create_directory_tree('case', 'start_date2', self.output_directory,
-                              self.n_scenarios, 'LK')
+                              cst.SCENARIO_FOLDER_BASE_NAME, self.n_scenarios, 'LK')
         self.assertTrue(os.path.isdir(os.path.join(
             self.output_directory, cst.KPI_FOLDER_NAME, 'case', 'start_date2'
         )))

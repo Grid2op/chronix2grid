@@ -1,0 +1,57 @@
+import os
+import unittest
+import shutil
+import subprocess
+
+import numpy as np
+import pandas as pd
+import pathlib
+
+from chronix2grid import main
+from chronix2grid import constants as cst
+import chronix2grid.generation.generation_utils as gu
+
+
+class TestCli(unittest.TestCase):
+    def setUp(self):
+        self.input_folder = os.path.join(
+            pathlib.Path(__file__).parent.parent.absolute(),
+            'input_data')
+        self.output_folder = os.path.join(
+            pathlib.Path(__file__).parent.parent.absolute(),
+            'tests',
+            'output')
+        self.case = 'case118_l2rpn_wcci'
+        self.start_date = '2012-01-01'
+        self.year = 2012
+        self.seed_loads = 1
+        self.seed_res = 1
+        self.seed_dispatch = 1
+        self.n_scenarios = 2
+        self.scenario_names = gu.folder_name_pattern(
+            cst.SCENARIO_FOLDER_BASE_NAME, self.n_scenarios
+        )
+        self.ignore_warnings = True
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.output_folder, ignore_errors=False, onerror=None)
+
+    def test_cli(self):
+        cmd = [
+            'chronix2grid',
+            '--case', 'case118_l2rpn_wcci',
+            '--start-date', '2012-01-01',
+            '--weeks', str(2),
+            '--by-n-weeks', str(4),
+            '--n_scenarios', str(self.n_scenarios),
+            '--mode', 'LR',
+            '--input-folder', self.input_folder,
+            '--output-folder', self.output_folder,
+            '--seed-for-loads', str(self.seed_loads),
+            '--seed-for-res', str(self.seed_res),
+            '--seed-for-dispatch', str(self.seed_dispatch),
+            '--ignore-warnings',
+            '--scenario_name', '',
+            '--nb_core', str(2)
+        ]
+        subprocess.run(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
