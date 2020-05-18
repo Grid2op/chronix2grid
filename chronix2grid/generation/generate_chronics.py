@@ -43,15 +43,15 @@ def main(case, n_scenarios, input_folder, output_folder, scenario_name, time_par
     print('============================================== CHRONICS GENERATION ==================================================================')
     print('=====================================================================================================================================')
 
-    #in multiprocessing, n_scenarios=1 here
-    if(n_scenarios>=2):
+    # in multiprocessing, n_scenarios=1 here
+    if n_scenarios >= 2:
         seeds_for_loads, seeds_for_res, seeds_for_disp = gu.generate_seeds(
-            n_scenarios, seed_for_loads, seed_for_res, seed_for_dispatch
+            n_scenarios, seed_for_loads, seed_for_res, seed_for_disp
         )
     else:
-        seeds_for_loads=[seed_for_loads]
-        seeds_for_res=[seed_for_res]
-        seeds_for_disp=[seed_for_disp]
+        seeds_for_loads = [seed_for_loads]
+        seeds_for_res = [seed_for_res]
+        seeds_for_disp = [seed_for_disp]
 
     # dispatch_input_folder, dispatch_input_folder_case, dispatch_output_folder = gu.make_generation_input_output_directories(input_folder, case, year, output_folder)
     load_config_manager = LoadsConfigManager(

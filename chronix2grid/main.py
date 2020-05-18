@@ -160,7 +160,7 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
     if 'L' in mode or 'R' in mode:
         params, loads_charac, prods_charac = gen.main(
             case, n_scenarios, generation_input_folder,
-            generation_output_folder,scenario_name, time_parameters,
+            generation_output_folder, scenario_name, time_parameters,
             mode, seed_for_loads, seed_for_res, seed_for_dispatch)
         if by_n_weeks is not None and 'T' in mode:
             output_processor_to_chunks(
