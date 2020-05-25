@@ -80,7 +80,6 @@ class TestMain(unittest.TestCase):
             ignore_warnings=self.ignore_warnings,
             scenario_id=0)
 
-
     def test_r(self):
         main.generate_per_scenario(
             case=self.case, start_date=self.start_date, weeks=1, by_n_weeks=4,

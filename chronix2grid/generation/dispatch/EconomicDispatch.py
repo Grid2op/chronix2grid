@@ -259,7 +259,7 @@ class Dispatcher(pypsa.Network):
         self.reset_ramps_from_grid2op_env()
         return DispatchResults(chronix=results, terminal_conditions=terminal_conditions)
 
-    def save_results(self,params, output_folder):
+    def save_results(self, params, output_folder):
         if not self._has_results and not self._has_simplified_results:
             print('The optimization has first to run successfully in order to '
                   'save results.')

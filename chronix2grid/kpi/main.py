@@ -9,7 +9,7 @@ from .deterministic.kpis import EconomicDispatchValidator
 from ..generation import generation_utils as gu
 from .. import constants as cst
 
-def main(kpi_input_folder, generation_output_folder,scenario_name,
+def main(kpi_input_folder, generation_output_folder, scenario_name,
          kpi_output_folder, year, case, n_scenarios, wind_solar_only, params,
          loads_charac, prods_charac):
     """

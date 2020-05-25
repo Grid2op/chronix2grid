@@ -118,7 +118,7 @@ def main(case, n_scenarios, input_folder, output_folder, scenario_name, time_par
 
             dispatch_results = gen_dispatch.main(dispatcher, scenario_folder_path,
                                                  scenario_folder_path,
-                                                 seed_disp,params, params_opf)
+                                                 seed_disp, params, params_opf)
         print('\n')
     return params, loads_charac, prods_charac
 

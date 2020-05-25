@@ -174,14 +174,14 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
     if 'R' in mode and 'K' in mode and 'T' not in mode:
         # Get and format solar and wind on all timescale, then compute KPI and save plots
         wind_solar_only = True
-        kpis.main(kpi_input_folder, generation_output_folder,scenario_name, kpi_output_folder,
+        kpis.main(kpi_input_folder, generation_output_folder, scenario_name, kpi_output_folder,
                   year, case, n_scenarios, wind_solar_only, params,
                   loads_charac, prods_charac)
 
     elif 'T' in mode and 'K' in mode:
         # Get and format dispatched chronics, then compute KPI and save plots
         wind_solar_only = False
-        kpis.main(kpi_input_folder, generation_output_folder,scenario_name,
+        kpis.main(kpi_input_folder, generation_output_folder, scenario_name,
                   kpi_output_folder, year, case, n_scenarios, wind_solar_only,
                   params, loads_charac, prods_charac)
 
