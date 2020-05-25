@@ -11,10 +11,12 @@ from . import generation_utils as gu
 from ..config import DispatchConfigManager, LoadsConfigManager, ResConfigManager
 from .. import constants as cst
 from ..seed_manager import dump_seeds
+from .. import utils as ut
 
 
 # Call generation scripts n_scenario times with dedicated random seeds
-def main(case, n_scenarios, input_folder, output_folder, scenario_name, time_params, mode='LRTK',
+def main(case, n_scenarios, input_folder, output_folder, scen_names,
+         time_params, mode='LRTK', scenario_id=None,
          seed_for_loads=None, seed_for_res=None, seed_for_disp=None):
     """
     Main function for chronics generation. It works with three steps: load generation, renewable generation (solar and wind) and then dispatch computation to get the whole energy mix
@@ -38,6 +40,8 @@ def main(case, n_scenarios, input_folder, output_folder, scenario_name, time_par
     -------
 
     """
+
+    ut.check_scenario(n_scenarios, scenario_id)
 
     print('=====================================================================================================================================')
     print('============================================== CHRONICS GENERATION ==================================================================')
@@ -94,12 +98,12 @@ def main(case, n_scenarios, input_folder, output_folder, scenario_name, time_par
     ## Launch proper scenarios generation
     seeds_iterator = zip(seeds_for_loads, seeds_for_res, seeds_for_disp)
     
-    scen_name_generator = gu.folder_name_pattern(scenario_name, n_scenarios)
-    
     for i, (seed_load, seed_res, seed_disp) in enumerate(seeds_iterator):
         
-        if(n_scenarios>1):#otherwise keep scenario_name as defined
-            scenario_name = scen_name_generator(i)
+        if n_scenarios > 1:
+            scenario_name = scen_names(i)
+        else:
+            scenario_name = scen_names(scenario_id)
             
         scenario_folder_path = os.path.join(output_folder, scenario_name)
         

@@ -13,6 +13,7 @@ from chronix2grid.output_processor import (
     output_processor_to_chunks, write_start_dates_for_chunks)
 from chronix2grid.seed_manager import (parse_seed_arg, generate_default_seed,
                                        dump_seeds)
+from chronix2grid import utils as ut
 
 
 @click.command()
@@ -43,7 +44,6 @@ def generate_mp(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
              seed_for_loads, seed_for_res, seed_for_dispatch, nb_core, ignore_warnings):
 
     start_time = time.time()
-    print('x'*100)
     print(case)
     # create folders
 
@@ -137,14 +137,15 @@ def generate_per_scenario(case, start_date, weeks, by_n_weeks, mode,
     generate_inner(
         case, start_date, weeks, by_n_weeks, n_scenarios_sub_p, mode,
         input_folder, kpi_output_folder, generation_output_folder,
-        scenario_name, seed_for_loads, seed_for_res, seed_for_dispatch)
+        scen_names, seed_for_loads, seed_for_res, seed_for_dispatch, scenario_id)
     
 
 def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
                    input_folder, kpi_output_folder, generation_output_folder,
-                   scenario_name, seed_for_loads, seed_for_res,
-                   seed_for_dispatch):
+                   scen_names, seed_for_loads, seed_for_res,
+                   seed_for_dispatch, scenario_id=None):
 
+    ut.check_scenario(n_scenarios, scenario_id)
     time_parameters = gu.time_parameters(weeks, start_date)
 
     generation_input_folder = os.path.join(
@@ -160,8 +161,9 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
     if 'L' in mode or 'R' in mode:
         params, loads_charac, prods_charac = gen.main(
             case, n_scenarios, generation_input_folder,
-            generation_output_folder, scenario_name, time_parameters,
-            mode, seed_for_loads, seed_for_res, seed_for_dispatch)
+            generation_output_folder, scen_names, time_parameters,
+            mode, scenario_id, seed_for_loads, seed_for_res, seed_for_dispatch)
+        scenario_name = scen_names(scenario_id)
         if by_n_weeks is not None and 'T' in mode:
             output_processor_to_chunks(
                 generation_output_folder, scenario_name, by_n_weeks,
@@ -174,16 +176,16 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
     if 'R' in mode and 'K' in mode and 'T' not in mode:
         # Get and format solar and wind on all timescale, then compute KPI and save plots
         wind_solar_only = True
-        kpis.main(kpi_input_folder, generation_output_folder, scenario_name, kpi_output_folder,
-                  year, case, n_scenarios, wind_solar_only, params,
-                  loads_charac, prods_charac)
+        kpis.main(kpi_input_folder, generation_output_folder, scen_names,
+                  kpi_output_folder, year, case, n_scenarios, wind_solar_only,
+                  params, loads_charac, prods_charac, scenario_id)
 
     elif 'T' in mode and 'K' in mode:
         # Get and format dispatched chronics, then compute KPI and save plots
         wind_solar_only = False
-        kpis.main(kpi_input_folder, generation_output_folder, scenario_name,
+        kpis.main(kpi_input_folder, generation_output_folder, scen_names,
                   kpi_output_folder, year, case, n_scenarios, wind_solar_only,
-                  params, loads_charac, prods_charac)
+                  params, loads_charac, prods_charac, scenario_id)
 
 
 def create_directory_tree(case, start_date, output_directory, scenario_name,
@@ -229,8 +231,7 @@ if __name__ == "__main__":
     generation_output_folder = '/home/vrenault/Projects/ChroniX2Grid/output/generation'
     kpi_output_folder = '/home/vrenault/Projects/ChroniX2Grid/output/generation/kpi'
     seed = 1
-    scenario_name = ''
+    scen_names = gu.folder_name_pattern(cst.SCENARIO_FOLDER_BASE_NAME, n_scenarios)
     generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
                    input_folder, kpi_output_folder, generation_output_folder,
-                   scenario_name,
-                   seed, seed, seed)
+                   scen_names, seed, seed, seed, 0)
