@@ -55,7 +55,7 @@ def compute_n_chunks(n_weeks, by_n_weeks):
     return n_chunks
 
 
-def output_processor_to_chunks(output_path,scenario_name, by_n_weeks, n_scenarios, n_weeks):
+def output_processor_to_chunks(output_path, scenario_name, by_n_weeks, n_scenarios, n_weeks):
     if n_weeks > by_n_weeks:
         chunk_size = by_n_weeks * 7 * 24 * 12  # 5 min time step
     

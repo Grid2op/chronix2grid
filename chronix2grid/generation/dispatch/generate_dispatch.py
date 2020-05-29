@@ -6,7 +6,7 @@ import numpy as np
 from .EDispatch_L2RPN2020 import run_economic_dispatch
 
 
-def main(dispatcher, input_folder, output_folder, seed, params,params_opf):
+def main(dispatcher, input_folder, output_folder, seed, params, params_opf):
     """
 
     Parameters
@@ -43,7 +43,7 @@ def main(dispatcher, input_folder, output_folder, seed, params,params_opf):
         pyomo=params_opf['pyomo'],
         solver_name=params_opf['solver_name']
     )
-    dispatcher.save_results(params,output_folder)
+    dispatcher.save_results(params, output_folder)
 
     return dispatch_results
 

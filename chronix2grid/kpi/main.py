@@ -8,10 +8,12 @@ from .preprocessing.pivot_KPI import pivot_format
 from .deterministic.kpis import EconomicDispatchValidator
 from ..generation import generation_utils as gu
 from .. import constants as cst
+from .. import utils as ut
 
-def main(kpi_input_folder, generation_output_folder,scenario_name,
+
+def main(kpi_input_folder, generation_output_folder, scenario_names,
          kpi_output_folder, year, case, n_scenarios, wind_solar_only, params,
-         loads_charac, prods_charac):
+         loads_charac, prods_charac, scenario_id=None):
     """
         This is the main function for KPI computation. It formats synthetic and reference chronics and then computes KPIs on it with 2 modes (wind solar and load only or full energy mix). It saves plots in png and html files. It writes a json output
 
@@ -31,6 +33,7 @@ def main(kpi_input_folder, generation_output_folder,scenario_name,
 
     """
 
+    ut.check_scenario(n_scenarios, scenario_id)
 
     print('=====================================================================================================================================')
     print('================================================= KPI GENERATION  ===================================================================')
@@ -44,14 +47,12 @@ def main(kpi_input_folder, generation_output_folder,scenario_name,
         prods_charac['zone'] = 'R1'
         loads_charac['zone'] = 'R1'
 
-    
-    scen_name_generator = gu.folder_name_pattern(scenario_name, n_scenarios)
-    
-    #scen_name_generator = gu.folder_name_pattern('Scenario', n_scenarios)
-    ## Format and compute KPI for each scenario
+    # Format and compute KPI for each scenario
     for scenario_num in range(n_scenarios):
-        if(n_scenarios>1):#otherwise keep scenario_name as defined
-            scenario_name = scen_name_generator(scenario_num)
+        if n_scenarios > 1:
+            scenario_name = scenario_names(scenario_num)
+        else:
+            scenario_name = scenario_names(scenario_id)
         print(scenario_name+'...')
         scenario_generation_output_folder = os.path.join(
             generation_output_folder, scenario_name

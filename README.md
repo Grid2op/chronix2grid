@@ -69,8 +69,13 @@ Options:
 
 ```
 ## Getting Started
-An example is included (network and configuration inputs) in the package to allow a quick review of the main options of
- Chronix2Grid.
+Three notebooks are provided to get you started with this package:
+
+* **getting_started_cli.ipynb** guide you through the use of chronix2grid cli
+* **getting_started_api.ipynb** is a more detailed notebook that presents chronix2grid api and showcases several ways to
+ analyze the chronics produced
+ * **RenewableNinja_Solar_WInd_KPI_format.ipynb** is an example on how to retrieve Solar and Wind chronics from the
+  [renewable ninja](https://www.renewables.ninja/) api. 
  
 ## Configuration
 

@@ -183,23 +183,19 @@ def generate_seeds(n_seeds, seed_for_loads=None, seed_for_res=None, seed_for_dis
     return seeds_for_loads, seeds_for_res, seeds_for_disp
 
 
-def read_all_configurations(weeks, start_date, case, root_dir):
+def read_all_configurations(weeks, start_date, case, input_folder, output_folder):
     time_params = time_parameters(weeks, start_date)
     year = time_params['year']
 
-    output_folder = os.path.join(root_dir, 'generation', 'output', case)
-    input_folder = os.path.join(root_dir, 'generation', 'input')
-
     print(f'output_folder: {output_folder}')
-    dispatch_input_folder, dispatch_input_folder_case, dispatch_output_folder = make_generation_input_output_directories(
-        input_folder, case, year, output_folder)
+
     load_config_manager = LoadsConfigManager(
         name="Loads Generation",
         root_directory=input_folder,
         input_directories=dict(case=case, patterns='patterns'),
         required_input_files=dict(case=['loads_charac.csv', 'params.json'],
                                   patterns=['load_weekly_pattern.csv']),
-        output_directory=dispatch_input_folder
+        output_directory=output_folder
     )
     load_config_manager.validate_configuration()
 
@@ -211,7 +207,7 @@ def read_all_configurations(weeks, start_date, case, root_dir):
         input_directories=dict(case=case, patterns='patterns'),
         required_input_files=dict(case=['prods_charac.csv', 'params.json'],
                                   patterns=['solar_pattern.npy']),
-        output_directory=dispatch_input_folder
+        output_directory=output_folder
     )
 
     params, prods_charac, solar_pattern = res_config_manager.read_configuration()
@@ -221,10 +217,10 @@ def read_all_configurations(weeks, start_date, case, root_dir):
 
     dispath_config_manager = DispatchConfigManager(
         name="Dispatch",
-        root_directory=os.path.join(input_folder, case),
-        output_directory=dispatch_output_folder,
-        input_directories=dict(params='.', year=os.path.join('dispatch', str(year))),
-        required_input_files=dict(params=['params_opf.json'], year=[])
+        root_directory=input_folder,
+        output_directory=output_folder,
+        input_directories=dict(params=case),
+        required_input_files=dict(params=['params_opf.json'])
     )
     dispath_config_manager.validate_configuration()
     params_opf = dispath_config_manager.read_configuration()
