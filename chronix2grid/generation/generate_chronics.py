@@ -93,7 +93,8 @@ def main(case, n_scenarios, input_folder, output_folder, scen_names,
     )
     dispath_config_manager.validate_configuration()
     params_opf = dispath_config_manager.read_configuration()
-    dispatcher = ec.init_dispatcher_from_config(params_opf["grid_path"], input_folder)
+    grid_path = os.path.join(input_folder, case, cst.GRID_FILENAME)
+    dispatcher = ec.init_dispatcher_from_config(grid_path, input_folder)
 
     ## Launch proper scenarios generation
     seeds_iterator = zip(seeds_for_loads, seeds_for_res, seeds_for_disp)

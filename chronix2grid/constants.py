@@ -21,3 +21,5 @@ TIME_STEP_FILE_NAME = 'time_interval.info'
 RENEWABLE_NINJA_REFERENCE_FOLDER = 'renewable_ninja'
 
 REFERENCE_ZONE = 'France'
+
+GRID_FILENAME = 'grid.json'
