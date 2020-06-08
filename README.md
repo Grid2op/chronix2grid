@@ -74,8 +74,10 @@ Three notebooks are provided to get you started with this package:
 * **getting_started_cli.ipynb** guide you through the use of chronix2grid cli
 * **getting_started_api.ipynb** is a more detailed notebook that presents chronix2grid api and showcases several ways to
  analyze the chronics produced
- * **RenewableNinja_Solar_WInd_KPI_format.ipynb** is an example on how to retrieve Solar and Wind chronics from the
-  [renewable ninja](https://www.renewables.ninja/) api. 
+ * **running_chronics_grid2op.ipynb** is a notebook giving an example of how generated chronics can further be used to create power grid scenarios and run them 
+ analyze the chronics produced
+ * **RenewableNinja_Solar_WInd_KPI_format.ipynb** is an example on how to retrieve Solar and Wind reference chronics from the
+  [renewable ninja](https://www.renewables.ninja/) api. There will be use to compare the KPI's with the generated chronics. 
  
 ## Configuration
 
