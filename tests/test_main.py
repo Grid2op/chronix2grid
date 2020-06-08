@@ -14,12 +14,10 @@ import chronix2grid.generation.generation_utils as gu
 class TestMain(unittest.TestCase):
     def setUp(self):
         self.input_folder = os.path.join(
-            pathlib.Path(__file__).parent.parent.absolute(),
-            'input_data')
-        print(self.input_folder)
+            pathlib.Path(__file__).parent.absolute(),
+            'data')
         self.output_folder = os.path.join(
-            pathlib.Path(__file__).parent.parent.absolute(),
-            'tests',
+            pathlib.Path(__file__).parent.absolute(),
             'output')
         self.case = 'case118_l2rpn_wcci'
         self.start_date = '2012-01-01'
