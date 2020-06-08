@@ -2,14 +2,16 @@
 
 Chronix2Grid is a python package, providing a command-line application as well, that allows to generate synthetic but realistic consumption, renewable production and economic dispatched productions chronics given a power grid. Reference data that you provide will serve to calibrate the parameters so that the synthetic data reproduce some realistic criteria (KPIs) from the reference data.
 
+*   [1 Chronix2Grid at a glance](#glance)
+*   [2 Installation](#installation)
+*   [3 The command-line interface](#the-command-line-interface)
+*   [4 Getting Started](#getting-started)
+*   [5 Configuration](#configuration)
+
+## Chronix2Grid at a glance
 ![Chronix2grid_inputs](pictures/ChroniX2Grid_inputs.png "Chronix2Grid Inputs") 
 
 ![Chronix2grid_outputs](pictures/ChroniX2Grid_ouputs.png "Chronix2Grid Ouputs") 
-
-*   [1 Installation](#installation)
-*   [2 The command-line interface](#the-command-line-interface)
-*   [3 Getting Started](#getting-started)
-*   [4 Configuration](#configuration)
 
 ## Installation
 
