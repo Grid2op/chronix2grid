@@ -1,12 +1,17 @@
 # ChroniX2Grid
 
-Chronix2Grid is a command-line application allowing to generate consumption, renewable production and dispatched
- production chronics on a given network.
+Chronix2Grid is a python package, providing a command-line application as well, that allows to generate synthetic but realistic consumption, renewable production and economic dispatched productions chronics given a power grid. Reference data that you provide will serve to calibrate the parameters so that the synthetic data reproduce some realistic criteria (KPIs) from the reference data.
 
-*   [1 Installation](#installation)
-*   [2 The command-line interface](#the-command-line-interface)
-*   [3 Getting Started](#getting-started)
-*   [4 Configuration](#configuration)
+*   [1 Chronix2Grid at a glance](#glance)
+*   [2 Installation](#installation)
+*   [3 The command-line interface](#the-command-line-interface)
+*   [4 Getting Started](#getting-started)
+*   [5 Configuration](#configuration)
+
+## Chronix2Grid at a glance
+![Chronix2grid_inputs](pictures/ChroniX2Grid_inputs.png "Chronix2Grid Inputs") 
+
+![Chronix2grid_outputs](pictures/ChroniX2Grid_ouputs.png "Chronix2Grid Ouputs") 
 
 ## Installation
 
@@ -74,8 +79,10 @@ Three notebooks are provided to get you started with this package:
 * **getting_started_cli.ipynb** guide you through the use of chronix2grid cli
 * **getting_started_api.ipynb** is a more detailed notebook that presents chronix2grid api and showcases several ways to
  analyze the chronics produced
- * **RenewableNinja_Solar_WInd_KPI_format.ipynb** is an example on how to retrieve Solar and Wind chronics from the
-  [renewable ninja](https://www.renewables.ninja/) api. 
+ * **running_chronics_grid2op.ipynb** is a notebook giving an example of how generated chronics can further be used to create power grid scenarios and run them 
+ analyze the chronics produced
+ * **RenewableNinja_Solar_WInd_KPI_format.ipynb** is an example on how to retrieve Solar and Wind reference chronics from the
+  [renewable ninja](https://www.renewables.ninja/) api. There will be use to compare the KPI's with the generated chronics. 
  
 ## Configuration
 
