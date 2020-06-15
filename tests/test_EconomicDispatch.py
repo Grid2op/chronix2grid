@@ -23,11 +23,10 @@ class TestDispatch(unittest.TestCase):
         self.CASE = 'case118_l2rpn_wcci'
         self.year = 2012
         self.scenario_name = 'Scenario_0'
-        with open(os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME,
-                               self.CASE, 'params_opf.json'), 'r') as params_opf_jons:
-            self.params_opf = json.load(params_opf_jons)
+        self.grid_path = os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME,
+                               self.CASE, 'grid.json')
         self.dispatcher = init_dispatcher_from_config(
-            self.params_opf["grid_path"],
+            self.grid_path,
             os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME)
         )
         self.hydro_file_path = os.path.join(self.input_folder,
@@ -37,7 +36,7 @@ class TestDispatch(unittest.TestCase):
 
     def test_from_grid2op_env(self):
         grid2op_env = grid2op.make("blank",
-                                   grid_path=self.params_opf["grid_path"],
+                                   grid_path=self.grid_path,
                                    chronics_class=ChangeNothing)
         dispatcher = Dispatcher.from_gri2op_env(grid2op_env)
         self.assertTrue(isinstance(dispatcher, Dispatcher))
