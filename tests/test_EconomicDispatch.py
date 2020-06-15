@@ -5,9 +5,11 @@ import tempfile
 import unittest
 
 import pandas as pd
+import pathlib
 
 from chronix2grid.generation.dispatch.EconomicDispatch import (
     ChroniXScenario, init_dispatcher_from_config, Dispatcher)
+import chronix2grid.constants as cst
 import grid2op
 from grid2op.Chronics import ChangeNothing
 
@@ -15,19 +17,26 @@ from grid2op.Chronics import ChangeNothing
 class TestDispatch(unittest.TestCase):
     def setUp(self):
         self.grid_path = ''
-        self.input_folder = os.path.abspath('input_data/generation')
+        self.input_folder = os.path.join(
+            pathlib.Path(__file__).parent.absolute(),
+            'data')
         self.CASE = 'case118_l2rpn_wcci'
         self.year = 2012
         self.scenario_name = 'Scenario_0'
-        with open(os.path.join(self.input_folder, self.CASE, 'params_opf.json'), 'r') as params_opf_jons:
-            self.params_opf = json.load(params_opf_jons)
-        self.dispatcher = init_dispatcher_from_config(self.params_opf["grid_path"], self.input_folder)
-        self.hydro_file_path = os.path.join(self.input_folder, 'patterns',
+        self.grid_path = os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME,
+                               self.CASE, 'grid.json')
+        self.dispatcher = init_dispatcher_from_config(
+            self.grid_path,
+            os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME)
+        )
+        self.hydro_file_path = os.path.join(self.input_folder,
+                                            cst.GENERATION_FOLDER_NAME,
+                                            'patterns',
                                             'hydro_french.csv')
 
     def test_from_grid2op_env(self):
         grid2op_env = grid2op.make("blank",
-                                   grid_path=self.params_opf["grid_path"],
+                                   grid_path=self.grid_path,
                                    chronics_class=ChangeNothing)
         dispatcher = Dispatcher.from_gri2op_env(grid2op_env)
         self.assertTrue(isinstance(dispatcher, Dispatcher))
@@ -40,12 +49,16 @@ class TestDispatch(unittest.TestCase):
 
 class TestChronixScenario(unittest.TestCase):
     def setUp(self):
-        self.input_folder = os.path.abspath('input_data/generation')
+        self.input_folder = os.path.join(
+            pathlib.Path(__file__).parent.absolute(),
+            'data')
         self.case = 'case118_l2rpn_wcci'
         self.grid2op_env = grid2op.make(
             "blank",
-            grid_path=os.path.join(self.input_folder, self.case,
-                                   "L2RPN_2020_case118_redesigned.json"),
+            grid_path=os.path.join(self.input_folder,
+                                   cst.GENERATION_FOLDER_NAME,
+                                   self.case,
+                                   "grid.json"),
             chronics_class=ChangeNothing,
         )
 
