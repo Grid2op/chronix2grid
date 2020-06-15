@@ -117,11 +117,11 @@ def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac,
     wind_file_name = f'wind.csv'
     repo_in_solar = os.path.join(
         kpi_input_folder, cst.REFERENCE_ZONE,
-        cst.RENEWABLE_NINJA_REFERENCE_FOLDER, case, solar_file_name)
+        cst.RENEWABLE_NINJA_REFERENCE_FOLDER, solar_file_name)
     ninja_solar = pd.read_csv(repo_in_solar, sep=';', encoding='latin1', decimal='.')
     repo_in_wind = os.path.join(
         kpi_input_folder, cst.REFERENCE_ZONE,
-        cst.RENEWABLE_NINJA_REFERENCE_FOLDER, case, wind_file_name)
+        cst.RENEWABLE_NINJA_REFERENCE_FOLDER, wind_file_name)
     ninja_wind = pd.read_csv(repo_in_wind, sep=';', encoding='latin1', decimal='.')
     timestep_ninja = 60 # Pas de temps une heure dans l'extraction renewable ninja
     ninja = pd.concat([ninja_solar, ninja_wind], axis = 1)
@@ -197,6 +197,12 @@ def chronics_to_kpi(chronics_repo, timestep, params, thermal = True):
 
     print("Importing and formatting synthetic chronics")
 
+    # Rebuild timeline
+    datetime_index = pd.date_range(
+        start=params['start_date'],
+        end=params['end_date'],
+        freq=str(params['dt']) + 'min')
+
     if thermal:
         ## Format when all dispatch is generated
 
@@ -208,28 +214,18 @@ def chronics_to_kpi(chronics_repo, timestep, params, thermal = True):
         price = pd.read_csv(os.path.join(chronics_repo, 'prices.csv.bz2'),
                             sep=';', decimal='.')
 
-        # Rebuild timeline
-        datetime_index = pd.date_range(
-            start=params['start_date'],
-            end=params['end_date'],
-            freq=str(params['dt']) + 'min')
-
-        prod_p['Time'] = datetime_index[:len(prod_p)]
-        load_p['Time'] = datetime_index[:len(load_p)]
         price['Time'] = datetime_index[:len(price)]
 
     else:
         ## Format synthetic chronics when no dispatch has been done
         solar_p = pd.read_csv(os.path.join(chronics_repo, 'solar_p.csv.bz2'), sep=';', decimal='.')
         wind_p = pd.read_csv(os.path.join(chronics_repo, 'wind_p.csv.bz2'), sep=';', decimal='.')
-        wind_p.drop(columns = ['datetime'],inplace = True)
         prod_p = pd.concat([solar_p, wind_p], axis=1)
 
         load_p = pd.read_csv(os.path.join(chronics_repo, 'load_p.csv.bz2'), sep=';', decimal='.')
 
-        # Timeline has already been written
-        for df in load_p, prod_p:
-            df.rename(columns={'datetime': 'Time'}, inplace=True)
+    prod_p['Time'] = datetime_index[:len(prod_p)]
+    load_p['Time'] = datetime_index[:len(load_p)]
 
     # Optional resampling
     load_p['Time'] = pd.to_datetime(load_p['Time'])
@@ -240,7 +236,7 @@ def chronics_to_kpi(chronics_repo, timestep, params, thermal = True):
     prod_p.set_index('Time', drop=False, inplace=True)
     prod_p = prod_p.resample(timestep).first()
 
-    ## Return with price if dispatch has been made
+    # Return with price if dispatch has been made
     if not thermal:
         return prod_p, load_p
     if thermal:
