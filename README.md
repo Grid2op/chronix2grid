@@ -118,3 +118,11 @@ To run the tests, execute:
 ```commandline
 python -m unittest discover
 ```
+You can also analyse the coverage of the tests with coverage and generate an html report:
+```commandline
+pip install coverage
+coverage run --source=./chronix2grid -m unittest discover
+coverage html
+```
+This will generate a htmlcov folder containing a static web site with the analysis. Open index.html in a browser
+ to analyse it.
