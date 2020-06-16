@@ -15,7 +15,7 @@ class TestMain(unittest.TestCase):
     def setUp(self):
         self.input_folder = os.path.join(
             pathlib.Path(__file__).parent.absolute(),
-            'data')
+            'data', 'input')
         self.output_folder = os.path.join(
             pathlib.Path(__file__).parent.absolute(),
             'output')
@@ -116,3 +116,16 @@ class TestMain(unittest.TestCase):
             seeds_for_dispatch=self.seeds_for_disp,
             ignore_warnings=self.ignore_warnings,
             scenario_id=1)
+
+    def test_lrtk(self):
+        main.generate_per_scenario(
+            case=self.case, start_date=self.start_date, weeks=1, by_n_weeks=4,
+            mode='LRTK', input_folder=self.input_folder,
+            kpi_output_folder=self.kpi_output_folder,
+            generation_output_folder=self.generation_output_folder,
+            scen_names=self.scenario_names,
+            seeds_for_loads=self.seeds_for_loads,
+            seeds_for_res=self.seeds_for_res,
+            seeds_for_dispatch=self.seeds_for_disp,
+            ignore_warnings=self.ignore_warnings,
+            scenario_id=0)

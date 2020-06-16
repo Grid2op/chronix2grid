@@ -140,7 +140,9 @@ def smooth(x, alpha=0.5, beta=None):
     x = pol(x, alpha=alpha, beta=beta)
     return x
 
-def create_csv(dict_, path, reordering=True, noise=None, shift=False, write_results = True, index=True):
+
+def create_csv(dict_, path, reordering=True, noise=None, shift=False,
+               write_results=True, index=False):
     df = pd.DataFrame.from_dict(dict_)
     df.set_index('datetime', inplace=True)
     df = df.sort_index(ascending=True)

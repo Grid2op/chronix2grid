@@ -276,8 +276,8 @@ def nrel_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, params, 
 
     regions = corresp_regions_gens['zone'].unique()
     for region_fictive in regions:
-        ref_prod_ = pd.DataFrame({'datetime':nrel_prod.index})
-        ref_load_ = pd.DataFrame({'datetime':nrel_load.index})
+        ref_prod_ = pd.DataFrame({'datetime': nrel_prod.index})
+        ref_load_ = pd.DataFrame({'datetime': nrel_load.index})
 
         # Production generators
         ref_gens = corresp_regions_gens[corresp_regions_gens['zone']==region_fictive]['name'].unique()

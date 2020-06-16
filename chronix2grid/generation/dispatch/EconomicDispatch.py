@@ -26,7 +26,8 @@ def init_dispatcher_from_config(grid_path, input_folder):
     #
     
     #read Prod Caracts
-    env118_withoutchron = grid2op.make("blank",
+    env118_withoutchron = grid2op.make("rte_case118_example",
+                                       test=True,
                                        grid_path=grid_path,
                                        chronics_class=ChangeNothing)
 
@@ -146,7 +147,8 @@ class Dispatcher(pypsa.Network):
 
         self._hydro_file_path = hydro_file_path
 
-    def read_load_and_res_scenario(self, load_path_file, prod_path_file, scenario_name):
+    def read_load_and_res_scenario(self, load_path_file, prod_path_file,
+                                   scenario_name, start_date, end_date, dt):
         if self._env is None:
             raise Exception('This method can only be applied when Dispatch has been'
                             'instantiated from a grid2op Environment.')
@@ -156,8 +158,11 @@ class Dispatcher(pypsa.Network):
             solar=[name for i, name in enumerate(self._env.name_gen)
                    if self._env.gen_type[i] == 'solar']
         )
-        self._chronix_scenario = ChroniXScenario.from_disk(load_path_file, prod_path_file,
-                                                           res_names, scenario_name=scenario_name)
+        self._chronix_scenario = ChroniXScenario.from_disk(
+            load_path_file, prod_path_file,
+            res_names, scenario_name=scenario_name,
+            start_date=start_date, end_date=end_date, dt=dt
+        )
 
     def make_hydro_constraints_from_res_load_scenario(self):
         if self._chronix_scenario is None or self._hydro_file_path is None:
@@ -323,9 +328,16 @@ class ChroniXScenario:
         self.name = scenario_name
 
     @classmethod
-    def from_disk(cls, load_path_file, prod_path_file, res_names, scenario_name):
-        loads = pd.read_csv(load_path_file, sep=';', index_col=0, parse_dates=True)
-        prods = pd.read_csv(prod_path_file, sep=';', index_col=0, parse_dates=True)
+    def from_disk(cls, load_path_file, prod_path_file, res_names, scenario_name,
+                  start_date, end_date, dt):
+        loads = pd.read_csv(load_path_file, sep=';')
+        prods = pd.read_csv(prod_path_file, sep=';')
+        datetime_index = pd.date_range(
+            start=start_date,
+            end=end_date,
+            freq=str(dt) + 'min')
+        loads.index = datetime_index
+        prods.index = datetime_index
         return cls(loads, prods, res_names, scenario_name)
 
     def net_load(self, losses_pct, name):
@@ -353,7 +365,7 @@ if __name__ == "__main__":
     losses_pct = 3.0
 
     env118_blank = grid2op.make(
-        "blank",
+        test=True,
         grid_path=os.path.join(path_grid, "L2RPN_2020_case118_redesigned.json"),
         chronics_class=ChangeNothing,
     )
