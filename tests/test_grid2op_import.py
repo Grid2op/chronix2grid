@@ -1,20 +1,19 @@
-import datetime as dt
-import json
 import os
-import tempfile
 import unittest
 
+import grid2op
+from grid2op.Chronics import Multifolder, GridStateFromFileWithForecasts
+from grid2op.Parameters import Parameters
+from grid2op.Backend import PandaPowerBackend
+from grid2op.Runner import Runner
+from grid2op.Episode import EpisodeData
+import numpy as np
 import pandas as pd
 import pathlib
 from tqdm import tqdm
 
 import chronix2grid.constants as cst
-import grid2op
-from grid2op.Chronics import ChangeNothing
-from grid2op.Chronics import Multifolder, GridStateFromFileWithForecasts
-from grid2op.Parameters import Parameters
-from grid2op.Backend import PandaPowerBackend
-from grid2op.Runner import Runner
+
 backend = PandaPowerBackend()
 param = Parameters()
 param.init_from_dict({"NO_OVERFLOW_DISCONNECTION": True})
@@ -50,11 +49,17 @@ class TestGrid2OpImport(unittest.TestCase):
 
         path_data_saved = os.path.join(
             os.path.abspath(os.path.join(self.generation_output_folder, os.pardir)),
-            'agent_results')  # , scenario_name)
+            'agent_results')
         os.makedirs(path_data_saved, exist_ok=True)
 
         nb_episode = 1
         NB_CORE = 2
+        max_iter = 1
         runner = Runner(**self.env.get_params_for_runner())
         res = runner.run(nb_episode=nb_episode, nb_process=NB_CORE,
-                         path_save=path_data_saved, pbar=tqdm)
+                         path_save=path_data_saved, pbar=tqdm, max_iter=max_iter)
+
+        data_this_episode = EpisodeData.from_disk(path_data_saved, 'Scenario_0')
+        prods_p = pd.DataFrame(
+            np.array([obs.prod_p for obs in data_this_episode.observations]))
+        self.assertAlmostEqual(prods_p.sum().mean(), 112.80043, places=5)
