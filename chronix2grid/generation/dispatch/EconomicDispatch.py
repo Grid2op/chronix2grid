@@ -336,8 +336,8 @@ class ChroniXScenario:
             start=start_date,
             end=end_date,
             freq=str(dt) + 'min')
-        loads.index = datetime_index
-        prods.index = datetime_index
+        loads.index = datetime_index[:len(loads)]
+        prods.index = datetime_index[:len(prods)]
         return cls(loads, prods, res_names, scenario_name)
 
     def net_load(self, losses_pct, name):
