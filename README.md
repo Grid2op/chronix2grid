@@ -40,7 +40,7 @@ pip install -U .
 ```
 
 ## Getting Started
-For notebooks are provided to get you started with this package:
+Four notebooks are provided to get you started with this package:
 
 * **getting_started_cli.ipynb** guide you through the use of chronix2grid cli
 * **getting_started_api.ipynb** is a more detailed notebook that presents chronix2grid api and showcases several ways to
@@ -50,7 +50,7 @@ For notebooks are provided to get you started with this package:
 * **RenewableNinja_Solar_WInd_KPI_format.ipynb** is an example on how to retrieve Solar and Wind reference chronics from the
   [renewable ninja](https://www.renewables.ninja/) api. There will be use to compare the KPI's with the generated chronics. 
  
- Additional, a data starting kit is provided to run an example in the folder 
+Additionally, a data starting kit is provided to run an example in the folder 
   ```commandline
 getting_started/example
 ```
@@ -58,6 +58,10 @@ getting_started/example
  ```commandline
 chronix2grid --mode RLTK --output-folder ChroniX2Grid/getting_started/example/output --input-folder /ChroniX2Grid/getting_started/example/input --ignore-warnings --weeks 8 --case case118_l2rpn_wcci --n_scenarios 1 --start-date 2012-01-01 --by-n-weeks 4
 ```
+
+### WARNING
+In order to limit the size of the output and the running time for this example, chronics are only generated for 8 weeks.
+This implicates that some kpis that defined on a whole year will not be exploitable for this example.
  
 ## The command-line interface
 ```commandline
