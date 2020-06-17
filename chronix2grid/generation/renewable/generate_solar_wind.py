@@ -52,8 +52,9 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
     start_date_day = start_date.weekday()
     pattern_start_date = pd.Timestamp("01-01-"+str(int(params['year_solar_pattern'])))
     pattern_start_date_day = pattern_start_date.weekday()
-    to_shift = start_date_day - pattern_start_date_day
-    solar_pattern = np.roll(solar_pattern, to_shift)
+    days_to_shift = start_date_day - pattern_start_date_day
+    steps_to_shift = int(days_to_shift * 60 * 24 / params['dt']) # Solar pattern starts on a monday at 0h + timestep
+    solar_pattern = np.roll(solar_pattern, steps_to_shift)
 
     # Generate GLOBAL temperature noise
     print('Computing global auto-correlated spatio-temporal noise for sun and wind...')
