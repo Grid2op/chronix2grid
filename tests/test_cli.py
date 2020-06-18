@@ -16,7 +16,7 @@ class TestCli(unittest.TestCase):
     def setUp(self):
         self.input_folder = os.path.join(
             pathlib.Path(__file__).parent.absolute(),
-            'data')
+            'data', 'input')
         self.output_folder = os.path.join(
             pathlib.Path(__file__).parent.absolute(),
             'output')

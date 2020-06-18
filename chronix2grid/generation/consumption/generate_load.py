@@ -53,8 +53,11 @@ def main(scenario_destination_path, seed, params, loads_charac, load_weekly_patt
     load_p_forecasted = conso.create_csv(loads_series, scenario_destination_path,
                                          forecasted=True, reordering=True,
                   shift=True, write_results=write_results, index=False)
-    load_p = conso.create_csv(loads_series, scenario_destination_path,
-                  reordering=True,
-                  noise=params['planned_std'], write_results=write_results, index=True)
+    load_p = conso.create_csv(
+        loads_series, scenario_destination_path,
+        reordering=True,
+        noise=params['planned_std'], write_results=write_results,
+        index=False
+    )
     
     return load_p, load_p_forecasted

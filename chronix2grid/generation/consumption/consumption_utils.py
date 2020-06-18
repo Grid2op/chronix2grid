@@ -94,17 +94,18 @@ def compute_load_pattern(params, weekly_pattern, index):
 
     return output
 
-def create_csv(dict_, path, forecasted=False, reordering=True, noise=None, shift=False,
-               write_results=True, index=True):
+
+def create_csv(dict_, path, forecasted=False, reordering=True, noise=None,
+               shift=False, write_results=True, index=False):
     df = pd.DataFrame.from_dict(dict_)
-    df.set_index('datetime', inplace = True)
+    df.set_index('datetime', inplace=True)
     df = df.sort_index(ascending=True)
-    df = df.head(len(df) - 1) # Last value is lonely for another day
+    df = df.head(len(df)-1)  # Last value is lonely for another day
     if reordering:
         value = []
         for name in list(df):
             value.append(utils.natural_keys(name))
-        new_ordering = [x for _,x in sorted(zip(value,list(df)))]
+        new_ordering = [x for _, x in sorted(zip(value, list(df)))]
         df = df[new_ordering]
     if shift:
         df = df.shift(-1)
@@ -113,7 +114,8 @@ def create_csv(dict_, path, forecasted=False, reordering=True, noise=None, shift
     df_reactive_power = 0.7 * df
     if noise is not None:
         df *= np.random.lognormal(mean=0.0,sigma=noise, size=df.shape)
-        df_reactive_power *= np.random.lognormal(mean=0.0,sigma=noise, size=df.shape)
+        df_reactive_power *= np.random.lognormal(mean=0.0, sigma=noise,
+                                                 size=df.shape)
 
     if write_results:
         file_extension = '_forecasted' if forecasted else ''

@@ -19,7 +19,7 @@ class TestDispatch(unittest.TestCase):
         self.grid_path = ''
         self.input_folder = os.path.join(
             pathlib.Path(__file__).parent.absolute(),
-            'data')
+            'data', 'input')
         self.CASE = 'case118_l2rpn_wcci'
         self.year = 2012
         self.scenario_name = 'Scenario_0'
@@ -35,7 +35,8 @@ class TestDispatch(unittest.TestCase):
                                             'hydro_french.csv')
 
     def test_from_grid2op_env(self):
-        grid2op_env = grid2op.make("blank",
+        grid2op_env = grid2op.make("rte_case118_example",
+                                   test=True,
                                    grid_path=self.grid_path,
                                    chronics_class=ChangeNothing)
         dispatcher = Dispatcher.from_gri2op_env(grid2op_env)
@@ -51,34 +52,41 @@ class TestChronixScenario(unittest.TestCase):
     def setUp(self):
         self.input_folder = os.path.join(
             pathlib.Path(__file__).parent.absolute(),
-            'data')
+            'data', 'input')
         self.case = 'case118_l2rpn_wcci'
         self.grid2op_env = grid2op.make(
-            "blank",
+            "rte_case118_example",
+            test=True,
             grid_path=os.path.join(self.input_folder,
                                    cst.GENERATION_FOLDER_NAME,
                                    self.case,
                                    "grid.json"),
             chronics_class=ChangeNothing,
         )
+        self.start_date = dt.datetime(2019, 9, 1, 0, 0)
+        self.end_date = dt.datetime(2019, 9, 1, 0, 5)
+        self.dt = 5
 
         self.chronics_path_gen = tempfile.mkdtemp()
         self.loads = pd.DataFrame(
-            index=[dt.datetime(2019, 9, 1, 0, 0), dt.datetime(2019, 9, 1, 0, 5)],
+            index=[self.start_date, self.end_date],
             columns=['load_1', 'load_2'],
             data=[[9, 10], [11, 12]]
         )
         self.prods = pd.DataFrame(
-            index=[dt.datetime(2019, 9, 1, 0, 0), dt.datetime(2019, 9, 1, 0, 5)],
+            index=[self.start_date, self.end_date],
             columns=['gen_1', 'gen_2', 'gen_3', 'gen_4'],
             data=[[1, 2, 3, 4], [5, 6, 7, 8]]
         )
         self.loads.to_csv(
-            os.path.join(self.chronics_path_gen, 'load_p.csv.bz2'), sep=';', index=True)
+            os.path.join(self.chronics_path_gen, 'load_p.csv.bz2'), sep=';', index=False)
         self.prods.to_csv(
-            os.path.join(self.chronics_path_gen, 'prod_p.csv.bz2'), sep=';', index=True)
+            os.path.join(self.chronics_path_gen, 'prod_p.csv.bz2'), sep=';', index=False)
         self.res_names = dict(wind=['gen_1'], solar=['gen_2', 'gen_4'])
-        self.chronix_scenario = ChroniXScenario(self.loads, self.prods, self.res_names, 'scen')
+        self.chronix_scenario = ChroniXScenario(
+            self.loads, self.prods, self.res_names, 'scen'
+        )
+
 
     def test_instanciation(self):
         self.assertEqual(self.chronix_scenario.total_res.iloc[0], 7)
@@ -88,7 +96,9 @@ class TestChronixScenario(unittest.TestCase):
         chronix_scenario = ChroniXScenario.from_disk(
             os.path.join(self.chronics_path_gen, 'load_p.csv.bz2'),
             os.path.join(self.chronics_path_gen, 'prod_p.csv.bz2'),
-            self.res_names, 'scen')
+            self.res_names, 'scen', self.start_date,
+            self.end_date, self.dt
+        )
         self.assertEqual(chronix_scenario.total_res.iloc[0], 7)
         self.assertEqual(chronix_scenario.wind_p.columns, ['gen_1'])
 

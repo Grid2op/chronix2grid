@@ -101,7 +101,7 @@ def EnergyMix_AprioriChecker(env118_withoutchron,Target_EM_percentage, PeakLoad,
     
     
     error=np.abs(Capacity['target_energy_mix']-Capacity['Apriori_energy_mix']).sum()
-    print('Warning: the differences in your target energy mix and you energy mix a priori are: ' + str(error)+'%')
+    print('Warning: the differences in your target energy mix and you energy mix a priori are: ' + str(round(error))+'%')
 
     return Capacity
 
