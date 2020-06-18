@@ -1,0 +1,10 @@
+{
+    "backend_type": "PandaPowerBackend_rte_case118_example",
+    "chronics_max_timestep": "1",
+    "chronics_path": "/home/vrenault/Projects/ChroniX2Grid/tests/data/output/generation/case118_l2rpn_wcci/2012-01-01/Scenario_0",
+    "cumulative_reward": 547.1090698242188,
+    "env_seed": null,
+    "env_type": "Environment_rte_case118_example",
+    "grid_path": "/home/vrenault/Projects/ChroniX2Grid/tests/data/input/generation/case118_l2rpn_wcci/grid.json",
+    "nb_timestep_played": 1
+}

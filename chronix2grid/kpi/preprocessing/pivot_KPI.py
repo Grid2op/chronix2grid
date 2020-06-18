@@ -34,7 +34,8 @@ def pivot_format(chronics_folder, kpi_input_folder, year, prods_charac, loads_ch
         """
 
     # Read json parameters for KPI configuration
-    json_filepath = os.path.join(kpi_input_folder, 'paramsKPI.json')
+    kpi_case_input_folder = os.path.join(kpi_input_folder, case)
+    json_filepath = os.path.join(kpi_case_input_folder, 'paramsKPI.json')
     with open(json_filepath, 'r') as json_file:
         paramsKPI = json.load(json_file)
     comparison = paramsKPI['comparison']
@@ -44,15 +45,15 @@ def pivot_format(chronics_folder, kpi_input_folder, year, prods_charac, loads_ch
     if comparison == 'France':
         corresp_regions = {'R1':"Hauts-de-France", "R2": "Nouvelle-Aquitaine", "R3": "PACA"}
         if wind_solar_only:
-            ref_prod, ref_load = renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac, prods_charac, year,
+            ref_prod, ref_load = renewableninja_to_kpi(kpi_case_input_folder, timestep, loads_charac, prods_charac, year,
                                                        params, corresp_regions, case)
         else:
-            ref_prod, ref_load, ref_prices = eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_charac, year, params,
+            ref_prod, ref_load, ref_prices = eco2mix_to_kpi_regional(kpi_case_input_folder, timestep, prods_charac, loads_charac, year, params,
                                                          corresp_regions)
     elif comparison == 'Texas':
 
         if wind_solar_only:
-            ref_prod, ref_load  = nrel_to_kpi(kpi_input_folder, timestep, prods_charac, loads_charac, params,year)
+            ref_prod, ref_load  = nrel_to_kpi(kpi_case_input_folder, timestep, prods_charac, loads_charac, params,year)
         else:
             print("Computation stopped: Texas Benchmark not implemented for a whole energy mix. Launch KPI computation in mode wind solar and load only.")
             sys.exit()
