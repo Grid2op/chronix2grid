@@ -105,18 +105,7 @@ class TestLoadProdCoherence(unittest.TestCase):
             freq=str(params['dt']) + 'min')
         prods['Hour'] = datetime_index.hour
 
-        ## OPTION1: Check for all generators and all days
-        # Compute daily peak hours
-        # prods['Weekday'] = datetime_index.weekday
-        # prods['Week'] = datetime_index.week
-        # prods = prods.set_index("Hour")
-        # peak_hours = prods.groupby(['Week','Weekday']).agg(lambda x: (x.index[x.argmax()]))
-        #
-        # # Make sure peak hour is between limits for every day and every generator
-        # assertion = ((peak_hours>self.max_peak_hour)|(peak_hours<self.min_peak_hour)).sum().sum()
-        # self.assertEqual(assertion ,0)
-
-        ## OPTION2: Check for average daily profile of all generators
+        # Check for average daily profile of all generators
         # Compute daily peak hours
         avg_prod = prods.groupby(['Hour'], as_index = True).mean()
         peak_hours = avg_prod.apply(lambda x: x.index[x.argmax()], axis = 0)
@@ -124,13 +113,4 @@ class TestLoadProdCoherence(unittest.TestCase):
         # Make sure peak hour is between limits in average for every generator
         assertion = ((peak_hours > self.max_peak_hour) | (peak_hours < self.min_peak_hour)).sum().sum()
         self.assertEqual(assertion, 0)
-
-        ## OPTION3: Check if total prod is between limits
-        # Compute daily peak hours
-        # tot_prod = prods.groupby(['Hour'], as_index=True).sum().sum(axis = 1)
-        # peak_hours = tot_prod.index[tot_prod.argmax()]
-        #
-        # # Make sure peak hour is between limits in average for every generator
-        # assertion = ((peak_hours > self.max_peak_hour) | (peak_hours < self.min_peak_hour))
-        # self.assertEqual(assertion, False)
 

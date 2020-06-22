@@ -106,7 +106,4 @@ class TestLoadProdCoherence(unittest.TestCase):
         avg_weekends = loads.loc[loads.index.isin([5,6])].mean() # Loads at working days
 
         # Make sure production is higher than consumption
-        self.assertEqual((avg_workingdays > avg_weekends),
-                         True)
-
-
+        self.assertTrue(avg_workingdays > avg_weekends)
