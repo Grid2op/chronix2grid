@@ -1,94 +1,131 @@
-# Native python libraries
 import os
-import json
 
-# Other Python libraries
 import pandas as pd
-import numpy as np
-from datetime import date
-from datetime import timedelta
 
-# Libraries developed for this module
-import consumption.generate_load as gen_loads
-
-## Temporaire: constantes
-# Calculation period of the scenarios
-YEAR = 2007
-MONTH = 1  # random.randint(1, 12)
-DAY = 1  # random.randint(1,29)
-WEEKS = 52
-start_date = date(YEAR, MONTH, DAY)
-end_date = start_date + timedelta(days=7 * WEEKS)
-
-# Miscellaneaous configuration
-n_scenarios = 2
-case = 'case118_l2rpn_2020'
-INPUT_FOLDER = 'input'
-
-# Chemin de
-if WEEKS == 52:
-    DISPATCH_INPUT_FOLDER = 'input/dispatch/'+str(YEAR)
-else:
-    DISPATCH_INPUT_FOLDER = 'input/dispatch/' + str(YEAR)+'_'+str(WEEKS)+'Weeks'
-
-
-
-
-# ======================================================================================================================
-## Proper functions
-# Read data (independant of the number of scenarios)
-def read_configuration(start_date, end_date, input_folder, case):
-    # Json parameters
-    print('Importing parameters ...')
-    json1_file = open(os.path.join(input_folder, case, 'params.json'))
-    json1_str = json1_file.read()
-    params = json.loads(json1_str)
-    for key, value in params.items():
-        try:
-            params[key] = float(value)
-        except ValueError:
-            params[key] = pd.to_datetime(value, format='%Y-%m-%d')
-
-    params['start_date'] = pd.to_datetime(start_date)
-    params['end_date'] = pd.to_datetime(end_date)
-
-    # date and time parameters
-    params['T'] = int(pd.Timedelta(end_date - start_date).total_seconds() // (60))
-    Nt_inter = int(params['T'] // params['dt'] + 1)
-
-    # Import loads_charac.csv and prods_charac.csv
-    print('Importing loads and prods parameters ...')
-    loads_charac = pd.read_csv(os.path.join(INPUT_FOLDER, case, 'loads_charac.csv'), sep = ';')
-    prods_charac = pd.read_csv(os.path.join(INPUT_FOLDER, case, 'prods_charac.csv'), sep = ';')
-
-    # Importing weekly patterns
-    load_weekly_pattern = pd.read_csv(os.path.join(INPUT_FOLDER, 'patterns', 'load_weekly_pattern.csv'))
-    solar_pattern = np.load(os.path.join(INPUT_FOLDER, 'patterns', 'solar_pattern.npy'))
-
-    return params, loads_charac, prods_charac, load_weekly_pattern, solar_pattern
+from .consumption import generate_load as gen_loads
+from .renewable import generate_solar_wind as gen_enr
+from .dispatch import utils as du
+from .dispatch import generate_dispatch as gen_dispatch
+from .dispatch import EconomicDispatch as ec
+from . import generation_utils as gu
+from ..config import DispatchConfigManager, LoadsConfigManager, ResConfigManager
+from .. import constants as cst
+from ..seed_manager import dump_seeds
+from .. import utils as ut
 
 
 # Call generation scripts n_scenario times with dedicated random seeds
-def main(n_scenarios, start_date, end_date, params, dispatch_input_folder, weeks, loads_charac, load_weekly_pattern):
+def main(case, n_scenarios, input_folder, output_folder, scen_names,
+         time_params, mode='LRTK', scenario_id=None,
+         seed_for_loads=None, seed_for_res=None, seed_for_disp=None):
+    """
+    Main function for chronics generation. It works with three steps: load generation, renewable generation (solar and wind) and then dispatch computation to get the whole energy mix
+
+    Parameters
+    ----------
+    case (str): name of case to study (must be a folder within input_folder)
+    n_scenarios (int): number of desired scenarios to generate for the same timescale
+    params (dict): parameters of generation, as returned by function chronix2grid.generation.generate_chronics.read_configuration
+    input_folder (str): path of folder containing inputs
+    output_folder (str): path where outputs will be written (intermediate folder case/year/scenario will be used)
+    prods_charac (pandas.DataFrame): as returned by function chronix2grid.generation.generate_chronics.read_configuration
+    loads_charac (pandas.DataFrame): as returned by function chronix2grid.generation.generate_chronics.read_configuration
+    lines (pandas.DataFrame): as returned by function chronix2grid.generation.generate_chronics.read_configuration
+    solar_pattern (pandas.DataFrame): as returned by function chronix2grid.generation.generate_chronics.read_configuration
+    load_weekly_pattern (pandas.DataFrame): as returned by function chronix2grid.generation.generate_chronics.read_configuration
+    mode (str): options to launch certain parts of the generation process : L load R renewable T thermal
+
+
+    Returns
+    -------
+
+    """
+
+    ut.check_scenario(n_scenarios, scenario_id)
+
     print('=====================================================================================================================================')
     print('============================================== CHRONICS GENERATION ==================================================================')
     print('=====================================================================================================================================')
 
-    # Make sure the seeds are the same, whether computation is parrallel or sequential
-    seeds = [np.random.randint(low=0, high=2**31) for _ in range(n_scenarios)]
+    # in multiprocessing, n_scenarios=1 here
+    if n_scenarios >= 2:
+        seeds_for_loads, seeds_for_res, seeds_for_disp = gu.generate_seeds(
+            n_scenarios, seed_for_loads, seed_for_res, seed_for_disp
+        )
+    else:
+        seeds_for_loads = [seed_for_loads]
+        seeds_for_res = [seed_for_res]
+        seeds_for_disp = [seed_for_disp]
 
-    # Make sure the output folder exists
-    main_folder = os.path.join(dispatch_input_folder)
-    if not os.path.exists(main_folder):
-        os.mkdir(main_folder)
+    # dispatch_input_folder, dispatch_input_folder_case, dispatch_output_folder = gu.make_generation_input_output_directories(input_folder, case, year, output_folder)
+    load_config_manager = LoadsConfigManager(
+        name="Loads Generation",
+        root_directory=input_folder,
+        input_directories=dict(case=case, patterns='patterns'),
+        required_input_files=dict(case=['loads_charac.csv', 'params.json'],
+                                  patterns=['load_weekly_pattern.csv']),
+        output_directory=output_folder
+    )
+    load_config_manager.validate_configuration()
 
-    # Launch proper scenario generation
-    for i, seed in enumerate(seeds):
-        print("================ Generating scenario number "+str(i)+" ================")
-        gen_loads.main(i, dispatch_input_folder, weeks, seed, start_date, end_date, params, loads_charac, load_weekly_pattern)
+    params, loads_charac, load_weekly_pattern = load_config_manager.read_configuration()
+
+    res_config_manager = ResConfigManager(
+        name="Renewables Generation",
+        root_directory=input_folder,
+        input_directories=dict(case=case, patterns='patterns'),
+        required_input_files=dict(case=['prods_charac.csv', 'params.json'],
+                                  patterns=['solar_pattern.npy']),
+        output_directory=output_folder
+    )
+
+    params, prods_charac, solar_pattern = res_config_manager.read_configuration()
+
+    params.update(time_params)
+    params = gu.updated_time_parameters_with_timestep(params, params['dt'])
+
+    dispath_config_manager = DispatchConfigManager(
+        name="Dispatch",
+        root_directory=input_folder,
+        output_directory=output_folder,
+        input_directories=dict(params=case),
+        required_input_files=dict(params=['params_opf.json'])
+    )
+    dispath_config_manager.validate_configuration()
+    params_opf = dispath_config_manager.read_configuration()
+    grid_path = os.path.join(input_folder, case, cst.GRID_FILENAME)
+    dispatcher = ec.init_dispatcher_from_config(grid_path, input_folder)
+
+    ## Launch proper scenarios generation
+    seeds_iterator = zip(seeds_for_loads, seeds_for_res, seeds_for_disp)
+    
+    for i, (seed_load, seed_res, seed_disp) in enumerate(seeds_iterator):
+        
+        if n_scenarios > 1:
+            scenario_name = scen_names(i)
+        else:
+            scenario_name = scen_names(scenario_id)
+            
+        scenario_folder_path = os.path.join(output_folder, scenario_name)
+        
+
+        print("================ Generating "+scenario_name+" ================")
+        if 'L' in mode:
+            load, load_forecasted = gen_loads.main(scenario_folder_path, seed_load, params, loads_charac, load_weekly_pattern, write_results = True)
+
+        if 'R' in mode:
+            prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = gen_enr.main(scenario_folder_path, seed_res, params, prods_charac, solar_pattern, write_results = True)
+        if 'T' in mode:
+            prods = pd.concat([prod_solar, prod_wind], axis=1)
+            res_names = dict(wind=prod_wind.columns, solar=prod_solar.columns)
+            dispatcher.chronix_scenario = ec.ChroniXScenario(load, prods, res_names,
+                                                             scenario_name)
+
+            dispatch_results = gen_dispatch.main(dispatcher, scenario_folder_path,
+                                                 scenario_folder_path,
+                                                 seed_disp, params, params_opf)
         print('\n')
-    return
+    return params, loads_charac, prods_charac
 
-### Test
-params, loads_charac, prods_charac, load_weekly_pattern, solar_pattern = read_configuration(start_date, end_date, INPUT_FOLDER, case)
-main(n_scenarios, start_date, end_date, params, DISPATCH_INPUT_FOLDER, WEEKS, loads_charac, load_weekly_pattern)
+
+
