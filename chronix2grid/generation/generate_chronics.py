@@ -4,11 +4,12 @@ import pandas as pd
 
 from .consumption import generate_load as gen_loads
 from .renewable import generate_solar_wind as gen_enr
+from.loss import generate_loss as gen_loss
 from .dispatch import utils as du
 from .dispatch import generate_dispatch as gen_dispatch
 from .dispatch import EconomicDispatch as ec
 from . import generation_utils as gu
-from ..config import DispatchConfigManager, LoadsConfigManager, ResConfigManager
+from ..config import DispatchConfigManager, LoadsConfigManager, ResConfigManager, LossConfigManager
 from .. import constants as cst
 from ..seed_manager import dump_seeds
 from .. import utils as ut
@@ -96,6 +97,16 @@ def main(case, n_scenarios, input_folder, output_folder, scen_names,
     grid_path = os.path.join(input_folder, case, cst.GRID_FILENAME)
     dispatcher = ec.init_dispatcher_from_config(grid_path, input_folder)
 
+    loss_config_manager = LossConfigManager(
+        name="Loss",
+        root_directory=input_folder,
+        output_directory=output_folder,
+        input_directories=dict(params=case),
+        required_input_files=dict(params=['params_loss.json'])
+    )
+    loss_config_manager.validate_configuration()
+    params_loss = loss_config_manager.read_configuration()
+
     ## Launch proper scenarios generation
     seeds_iterator = zip(seeds_for_loads, seeds_for_res, seeds_for_disp)
     
@@ -124,6 +135,11 @@ def main(case, n_scenarios, input_folder, output_folder, scen_names,
             dispatch_results = gen_dispatch.main(dispatcher, scenario_folder_path,
                                                  scenario_folder_path,
                                                  seed_disp, params, params_opf)
+        if 'D' in mode:
+            if 'L' not in mode or 'R' not in mode or 'T' not in mode:
+                if not gen_loss.check_chronix(scenario_folder_path): # TODO: A développer direct avec os.path.exists
+                    raise ValueError("Ran with D mode without LRT and no available chronic saved")
+            dispatch_results_corrected = gen_loss.main(scenario_folder_path, params_loss, write_results = True)
         print('\n')
     return params, loads_charac, prods_charac
 
