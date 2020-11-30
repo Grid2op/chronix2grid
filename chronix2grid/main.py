@@ -42,6 +42,14 @@ from chronix2grid import utils as ut
 def generate_mp(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
              input_folder, output_folder, scenario_name,
              seed_for_loads, seed_for_res, seed_for_dispatch, nb_core, ignore_warnings):
+    generate_mp_core(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
+                     input_folder, output_folder, scenario_name,
+                     seed_for_loads, seed_for_res, seed_for_dispatch, nb_core, ignore_warnings)
+
+
+def generate_mp_core(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
+             input_folder, output_folder, scenario_name,
+             seed_for_loads, seed_for_res, seed_for_dispatch, nb_core, ignore_warnings):
 
     start_time = time.time()
     print(case)
@@ -72,11 +80,11 @@ def generate_mp(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
         renewables=seed_for_res,
         dispatch=seed_for_dispatch
     )
-    
+
     print('initial_seeds')
     print(initial_seeds)
     dump_seeds(generation_output_folder, initial_seeds, scenario_name)
-    
+
     if n_scenarios >= 2:
         seeds_for_loads, seeds_for_res, seeds_for_disp = gu.generate_seeds(
             n_scenarios, seed_for_loads, seed_for_res, seed_for_dispatch
@@ -96,10 +104,10 @@ def generate_mp(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
         case, start_date, weeks, by_n_weeks, mode, input_folder,
         kpi_output_folder, generation_output_folder, scen_names,
         seeds_for_loads, seeds_for_res, seeds_for_disp, ignore_warnings)
-    
+
     pool.map(multiprocessing_func, iterable)
     pool.close()
-    print('multiprocessing done')  
+    print('multiprocessing done')
     print('Time taken = {} seconds'.format(time.time() - start_time))
 
 
@@ -221,17 +229,30 @@ def create_directory_tree(case, start_date, output_directory, scenario_name,
 
 
 if __name__ == "__main__":
-    case = 'case118_l2rpn'
+    # Default arguments for dev mode
+    case = 'case118_l2rpn_wcci'
     start_date = '2012-01-01'
     weeks = 1
     by_n_weeks = 1
     n_scenarios = 1
-    mode = 'LRK'
-    input_folder = '/home/vrenault/Projects/ChroniX2Grid/input'
-    generation_output_folder = '/home/vrenault/Projects/ChroniX2Grid/output/generation'
-    kpi_output_folder = '/home/vrenault/Projects/ChroniX2Grid/output/generation/kpi'
-    seed = 1
-    scen_names = gu.folder_name_pattern(cst.SCENARIO_FOLDER_BASE_NAME, n_scenarios)
-    generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
-                   input_folder, kpi_output_folder, generation_output_folder,
-                   scen_names, seed, seed, seed, 0)
+    mode = 'LRTK'
+    input_folder = r'getting_started\example\input'
+    output_folder = r'getting_started\example\output'
+    scenario_name = ""
+    seed_for_loads = None
+    seed_for_res = None
+    seed_for_dispatch = None
+    nb_core = 1
+    ignore_warnings = False
+
+    # Run main function (only works with asolute path)
+    cwd = os.getcwd()
+    input_folder = os.path.join(cwd,input_folder)
+    output_folder = os.path.join(cwd, output_folder)
+    generate_mp_core(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
+                     input_folder, output_folder, scenario_name,
+                     seed_for_loads, seed_for_res, seed_for_dispatch, nb_core, ignore_warnings)
+
+
+
+
