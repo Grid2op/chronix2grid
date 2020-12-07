@@ -1,20 +1,25 @@
+import os
 from .loss_utils import run_grid2op_simulation_donothing, correct_scenario_loss
 
-def main(scenario_folder_path, params_loss, write_results = True):
-    agent_result_path = "" #TODO: décider où on stocke ça et si c'est de manière permanente ou non. Pour l'instant dans les outputs
-    run_grid2op_simulation_donothing(scenario_folder_path, agent_result_path)
+def main(grid_folder_g2op, scenario_folder_path, params_loss, write_results = True):
+    run_grid2op_simulation_donothing(grid_folder_g2op, scenario_folder_path,
+                                     agent_type=params_loss['agent_type'])
     dispatch_results_corrected = correct_scenario_loss(scenario_folder_path, agent_result_path, params_loss)
     return dispatch_results_corrected
 
 def check_chronix(scenario_folder_path):
-    # TODO: Check que les chorniques existent et ont fait l'objet de LRT.. Voir que de T en fait ?
-     return True
+    bool = True
+    if os.path.exists(scenario_folder_path):
+        if not (os.path.exists(os.path.join(scenario_folder_path,"load_p.csv.bz2") and
+                               os.path.exists(os.path.join(scenario_folder_path,"prod_p.csv.bz2")))):
+            bool = False
+    else:
+         bool = False
+    return bool
 
 if __name__ == "__main__":
     # Bouchon
     params_loss = {
-        "explicit_loss_mode":False,
-        "loss_correction_mode":True,
         "idxSlack":37,
         "nameSlack": "gen_68_37",
         "adjust_pmin": True,

@@ -235,7 +235,7 @@ if __name__ == "__main__":
     weeks = 1
     by_n_weeks = 1
     n_scenarios = 1
-    mode = 'LRTK'
+    mode = 'LRTDK'
     input_folder = r'getting_started\example\input'
     output_folder = r'getting_started\example\output'
     scenario_name = ""
@@ -245,7 +245,7 @@ if __name__ == "__main__":
     nb_core = 1
     ignore_warnings = False
 
-    # Run main function (only works with asolute path)
+    # Run main function (only works with absolute path)
     cwd = os.getcwd()
     input_folder = os.path.join(cwd,input_folder)
     output_folder = os.path.join(cwd, output_folder)

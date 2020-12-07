@@ -104,6 +104,7 @@ def main(case, n_scenarios, input_folder, output_folder, scen_names,
         input_directories=dict(params=case),
         required_input_files=dict(params=['params_loss.json'])
     )
+    grid_folder_g2op = os.path.join(input_folder, case)
     loss_config_manager.validate_configuration()
     params_loss = loss_config_manager.read_configuration()
 
@@ -136,10 +137,10 @@ def main(case, n_scenarios, input_folder, output_folder, scen_names,
                                                  scenario_folder_path,
                                                  seed_disp, params, params_opf)
         if 'D' in mode:
-            if 'L' not in mode or 'R' not in mode or 'T' not in mode:
-                if not gen_loss.check_chronix(scenario_folder_path): # TODO: A développer direct avec os.path.exists
-                    raise ValueError("Ran with D mode without LRT and no available chronic saved")
-            dispatch_results_corrected = gen_loss.main(scenario_folder_path, params_loss, write_results = True)
+            if 'T' not in mode:
+                if not gen_loss.check_chronix(scenario_folder_path):
+                    raise ValueError("Ran with D mode without T mode computed previously (no available computed chronic)")
+            dispatch_results_corrected = gen_loss.main(grid_folder_g2op, scenario_folder_path, params_loss, write_results = True)
         print('\n')
     return params, loads_charac, prods_charac
 

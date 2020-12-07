@@ -1,0 +1,7 @@
+{
+        "idxSlack":37,
+        "nameSlack": "gen_68_37",
+        "adjust_pmin": true,
+        "adjust_pmax":true,
+        "agent_type": "do-nothing"
+}
