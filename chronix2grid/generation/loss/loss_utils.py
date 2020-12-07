@@ -1,6 +1,7 @@
-import grid2op
 import os
-import argparse
+import shutil
+
+import grid2op
 from grid2op.Chronics import Multifolder, GridStateFromFileWithForecasts
 from grid2op.Parameters import Parameters
 from grid2op.Runner import Runner
@@ -9,14 +10,26 @@ from grid2op.Runner import Runner
 #from grid2op.Agent import RecoPowerlineAgent
 from grid2op.Agent import DoNothingAgent
 
+def move_chronics_temporarily(scenario_output_folder, grid_path):
+    chronics_temporary_path = os.path.join(grid_path,'chronics')
+    os.makedirs(chronics_temporary_path, exist_ok=True)
+    chronics_temporary_path = os.path.join(chronics_temporary_path, '000')
+    print("temporary copy of chronics in "+str(chronics_temporary_path))
+    shutil.copytree(scenario_output_folder, chronics_temporary_path)
+
+def remove_temporary_chronics(grid_path):
+    chronics_temporary_path = os.path.join(grid_path, 'chronics')
+    shutil.rmtree(chronics_temporary_path)
+
+
+
 def run_grid2op_simulation_donothing(grid_path, agent_result_path, agent_type = 'do-nothing', nb_core = 1):
     ## Fonction Notebook - Run Grid2op sur les chroniques du scénario et écrire EpisodeData à agent_path_result
 
     # Récupération des paramètres
     ouput_dir = agent_result_path
     NB_CORE = nb_core # TOUJOURS 1 car la parallélisation se fait sur les scénarii dans le main
-    nb_episode = 1 # TODO: spécifier l'épisode qu'on est en train de traiter dans le Runner (ou l'env comme dans Oracle et Expert)
-
+    nb_episode = 1 
     # os.makedirs(ouput_dir, exist_ok=True) # Normalement existe déjà
 
     print('Grid2op simulation for loss')
@@ -35,7 +48,10 @@ def run_grid2op_simulation_donothing(grid_path, agent_result_path, agent_type = 
     param = Parameters()
     param.init_from_dict({"NO_OVERFLOW_DISCONNECTION": True})
 
-    env = grid2op.make(grid_path, param=param, backend=backend, test=True)
+    env = grid2op.make(grid_path,
+                       param=param, backend=backend, test=True)
+    #env = grid2op.make(grid_path = grid_path, chronics_path = scenario_output_folder,
+     #                  param=param, backend=backend, test=True)
     # If you remove the "GridStateFromFileWithForecasts", from above, chronics will NOT be loaded properly.
     # GridStateFromFileWithForecasts is the format used for the competition, so it is mandatory that this works!
     # WITHOUT ANY MODIFICATIONS

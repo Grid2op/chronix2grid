@@ -137,9 +137,9 @@ def main(case, n_scenarios, input_folder, output_folder, scen_names,
                                                  scenario_folder_path,
                                                  seed_disp, params, params_opf)
         if 'D' in mode:
-            if 'T' not in mode:
-                if not gen_loss.check_chronix(scenario_folder_path):
-                    raise ValueError("Ran with D mode without T mode computed previously (no available computed chronic)")
+            if not gen_loss.check_chronix(scenario_folder_path):
+                raise ValueError("Ran with D mode without T mode computed previously (no available computed chronic)")
+            print("Computing realistic loss by Grid2op Simulation")
             dispatch_results_corrected = gen_loss.main(grid_folder_g2op, scenario_folder_path, params_loss, write_results = True)
         print('\n')
     return params, loads_charac, prods_charac

@@ -1,10 +1,12 @@
 import os
-from .loss_utils import run_grid2op_simulation_donothing, correct_scenario_loss
+from .loss_utils import run_grid2op_simulation_donothing, correct_scenario_loss, move_chronics_temporarily, remove_temporary_chronics
 
 def main(grid_folder_g2op, scenario_folder_path, params_loss, write_results = True):
+    move_chronics_temporarily(scenario_folder_path, grid_folder_g2op)
     run_grid2op_simulation_donothing(grid_folder_g2op, scenario_folder_path,
                                      agent_type=params_loss['agent_type'])
     dispatch_results_corrected = correct_scenario_loss(scenario_folder_path, agent_result_path, params_loss)
+    remove_temporary_chronics(grid_folder_g2op)
     return dispatch_results_corrected
 
 def check_chronix(scenario_folder_path):
