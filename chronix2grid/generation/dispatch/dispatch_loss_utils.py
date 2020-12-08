@@ -24,12 +24,19 @@ def remove_temporary_chronics(grid_path):
 
 
 def run_grid2op_simulation_donothing(grid_path, agent_result_path, agent_type = 'do-nothing', nb_core = 1):
-    ## Fonction Notebook - Run Grid2op sur les chroniques du scénario et écrire EpisodeData à agent_path_result
+    """
+
+    :param grid_path (str): path to folder where grid.json and other information on grid are stored
+    :param agent_result_path (str): path in which we want to write the result of Grid2op simulation (via serialized EpisodeData object)
+    :param agent_type (str): type of grid2op agent to use in simulation. Can be reco for RecoPowerlineAgent or do-nothing for DoNothingAgent
+    :param nb_core (int): Simulations can be paralelized on cores. By default, 1 core is used here because paralelization is made previously on chronic scenarios
+    :return:
+    """
 
     # Récupération des paramètres
     ouput_dir = agent_result_path
     NB_CORE = nb_core # TOUJOURS 1 car la parallélisation se fait sur les scénarii dans le main
-    nb_episode = 1 
+    nb_episode = 1
     # os.makedirs(ouput_dir, exist_ok=True) # Normalement existe déjà
 
     print('Grid2op simulation for loss')

@@ -4,9 +4,11 @@ import shutil
 import numpy as np
 
 from .EDispatch_L2RPN2020 import run_economic_dispatch
+from .dispatch_loss_utils import run_grid2op_simulation_donothing, correct_scenario_loss, move_chronics_temporarily, remove_temporary_chronics
 
 
-def main(dispatcher, input_folder, output_folder, seed, params, params_opf):
+
+def main(dispatcher, input_folder, output_folder, grid_folder, seed, params, params_opf):
     """
 
     Parameters
@@ -17,6 +19,8 @@ def main(dispatcher, input_folder, output_folder, seed, params, params_opf):
         The path to the directory containing the inputs for the dispatch
     output_folder
         The path of the directory that will receive the outputs of the dispatch
+    grid_folder
+        The path of the directory that contains grid information (used only if loss simulation are activated)
     seed : int
         Random seed for parallel execution
     params_opf : dict
@@ -45,7 +49,26 @@ def main(dispatcher, input_folder, output_folder, seed, params, params_opf):
     )
     dispatcher.save_results(params, output_folder)
 
+    if params_opf["loss_grid2op_simulation"]:
+        corrected_prod = simulate_loss(grid_folder, output_folder, params_opf, write_results = True)
+        # TODO: modifier dispatch results et dispatcher avant de retourner les résultats
+        # dispatch_results[0].prod_p_dispatched à modifier (car les results sont sous forme de v=classe ChroniXSCenario)
+
     return dispatch_results
+
+def simulate_loss(input_folder, output_folder, params_opf, write_results = True):
+    scenario_folder_path = output_folder
+    grid_folder_g2op = input_folder
+    move_chronics_temporarily(scenario_folder_path, grid_folder_g2op)
+    try:
+        run_grid2op_simulation_donothing(grid_folder_g2op, scenario_folder_path,
+                                     agent_type=params_opf['agent_type'])
+    except RuntimeError:
+        remove_temporary_chronics(grid_folder_g2op)
+        raise RuntimeError("Error in Grid2op simulation, temporary folder deleted")
+    dispatch_results_corrected = correct_scenario_loss(scenario_folder_path, scenario_folder_path, params_opf)
+    remove_temporary_chronics(grid_folder_g2op)
+    return dispatch_results_corrected
 
 
 def parse_ramp_mode(mode):

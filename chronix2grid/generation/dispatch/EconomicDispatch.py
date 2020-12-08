@@ -318,7 +318,7 @@ class Dispatcher(pypsa.Network):
 
 
 class ChroniXScenario:
-    def __init__(self, loads, prods, res_names, scenario_name):
+    def __init__(self, loads, prods, res_names, scenario_name, loss):
         self.loads = loads
         self.wind_p = prods[res_names['wind']]
         self.solar_p = prods[res_names['solar']]
@@ -326,22 +326,30 @@ class ChroniXScenario:
         self.prods_dispatch = None  # Will receive the results of the dispatch
         self.marginal_prices = None # Will receive the marginal prices associated to a dispatch
         self.name = scenario_name
+        self.loss = loss
 
     @classmethod
     def from_disk(cls, load_path_file, prod_path_file, res_names, scenario_name,
-                  start_date, end_date, dt):
+                  start_date, end_date, dt, loss_path_file = None):
         loads = pd.read_csv(load_path_file, sep=';')
         prods = pd.read_csv(prod_path_file, sep=';')
+        if loss_path_file is not None:
+            loss = pd.read_csv(loss_path_file, sep=';')
+        else:
+            loss = None
         datetime_index = pd.date_range(
             start=start_date,
             end=end_date,
             freq=str(dt) + 'min')
         loads.index = datetime_index[:len(loads)]
         prods.index = datetime_index[:len(prods)]
-        return cls(loads, prods, res_names, scenario_name)
+        return cls(loads, prods, res_names, scenario_name, loss)
 
     def net_load(self, losses_pct, name):
-        load_minus_losses = self.loads.sum(axis=1) * (1 + losses_pct/100)
+        if self.loss is None:
+            load_minus_losses = self.loads.sum(axis=1) * (1 + losses_pct/100)
+        else:
+            load_minus_losses = self.loads.sum(axis=1) + self.loss
         return (load_minus_losses - self.total_res).to_frame(name=name)
 
     def simplify_chronix(self):

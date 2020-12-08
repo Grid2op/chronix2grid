@@ -138,7 +138,7 @@ def generate_per_scenario(case, start_date, weeks, by_n_weeks, mode,
     #    n_scenarios_sub_p, mode, warn_user=not ignore_warnings)
 
     scenario_path = os.path.join(generation_output_folder, scenario_name)
-    print('scenarion_path: '+scenario_path)
+    print('scenario_path: '+scenario_path)
     dump_seeds(scenario_path, scenario_seeds)
 
     # go to generate chronics
@@ -235,7 +235,7 @@ if __name__ == "__main__":
     weeks = 1
     by_n_weeks = 1
     n_scenarios = 1
-    mode = 'LRTDK'
+    mode = 'LRT'
     input_folder = r'getting_started\example\input'
     output_folder = r'getting_started\example\output'
     scenario_name = ""

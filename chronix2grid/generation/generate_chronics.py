@@ -94,8 +94,10 @@ def main(case, n_scenarios, input_folder, output_folder, scen_names,
     )
     dispath_config_manager.validate_configuration()
     params_opf = dispath_config_manager.read_configuration()
-    grid_path = os.path.join(input_folder, case, cst.GRID_FILENAME)
+    grid_folder = os.path.join(input_folder, case)
+    grid_path = os.path.join(grid_folder, cst.GRID_FILENAME)
     dispatcher = ec.init_dispatcher_from_config(grid_path, input_folder)
+    loss = None
 
     loss_config_manager = LossConfigManager(
         name="Loss",
@@ -104,7 +106,6 @@ def main(case, n_scenarios, input_folder, output_folder, scen_names,
         input_directories=dict(params=case),
         required_input_files=dict(params=['params_loss.json'])
     )
-    grid_folder_g2op = os.path.join(input_folder, case)
     loss_config_manager.validate_configuration()
     params_loss = loss_config_manager.read_configuration()
 
@@ -127,20 +128,19 @@ def main(case, n_scenarios, input_folder, output_folder, scen_names,
 
         if 'R' in mode:
             prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = gen_enr.main(scenario_folder_path, seed_res, params, prods_charac, solar_pattern, write_results = True)
+        if 'D' in mode:
+            loss = gen_loss.main(input_folder, scenario_folder_path,
+                                 load, prod_solar, prod_wind,
+                                 params, params_loss, write_results = True)
         if 'T' in mode:
             prods = pd.concat([prod_solar, prod_wind], axis=1)
             res_names = dict(wind=prod_wind.columns, solar=prod_solar.columns)
             dispatcher.chronix_scenario = ec.ChroniXScenario(load, prods, res_names,
-                                                             scenario_name)
+                                                             scenario_name, loss)
 
             dispatch_results = gen_dispatch.main(dispatcher, scenario_folder_path,
-                                                 scenario_folder_path,
+                                                 scenario_folder_path, grid_folder,
                                                  seed_disp, params, params_opf)
-        if 'D' in mode:
-            if not gen_loss.check_chronix(scenario_folder_path):
-                raise ValueError("Ran with D mode without T mode computed previously (no available computed chronic)")
-            print("Computing realistic loss by Grid2op Simulation")
-            dispatch_results_corrected = gen_loss.main(grid_folder_g2op, scenario_folder_path, params_loss, write_results = True)
         print('\n')
     return params, loads_charac, prods_charac
 

@@ -1,13 +1,29 @@
 import os
-from .loss_utils import run_grid2op_simulation_donothing, correct_scenario_loss, move_chronics_temporarily, remove_temporary_chronics
+import pandas as pd
 
-def main(grid_folder_g2op, scenario_folder_path, params_loss, write_results = True):
-    move_chronics_temporarily(scenario_folder_path, grid_folder_g2op)
-    run_grid2op_simulation_donothing(grid_folder_g2op, scenario_folder_path,
-                                     agent_type=params_loss['agent_type'])
-    dispatch_results_corrected = correct_scenario_loss(scenario_folder_path, agent_result_path, params_loss)
-    remove_temporary_chronics(grid_folder_g2op)
-    return dispatch_results_corrected
+def main(input_folder, output_folder, load, prod_solar, prod_wind, params, params_loss, write_results = True):
+    """
+    :param input_folder (str): input folder in which pattern folder can be found
+    :param output_folder (str): output folder to write loss chronic
+    :param load(pandas.DataFrame): generated load with Chronix2grid module (for other usage)
+    :param prod_solar (pandas.DataFrame): generated solar production with Chronix2grid module (for other usage)
+    :param prod_wind (pandas.DataFrame): generated wind production with Chronix2grid module (for other usage)
+    :param params (dict): dictionary with parameters concerning chronic generations in general
+    :param params_loss (dict): dictionary with parameters concerning loss computation
+    :param write_results (bool): whether to serialize results or not in scenario_folder_path (True by default)
+    :return: pandas.Series representing provided  loss chronic
+    """
+
+    loss_pattern_path = os.path.join(input_folder, 'patterns', params_loss["loss_pattern"])
+    loss = generate_valid_loss(loss_pattern_path, params)
+    if write_results:
+        loss.to_csv(os.path.join(output_folder,'loss.csv.bz2'), sep = ';')
+    return loss
+
+def generate_valid_loss(loss_pattern_path, params):
+    loss = pd.read_csv(loss_pattern_path, sep = ';')
+    # TODO: Check longueur, changer date ? S'inspirer largement. Supposer que les jour-mois sont contenus dedans
+    return loss
 
 def check_chronix(scenario_folder_path):
     bool = True
@@ -18,20 +34,4 @@ def check_chronix(scenario_folder_path):
     else:
          bool = False
     return bool
-
-if __name__ == "__main__":
-    # Bouchon
-    params_loss = {
-        "idxSlack":37,
-        "nameSlack": "gen_68_37",
-        "adjust_pmin": True,
-        "adjust_pmax":True
-    }
-
-    losses_pct = 1 #0.4 # Provient du params_opf
-
-    scenario_folder_path = ""
-    agent_result_path = ""
-    dispatch_results_corrected = main(scenario_folder_path, params_loss, write_results=True)
-
 

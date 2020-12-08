@@ -193,5 +193,39 @@ class DispatchConfigManager(ConfigManager):
             if params_opf['mode_opf'] == '':
                 params_opf['mode_opf'] = None
         except KeyError:
-            raise KeyError('The mode_opf field of params_opf.jons is missing.')
+            raise KeyError('The mode_opf field of params_opf.json is missing.')
+        bool = False
+        try:
+            bool = params_opf["loss_grid2op_simulation"]
+        except KeyError:
+            raise KeyError('The loss_grid2op_simulation field of params_opf.json is missing.')
+        if bool:
+            oblig_keys = ["idxSlack","nameSlack","pmin_margin","pmax_margin","agent_type"]
+            for key in oblig_keys:
+                try:
+                    params_opf[key]
+                except KeyError:
+                    raise KeyError('loss_grid2op_simulation is set to True, key '+str(key) + ' must be provided')
+
         return params_opf
+
+class LossConfigManager(ConfigManager):
+    def __init__(self, name, root_directory, input_directories, output_directory,
+                 required_input_files=None):
+        super(LossConfigManager, self).__init__(name, root_directory, input_directories,
+                                                 output_directory, required_input_files)
+
+    def read_configuration(self):
+        self.validate_configuration()
+        params_filepath = os.path.join(
+            self.root_directory,
+            self.input_directories['params'],
+            'params_loss.json')
+        with open(params_filepath, 'r') as loss_param_json:
+            params_loss = json.load(loss_param_json)
+        try:
+            if params_loss['loss_pattern'] == '':
+                params_loss['loss_pattern'] = 'loss_pattern.csv'
+        except KeyError:
+            raise KeyError('The loss_pattern field of params_loss.json is missing.')
+        return params_loss
