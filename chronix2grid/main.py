@@ -235,13 +235,13 @@ if __name__ == "__main__":
     weeks = 1
     by_n_weeks = 1
     n_scenarios = 1
-    mode = 'LRT'
+    mode = 'LRDT'
     input_folder = r'getting_started\example\input'
     output_folder = r'getting_started\example\output'
-    scenario_name = ""
-    seed_for_loads = None
-    seed_for_res = None
-    seed_for_dispatch = None
+    scenario_name = "LossPattern"
+    seed_for_loads = 1000
+    seed_for_res = 1000
+    seed_for_dispatch = 1000
     nb_core = 1
     ignore_warnings = False
 

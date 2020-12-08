@@ -1,4 +1,5 @@
 import os
+import datetime as dt
 import pandas as pd
 
 def main(input_folder, output_folder, load, prod_solar, prod_wind, params, params_loss, write_results = True):
@@ -21,17 +22,20 @@ def main(input_folder, output_folder, load, prod_solar, prod_wind, params, param
     return loss
 
 def generate_valid_loss(loss_pattern_path, params):
-    loss = pd.read_csv(loss_pattern_path, sep = ';')
-    # TODO: Check longueur, changer date ? S'inspirer largement. Supposer que les jour-mois sont contenus dedans
-    return loss
+    # It is assumed that provided loss_pattern contains the requested time period and time step
 
-def check_chronix(scenario_folder_path):
-    bool = True
-    if os.path.exists(scenario_folder_path):
-        if not (os.path.exists(os.path.join(scenario_folder_path,"load_p.csv.bz2") and
-                               os.path.exists(os.path.join(scenario_folder_path,"prod_p.csv.bz2")))):
-            bool = False
-    else:
-         bool = False
-    return bool
+    # Reading and parsing dates
+    dateparse = lambda x: dt.datetime.strptime(x, '%d/%m/%Y %H:%M')
+    loss_pattern = pd.read_csv(loss_pattern_path, usecols=[0, 1],
+                                parse_dates=[0], date_parser=dateparse, sep = ';')
+    loss_pattern.set_index(loss_pattern.columns[0], inplace=True)
 
+    # Extract subset of loss-pattern corresponding to the period studied
+    loss_pattern.index = loss_pattern.index.map(lambda t: t.replace(year=params['year']))
+    datetime_index = pd.date_range(
+        start=params['start_date'],
+        end=params['end_date'],
+        freq=str(params['dt']) + 'min')
+    loss_pattern = loss_pattern.loc[datetime_index]
+    loss_pattern = loss_pattern.head(len(loss_pattern)-1)  # Last value is lonely for another day (same treatment as load and renewable)
+    return pd.Series(loss_pattern[loss_pattern.columns[0]])
