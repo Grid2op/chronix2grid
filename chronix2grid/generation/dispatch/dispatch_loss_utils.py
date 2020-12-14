@@ -1,4 +1,5 @@
 import os
+import warnings
 import shutil
 import numpy as np
 import pandas as pd
@@ -89,7 +90,7 @@ def run_grid2op_simulation_donothing(grid_path, agent_result_path, agent_type = 
     res = runner.run(nb_episode=nb_episode, nb_process=NB_CORE, path_save=simulation_data_folder, pbar=True)
     print('---- end of simulation')
 
-def correct_scenario_loss(scenario_folder_path, agent_result_path, params_opf):
+def correct_scenario_loss(scenario_folder_path, agent_result_path, params_opf, grid_path):
     print('Start realistic loss correction from simulation results')
 
     # Load simulation data
@@ -97,10 +98,18 @@ def correct_scenario_loss(scenario_folder_path, agent_result_path, params_opf):
     slack_name = params_opf["nameSlack"]
     id_slack = params_opf["idxSlack"]
 
+    # Get gen constraints
+    first_obs = data_this_episode.observations[0]
+    pmax = first_obs.gen_pmax[id_slack] + params_opf['pmax_margin']
+    pmin = max(first_obs.gen_pmin[id_slack] - params_opf['pmin_margin'],0)
+    ramp_up = first_obs.gen_max_ramp_up[id_slack] + params_opf['rampup_margin']
+    ramp_down = first_obs.gen_max_ramp_down[id_slack] + params_opf['rampdown_margin']
+
+    # Get corrected dispatch prod
     prods_p = pd.DataFrame(np.array([obs.prod_p for obs in data_this_episode.observations]))
     prodSlack = prods_p[id_slack]
 
-    # prods before runner in chronix
+    # Get dispatch prods before runner in chronix
     OldProdsDf = pd.read_csv(os.path.join(scenario_folder_path, 'prod_p.csv.bz2'), sep=';')
     OldProdsForecastDf = pd.read_csv(os.path.join(scenario_folder_path, 'prod_p_forecasted.csv.bz2'), sep=';')
 
@@ -117,7 +126,16 @@ def correct_scenario_loss(scenario_folder_path, agent_result_path, params_opf):
     newProdsDf[slack_name] = OldProdsDf[slack_name] + CorrectionLosses
     newProdsForecastDf[slack_name] = OldProdsForecastDf[slack_name] + CorrectionLosses
 
-    # TODO: subtilité sur les Pmin Pmax
+    # Check constraints
+    violations_message, bool = check_slack_constraints(newProdsDf[slack_name], pmax, pmin, ramp_up, ramp_down)
+    if bool:
+        if params_opf['early_stopping_mode']:
+            remove_temporary_chronics(grid_path)
+            raise ValueError(violations_message)
+        else:
+            warnings.warn(violations_message, UserWarning)
+            print("Warning - "+violations_message)
+
 
     # Serialization
     newProdsDf.to_csv(
@@ -134,3 +152,36 @@ def correct_scenario_loss(scenario_folder_path, agent_result_path, params_opf):
 
     print('---- end of loss correction ')
     return newProdsDf, newProdsForecastDf
+
+def check_slack_constraints(prod_p, pmax, pmin, ramp_up, ramp_down):
+    msg = "Loss correction violates generator constraints: "
+    bool = False
+
+    # Pmax
+    dep = max(prod_p-pmax)
+    if dep > 0:
+        bool = True
+        msg += "Pmax + margin is violated with maximum of "+str(dep)+" MW - "
+
+    # Pmin
+    dep = min(prod_p-pmin)
+    if dep < 0:
+        bool = True
+        msg += "Pmin - margin is violated with maximum of " + str(dep) + " MW - "
+
+    # Ramp up
+    ramps = prod_p.diff()
+    ramps_up = ramps[ramps>0]
+    dep = max(ramps_up - ramp_up)
+    if dep > 0:
+        bool = True
+        msg += "Ramp up + margin is violated with maximum of " + str(dep) + " MW - "
+
+    # Ramp down
+    ramps_down = -1 * ramps[ramps < 0]
+    dep = max(ramps_down - ramp_down)
+    if dep > 0:
+        bool = True
+        msg += "Ramp down + margin is violated with maximum of " + str(dep) + " MW - "
+
+    return msg, bool

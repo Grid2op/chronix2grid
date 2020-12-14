@@ -99,16 +99,6 @@ def main(case, n_scenarios, input_folder, output_folder, scen_names,
     dispatcher = ec.init_dispatcher_from_config(grid_path, input_folder)
     loss = None
 
-    loss_config_manager = LossConfigManager(
-        name="Loss",
-        root_directory=input_folder,
-        output_directory=output_folder,
-        input_directories=dict(params=case),
-        required_input_files=dict(params=['params_loss.json'])
-    )
-    loss_config_manager.validate_configuration()
-    params_loss = loss_config_manager.read_configuration()
-
     ## Launch proper scenarios generation
     seeds_iterator = zip(seeds_for_loads, seeds_for_res, seeds_for_disp)
     
@@ -129,6 +119,15 @@ def main(case, n_scenarios, input_folder, output_folder, scen_names,
         if 'R' in mode:
             prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = gen_enr.main(scenario_folder_path, seed_res, params, prods_charac, solar_pattern, write_results = True)
         if 'D' in mode:
+            loss_config_manager = LossConfigManager(
+                name="Loss",
+                root_directory=input_folder,
+                output_directory=output_folder,
+                input_directories=dict(params=case),
+                required_input_files=dict(params=['params_loss.json'])
+            )
+            loss_config_manager.validate_configuration()
+            params_loss = loss_config_manager.read_configuration()
             loss = gen_loss.main(input_folder, scenario_folder_path,
                                  load, prod_solar, prod_wind,
                                  params, params_loss, write_results = True)

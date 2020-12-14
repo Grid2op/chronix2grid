@@ -69,7 +69,7 @@ def simulate_loss(input_folder, output_folder, params_opf, write_results = True)
     # except RuntimeError:
     #     remove_temporary_chronics(grid_folder_g2op)
     #     raise RuntimeError("Error in Grid2op simulation, temporary folder deleted")
-    dispatch_results_corrected = correct_scenario_loss(scenario_folder_path, scenario_folder_path, params_opf)
+    dispatch_results_corrected = correct_scenario_loss(scenario_folder_path, scenario_folder_path, params_opf, grid_folder_g2op)
     remove_temporary_chronics(grid_folder_g2op)
     #remove_simulation_data(scenario_folder_path)
     return dispatch_results_corrected

@@ -318,7 +318,7 @@ class Dispatcher(pypsa.Network):
 
 
 class ChroniXScenario:
-    def __init__(self, loads, prods, res_names, scenario_name, loss):
+    def __init__(self, loads, prods, res_names, scenario_name, loss=None):
         self.loads = loads
         self.wind_p = prods[res_names['wind']]
         self.solar_p = prods[res_names['solar']]
