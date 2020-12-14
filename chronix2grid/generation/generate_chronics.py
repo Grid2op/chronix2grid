@@ -2,7 +2,7 @@
 from GeneratorBackend import GeneratorBackend
 
 
-def main(case, n_scenarios, input_folder, output_folder, scen_names,
+def main(generator: GeneratorBackend, case, n_scenarios, input_folder, output_folder, scen_names,
          time_params, mode='LRTK', scenario_id=None,
          seed_for_loads=None, seed_for_res=None, seed_for_disp=None):
     """
@@ -10,6 +10,7 @@ def main(case, n_scenarios, input_folder, output_folder, scen_names,
 
     Parameters
     ----------
+    generator (GeneratorBackend): implementation class to do the different generation
     case (str): name of case to study (must be a folder within input_folder)
     n_scenarios (int): number of desired scenarios to generate for the same timescale
     params (dict): parameters of generation, as returned by function chronix2grid.generation.generate_chronics.read_configuration
@@ -21,12 +22,10 @@ def main(case, n_scenarios, input_folder, output_folder, scen_names,
     solar_pattern (pandas.DataFrame): as returned by function chronix2grid.generation.generate_chronics.read_configuration
     load_weekly_pattern (pandas.DataFrame): as returned by function chronix2grid.generation.generate_chronics.read_configuration
     mode (str): options to launch certain parts of the generation process : L load R renewable T thermal
-    generator_backend (GeneratorBackend): The backend class to do all generation parts
 
     Returns
     -------
 
     """
-    gen = GeneratorBackend()
-    return gen.run(case, n_scenarios, input_folder, output_folder, scen_names, time_params, mode, scenario_id, seed_for_loads, seed_for_res,
-                   seed_for_disp)
+    return generator.run(case, n_scenarios, input_folder, output_folder, scen_names, time_params, mode, scenario_id, seed_for_loads, seed_for_res,
+                         seed_for_disp)

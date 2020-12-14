@@ -34,16 +34,9 @@ class GeneratorBackend:
         ----------
         case (str): name of case to study (must be a folder within input_folder)
         n_scenarios (int): number of desired scenarios to generate for the same timescale
-        params (dict): parameters of generation, as returned by function chronix2grid.generation.generate_chronics.read_configuration
         input_folder (str): path of folder containing inputs
         output_folder (str): path where outputs will be written (intermediate folder case/year/scenario will be used)
-        prods_charac (pandas.DataFrame): as returned by function chronix2grid.generation.generate_chronics.read_configuration
-        loads_charac (pandas.DataFrame): as returned by function chronix2grid.generation.generate_chronics.read_configuration
-        lines (pandas.DataFrame): as returned by function chronix2grid.generation.generate_chronics.read_configuration
-        solar_pattern (pandas.DataFrame): as returned by function chronix2grid.generation.generate_chronics.read_configuration
-        load_weekly_pattern (pandas.DataFrame): as returned by function chronix2grid.generation.generate_chronics.read_configuration
         mode (str): options to launch certain parts of the generation process : L load R renewable T thermal
-        generator_backend (GeneratorBackend): The backend class to do all generation parts
 
         Returns
         -------
@@ -77,7 +70,7 @@ class GeneratorBackend:
         )
         load_config_manager.validate_configuration()
 
-        params, loads_charac, load_weekly_pattern = load_config_manager.read_configuration()
+        params, loads_charac = load_config_manager.read_configuration()
 
         res_config_manager = ResConfigManager(
             name="Renewables Generation",
@@ -88,7 +81,7 @@ class GeneratorBackend:
             output_directory=output_folder
         )
 
-        params, prods_charac, solar_pattern = res_config_manager.read_configuration()
+        params, prods_charac = res_config_manager.read_configuration()
 
         params.update(time_params)
         params = generation_utils.updated_time_parameters_with_timestep(params, params['dt'])
@@ -119,24 +112,38 @@ class GeneratorBackend:
 
             print("================ Generating " + scenario_name + " ================")
             if 'L' in mode:
-                generator_loads = self.consumption_backend_class(scenario_folder_path, seed_load, params, loads_charac, load_weekly_pattern,
-                                                                 write_results=True)
-                load, load_forecasted = generator_loads.run()
-
+                load, load_forecasted = self.do_l(scenario_folder_path, seed_load, params, loads_charac, load_config_manager)
             if 'R' in mode:
-                generator_enr = self.renewable_backend_class(scenario_folder_path, seed_res, params,
-                                                             prods_charac,
-                                                             solar_pattern, write_results=True)
-
-                prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = generator_enr.run()
+                prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = self.do_r(scenario_folder_path, seed_res, params,
+                                                                                               prods_charac,
+                                                                                               res_config_manager)
             if 'T' in mode:
-                prods = pd.concat([prod_solar, prod_wind], axis=1)
-                res_names = dict(wind=prod_wind.columns, solar=prod_solar.columns)
-                dispatcher.chronix_scenario = EconomicDispatch.ChroniXScenario(load, prods, res_names,
-                                                                               scenario_name)
-
-                dispatch_results = generate_dispatch.main(dispatcher, scenario_folder_path,
-                                                          scenario_folder_path,
-                                                          seed_disp, params, params_opf)
+                dispatch_results = self.do_t(dispatcher, scenario_name, load, prod_solar, prod_wind,
+                                             scenario_folder_path, seed_disp, params, params_opf)
             print('\n')
         return params, loads_charac, prods_charac
+
+    def do_l(self, scenario_folder_path, seed_load, params, loads_charac, load_config_manager):
+        generator_loads = self.consumption_backend_class(scenario_folder_path, seed_load, params, loads_charac, load_config_manager,
+                                                         write_results=True)
+        load, load_forecasted = generator_loads.run()
+        return load, load_forecasted
+
+    def do_r(self, scenario_folder_path, seed_res, params, prods_charac, res_config_manager):
+        generator_enr = self.renewable_backend_class(scenario_folder_path, seed_res, params,
+                                                     prods_charac,
+                                                     res_config_manager, write_results=True)
+
+        prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = generator_enr.run()
+        return prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted
+
+    def do_t(self, dispatcher, scenario_name, load, prod_solar, prod_wind, scenario_folder_path, seed_disp, params, params_opf):
+        prods = pd.concat([prod_solar, prod_wind], axis=1)
+        res_names = dict(wind=prod_wind.columns, solar=prod_solar.columns)
+        dispatcher.chronix_scenario = EconomicDispatch.ChroniXScenario(load, prods, res_names,
+                                                                       scenario_name)
+
+        dispatch_results = generate_dispatch.main(dispatcher, scenario_folder_path,
+                                                  scenario_folder_path,
+                                                  seed_disp, params, params_opf)
+        return dispatch_results

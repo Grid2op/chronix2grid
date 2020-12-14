@@ -5,6 +5,7 @@ import click
 import multiprocessing
 from functools import partial
 
+from GeneratorBackend import GeneratorBackend
 from chronix2grid import constants as cst
 from chronix2grid.generation import generate_chronics as gen
 from chronix2grid.generation import generation_utils as gu
@@ -167,7 +168,8 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
 
     # Chronic generation
     if 'L' in mode or 'R' in mode:
-        params, loads_charac, prods_charac = gen.main(
+        generator = GeneratorBackend()
+        params, loads_charac, prods_charac = gen.main(generator,
             case, n_scenarios, generation_input_folder,
             generation_output_folder, scen_names, time_parameters,
             mode, scenario_id, seed_for_loads, seed_for_res, seed_for_dispatch)

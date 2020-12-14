@@ -80,7 +80,7 @@ class TestLoadProdCoherence(unittest.TestCase):
             output_directory=self.generation_output_folder
         )
 
-        params, prods_charac, solar_pattern = res_config_manager.read_configuration()
+        params, prods_charac = res_config_manager.read_configuration()
 
         scenario_path = os.path.join(
             self.generation_output_folder,
