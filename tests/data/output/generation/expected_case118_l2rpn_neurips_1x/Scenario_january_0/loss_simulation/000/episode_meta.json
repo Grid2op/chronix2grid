@@ -1,0 +1,10 @@
+{
+    "backend_type": "LightSimBackend_case118_l2rpn_neurips_1x",
+    "chronics_max_timestep": "8062",
+    "chronics_path": "D:\\RTE\\Chronix2grid\\1 - D\u00e9veloppement\\ChroniX2Grid\\tests\\data\\input\\generation\\case118_l2rpn_neurips_1x\\chronics\\000",
+    "cumulative_reward": 4587826.5,
+    "env_seed": null,
+    "env_type": "Environment_case118_l2rpn_neurips_1x",
+    "grid_path": "D:\\RTE\\Chronix2grid\\1 - D\u00e9veloppement\\ChroniX2Grid\\tests\\data\\input\\generation\\case118_l2rpn_neurips_1x\\grid.json",
+    "nb_timestep_played": 8062
+}
