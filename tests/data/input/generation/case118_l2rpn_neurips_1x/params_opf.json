@@ -7,5 +7,14 @@
   "ramp_mode": "hard",
   "grid_path": "input_data/generation/case118_l2rpn_wcci_modifySlackBeforeChronixGeneration_v2/L2RPN_2020_case118_redesigned.json",
   "pyomo": false,
-  "solver_name": "cbc"
+  "solver_name": "cbc",
+  "loss_grid2op_simulation": true,
+"idxSlack":37,
+"nameSlack": "gen_68_37",
+"early_stopping_mode": false,
+"pmin_margin": 10,
+"pmax_margin":70,
+"rampup_margin": 2,
+"rampdown_margin": 3,
+"agent_type": "reco"
 }
