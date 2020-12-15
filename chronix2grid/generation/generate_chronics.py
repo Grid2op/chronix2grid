@@ -1,5 +1,5 @@
 # Call generation scripts n_scenario times with dedicated random seeds
-from GeneratorBackend import GeneratorBackend
+from chronix2grid.GeneratorBackend import GeneratorBackend
 
 
 def main(generator: GeneratorBackend, case, n_scenarios, input_folder, output_folder, scen_names,

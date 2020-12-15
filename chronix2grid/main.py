@@ -5,7 +5,7 @@ import click
 import multiprocessing
 from functools import partial
 
-from GeneratorBackend import GeneratorBackend
+from chronix2grid.GeneratorBackend import GeneratorBackend
 from chronix2grid import constants as cst
 from chronix2grid.generation import generate_chronics as gen
 from chronix2grid.generation import generation_utils as gu
