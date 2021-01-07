@@ -20,6 +20,7 @@ class TestCli(unittest.TestCase):
         self.output_folder = os.path.join(
             pathlib.Path(__file__).parent.absolute(),
             'output')
+        # os.makedirs(self.output_folder, exist_ok=True)
         self.case = 'case118_l2rpn_wcci'
         self.start_date = '2012-01-01'
         self.year = 2012

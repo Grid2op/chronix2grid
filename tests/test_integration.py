@@ -41,9 +41,6 @@ class TestMain(unittest.TestCase):
         self.seed_for_load = [seeds_for_loads[0]]
         self.seed_for_res = [seeds_for_res[0]]
         self.seed_for_disp = [seeds_for_disp[0]]
-        # self.seed_for_load = [912206665]
-        # self.seed_for_res = [912206665]
-        # self.seed_for_disp = [912206665]
 
         ## 2 cases, rest is equal between both tests
         self.case_noloss = 'case118_l2rpn_neurips_1x_modifySlackBeforeChronixGeneration'
@@ -71,26 +68,15 @@ class TestMain(unittest.TestCase):
             'data', 'output',"generation",
             "expected_case118_l2rpn_neurips_1x_modifySlackBeforeChronixGeneration",
             "Scenario_january_0")
-        self.files_tocheck = ['load_p', 'solar_p','wind_p','prod_p','prod_p_forecasted']
+        self.files_tocheck = ['prod_p']
 
 
     def tearDown(self) -> None:
         shutil.rmtree(self.output_folder, ignore_errors=False, onerror=None)
 
-    def test_outputs(self):
-        path_out = os.path.join(self.generation_output_folder_loss, "Scenario_0")
-        path_ref = self.expected_folder_loss
-        vars = self.files_tocheck
-        bool = self.check_frames_equal(path_out, path_ref, vars)
-        self.assertTrue(bool)
 
     def test_integration_lrt_nolosscorrection(self):
-        # main.generate_mp_core(case = self.case_noloss, start_date = self.start_date, weeks = self.nweeks,
-        #                       by_n_weeks = 4, n_scenarios = self.n_scenarios, mode = "LRT",
-        #                       input_folder = self.input_folder, output_folder=self.output_folder,
-        #                       scenario_name = "january_2", seed_for_loads = self.seed_for_loads,
-        #                       seed_for_res = self.seed_for_res, seed_for_dispatch = self.seed_for_disp,
-        #                       nb_core = 1, ignore_warnings = self.ignore_warnings)
+
         # Launch module
         main.generate_per_scenario(
             case=self.case_noloss, start_date=self.start_date, weeks=self.nweeks, by_n_weeks=4,
@@ -110,12 +96,7 @@ class TestMain(unittest.TestCase):
         self.assertTrue(bool)
 
     def test_integration_lrt_withlosscorrection(self):
-        # main.generate_mp_core(case=self.case_loss, start_date=self.start_date, weeks=self.nweeks,
-        #                       by_n_weeks=4, n_scenarios=self.n_scenarios, mode="LRT",
-        #                       input_folder=self.input_folder, output_folder=self.output_folder,
-        #                       scenario_name="january_2", seed_for_loads=self.seeds_for_loads,
-        #                       seed_for_res=self.seeds_for_res, seed_for_dispatch=self.seeds_for_disp,
-        #                       nb_core=1, ignore_warnings=self.ignore_warnings)
+
         main.generate_per_scenario(
             case=self.case_loss, start_date=self.start_date, weeks=self.nweeks, by_n_weeks=4,
             mode='LRT', input_folder=self.input_folder,
