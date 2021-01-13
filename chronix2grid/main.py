@@ -233,17 +233,20 @@ def create_directory_tree(case, start_date, output_directory, scenario_name,
 if __name__ == "__main__":
     # Default arguments for dev mode
     case = 'case118_l2rpn_wcci'
+    #case = 'case118_l2rpn_neurips_1x'
     start_date = '2012-01-01'
     weeks = 1
-    by_n_weeks = 1
+    by_n_weeks = 4
     n_scenarios = 1
     mode = 'LRDT'
-    input_folder = r'getting_started\example\input'
-    output_folder = r'getting_started\example\output'
-    scenario_name = "LossPattern"
-    seed_for_loads = 1000
-    seed_for_res = 1000
-    seed_for_dispatch = 1000
+    #input_folder = r'tests/data/input'
+    #output_folder = r'tests/data/output'
+    input_folder = 'getting_started/example/input'
+    output_folder = 'getting_started/example/output'
+    scenario_name = "january"
+    seed_for_loads = 912206665
+    seed_for_res = 912206665
+    seed_for_dispatch = 912206665
     nb_core = 1
     ignore_warnings = False
 

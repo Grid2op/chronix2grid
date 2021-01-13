@@ -4,7 +4,8 @@ import pandas as pd
 
 from chronix2grid import constants
 from chronix2grid import utils
-from chronix2grid.config import LoadsConfigManager, ResConfigManager, DispatchConfigManager
+from chronix2grid.config import LoadsConfigManager, ResConfigManager, DispatchConfigManager, LossConfigManager
+from chronix2grid.generation.loss import generate_loss as gen_loss
 from chronix2grid.generation import generation_utils
 from chronix2grid.generation.consumption.ConsumptionGeneratorBackend import ConsumptionGeneratorBackend
 from chronix2grid.generation.dispatch import generate_dispatch, EconomicDispatch
@@ -95,8 +96,10 @@ class GeneratorBackend:
         )
         dispath_config_manager.validate_configuration()
         params_opf = dispath_config_manager.read_configuration()
-        grid_path = os.path.join(input_folder, case, constants.GRID_FILENAME)
+        grid_folder = os.path.join(input_folder, case)
+        grid_path = os.path.join(grid_folder, constants.GRID_FILENAME)
         dispatcher = EconomicDispatch.init_dispatcher_from_config(grid_path, input_folder)
+        loss = None
 
         ## Launch proper scenarios generation
         seeds_iterator = zip(seeds_for_loads, seeds_for_res, seeds_for_disp)
@@ -117,9 +120,22 @@ class GeneratorBackend:
                 prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = self.do_r(scenario_folder_path, seed_res, params,
                                                                                                prods_charac,
                                                                                                res_config_manager)
+            if 'D' in mode:
+                loss_config_manager = LossConfigManager(
+                    name="Loss",
+                    root_directory=input_folder,
+                    output_directory=output_folder,
+                    input_directories=dict(params=case),
+                    required_input_files=dict(params=['params_loss.json'])
+                )
+                loss_config_manager.validate_configuration()
+                params_loss = loss_config_manager.read_configuration()
+                loss = gen_loss.main(input_folder, scenario_folder_path,
+                                     load, prod_solar, prod_wind,
+                                     params, params_loss, write_results=True)
             if 'T' in mode:
                 dispatch_results = self.do_t(dispatcher, scenario_name, load, prod_solar, prod_wind,
-                                             scenario_folder_path, seed_disp, params, params_opf)
+                                             grid_folder, scenario_folder_path, seed_disp, params, params_opf, loss)
             print('\n')
         return params, loads_charac, prods_charac
 
@@ -137,13 +153,14 @@ class GeneratorBackend:
         prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = generator_enr.run()
         return prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted
 
-    def do_t(self, dispatcher, scenario_name, load, prod_solar, prod_wind, scenario_folder_path, seed_disp, params, params_opf):
+    def do_t(self, dispatcher, scenario_name, load, prod_solar, prod_wind, grid_folder,
+             scenario_folder_path, seed_disp, params, params_opf, loss):
         prods = pd.concat([prod_solar, prod_wind], axis=1)
         res_names = dict(wind=prod_wind.columns, solar=prod_solar.columns)
         dispatcher.chronix_scenario = EconomicDispatch.ChroniXScenario(load, prods, res_names,
-                                                                       scenario_name)
+                                                                       scenario_name, loss)
 
         dispatch_results = generate_dispatch.main(dispatcher, scenario_folder_path,
-                                                  scenario_folder_path,
+                                                 scenario_folder_path, grid_folder,
                                                   seed_disp, params, params_opf)
         return dispatch_results

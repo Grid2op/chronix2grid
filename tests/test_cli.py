@@ -20,7 +20,7 @@ class TestCli(unittest.TestCase):
         self.output_folder = os.path.join(
             pathlib.Path(__file__).parent.absolute(),
             'output')
-        # os.makedirs(self.output_folder, exist_ok=True)
+        os.makedirs(self.output_folder, exist_ok=True)
         self.case = 'case118_l2rpn_wcci'
         self.start_date = '2012-01-01'
         self.year = 2012
@@ -54,5 +54,6 @@ class TestCli(unittest.TestCase):
             '--scenario_name', '',
             '--nb_core', str(2)
         ]
+
         rv = subprocess.run(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         self.assertEqual(rv.returncode, 0)
