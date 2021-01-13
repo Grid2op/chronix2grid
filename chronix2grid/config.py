@@ -66,8 +66,8 @@ class ConfigManager(ABC):
                 formatted_required_input_files += "\n      - " + filename
 
             error_msg_body = (
-                f"  - Input directory is {input_directory_abs_path}\n"
-                f"    - Expected input files are:" + formatted_required_input_files
+                    f"  - Input directory is {input_directory_abs_path}\n"
+                    f"    - Expected input files are:" + formatted_required_input_files
             )
         else:
             formatted_required_directories = ""
@@ -78,7 +78,7 @@ class ConfigManager(ABC):
                         "\n      - with expected input files:"
                 )
                 for required_file in self.required_input_files[input_name]:
-                    formatted_required_directories += "\n        - "+required_file
+                    formatted_required_directories += "\n        - " + required_file
 
             error_msg_body = (
                     f"  - Input directories are:" + formatted_required_directories
@@ -128,25 +128,26 @@ class LoadsConfigManager(ConfigManager):
                              'loads_charac.csv'),
                 sep=';')
 
+        return params, loads_charac
 
+    def read_specific(self):
         load_weekly_pattern = pd.read_csv(
             os.path.join(self.root_directory, self.input_directories['patterns'],
                          'load_weekly_pattern.csv'))
-
-        return params, loads_charac, load_weekly_pattern
+        return load_weekly_pattern
 
 
 class ResConfigManager(ConfigManager):
     def __init__(self, name, root_directory, input_directories, output_directory,
                  required_input_files=None):
         super(ResConfigManager, self).__init__(name, root_directory, input_directories,
-                                                 output_directory, required_input_files)
+                                               output_directory, required_input_files)
 
     def read_configuration(self):
-        params_filepath = os.path.join(
+        params_file_path = os.path.join(
             self.root_directory,
             self.input_directories['case'], 'params.json')
-        with open(params_filepath, 'r') as params_json:
+        with open(params_file_path, 'r') as params_json:
             params = json.load(params_json)
         for key, value in params.items():
             try:
@@ -168,11 +169,14 @@ class ResConfigManager(ConfigManager):
                              'prods_charac.csv'),
                 sep=';')
 
+        return params, prods_charac
+
+    def read_specific(self):
         solar_pattern = np.load(
             os.path.join(self.root_directory, self.input_directories['patterns'],
                          'solar_pattern.npy'))
+        return solar_pattern
 
-        return params, prods_charac, solar_pattern
 
 
 class DispatchConfigManager(ConfigManager):
@@ -209,6 +213,23 @@ class DispatchConfigManager(ConfigManager):
                     raise KeyError('loss_grid2op_simulation is set to True, key '+str(key) + ' must be provided')
 
         return params_opf
+
+
+def read_all_configuration(files, root_directory, input_directories):
+    params = {}
+    for file in files:
+        params_file_path = os.path.join(
+            root_directory,
+            input_directories['case'], file)
+        with open(params_file_path, 'r') as params_json:
+            params_to_add = json.load(params_json)
+        for key, value in params_to_add.items():
+            try:
+                params_to_add[key] = float(value)
+            except ValueError:
+                params_to_add[key] = pd.to_datetime(value, format='%Y-%m-%d')
+        params.update(params_to_add)
+    return params
 
 class LossConfigManager(ConfigManager):
     def __init__(self, name, root_directory, input_directories, output_directory,
