@@ -51,7 +51,7 @@ Features
 * T - thermic production generation thanks to a production dispatch (simplified optimal power flow computation)
 * K - KPI generation in order to compare synthetic (generated) chronics to reference (real-life) chronics
 
-The figure below shows how these submodules can be launched together with --mode/-m argument.
+The figure below shows how these submodules can be launched together with --mode argument.
 Note that D and T submodules can't be launched without previous L and R modules, and that KPIs can always been computed
 
 .. image:: ../pictures/Launch_mode.png
@@ -59,15 +59,20 @@ Note that D and T submodules can't be launched without previous L and R modules,
 Inputs and Configuration
 ========================
 
-grids + params généraux (json, ...)
-IMAGE
+For synthetic chronic generation, one should provide
+
+* Data that represents grid, demand and generators characteristics
+* Pattern data (ex: weekly load profile)
+* Json parameters for generation algorithms
+
+One should also provide reference chronics data for comparison through a library of KPIs
+
+.. image:: ../pictures/ChroniX2Grid_inputs.png
 
 Outputs
 ========================
 
-* generation (renvoi sections x2)
-* kpi (renvoi section)
-IMAGE
+.. image:: ../pictures/ChroniX2Grid_outputs.png
 
 Tests
 =====
