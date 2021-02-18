@@ -1,6 +1,10 @@
 # ChroniX2Grid
 
-Chronix2Grid is a python package, providing a command-line application as well, that allows to generate synthetic but realistic consumption, renewable production and economic dispatched productions chronics given a power grid. Reference data that you provide will serve to calibrate the parameters so that the synthetic data reproduce some realistic criteria (KPIs) from the reference data.
+Chronix2Grid is a python package, providing a command-line application as well, 
+that allows to generate synthetic but realistic consumption, renewable production, electricity loss (dissipation) 
+and economic dispatched productions chronics given a power grid.
+Reference data that you provide will serve to calibrate the parameters 
+so that the synthetic data reproduce some realistic criteria (KPIs) from the reference data.
 
 *   [1 Chronix2Grid at a glance](#glance)
 *   [2 Installation](#installation)
@@ -73,9 +77,11 @@ Options:
   --weeks INTEGER           Number of weeks to generate
   --by-n-weeks INTEGER      Size of the output chunks in weeks
   --n_scenarios INTEGER     Number of scenarios to generate
-  --mode TEXT               Steps to execute : L for loads only (and KPI);
-                            R(K) for renewables (and KPI) only; LRTK for all
-                            generation
+  --mode TEXT               Steps to execute : L(K) for loads only (and KPI);
+                            R(K) for renewables (and KPI) only; LRT (K) 
+                            for load, renewable and thermic generation (and KPI); 
+                            LRDT(TK) for load, renewable, loss (dissipation) generation 
+                            (and thermic and KPI)   
 
   --input-folder TEXT       Directory to read input files from.
   --output-folder TEXT      Directory to store output files.
@@ -98,6 +104,21 @@ Options:
   --help                    Show this message and exit.
 
 ```
+
+## Launch mode
+4 generation submodules and a KPI module are available
+
+* L - load generation
+* R - wind and solar production generation
+* D - loss generation (depending on L and R)
+* T - thermic a,d hydro production generation thanks to an economic dispatch (simplified optimal power flow simulation)
+* K - KPI generation in order to compare synthetic (generated) chronics to reference (real-life) chronics
+
+The figure below shows how these submodules can be launched together with --mode/-m argument. 
+Note that D and T submodules can't be launched without previous L and R modules, and that KPIs can always been computed 
+
+![Launch_mode](pictures/Launch_mode.png "Launch mode") 
+
 ## Configuration
 
 ### Chronic generation detailed configuration
@@ -112,6 +133,14 @@ Some general parameters have to be set in *INPUT_FOLDER/kpi/paramsKPI.json*
 - **timestep**: timestep for KPI computation. For example, renewable ninja data requires minimum timestep of 60min
 - **night_hours**: dictionary to provide night hours for each season of year
 - **seasons**: dictionary to provide months in each season of year
+
+## Model interface
+
+All generation submodules (LRDT) have a modular backend. 
+You can develop your own load, renewable, loss and dispatch model using as input: 
+* Your json parameters
+* Possible pattern files
+* Grid demand and generator characteristics in csv
 
 ## Running the test suite
 To run the tests, execute:

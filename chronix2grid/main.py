@@ -23,7 +23,10 @@ from chronix2grid import utils as ut
 @click.option('--weeks', default=4, help='Number of weeks to generate')
 @click.option('--by-n-weeks', default=4, help='Size of the output chunks in weeks')
 @click.option('--n_scenarios', default=1, help='Number of scenarios to generate')
-@click.option('--mode', default='LRTK', help='Steps to execute : L for loads only (and KPI); R(K) for renewables (and KPI) only; LRTK for all generation')
+@click.option('--mode', default='LRDTK', help='Steps to execute : '
+                                              'L(K) for loads only (and KPI);R(K) for renewables (and KPI) only; '
+                                              'LRT (K) for load, renewable and thermic generation (and KPI); '
+                                              'LRDT(TK) for load, renewable, loss (dissipation) generation (and thermic and KPI)')
 @click.option('--input-folder',
               default=os.path.join(os.path.normpath(os.getcwd()),
                                    cst.DEFAULT_INPUT_FOLDER_NAME),
@@ -235,10 +238,10 @@ if __name__ == "__main__":
     case = 'case118_l2rpn_wcci'
     #case = 'case118_l2rpn_neurips_1x'
     start_date = '2012-01-01'
-    weeks = 1
+    weeks = 4
     by_n_weeks = 4
     n_scenarios = 1
-    mode = 'LRDT'
+    mode = 'LRDTK'
     #input_folder = r'tests/data/input'
     #output_folder = r'tests/data/output'
     input_folder = 'getting_started/example/input'

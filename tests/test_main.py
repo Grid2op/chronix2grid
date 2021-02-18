@@ -130,6 +130,19 @@ class TestMain(unittest.TestCase):
             ignore_warnings=self.ignore_warnings,
             scenario_id=0)
 
+    def test_lrdk(self):
+        main.generate_per_scenario(
+            case=self.case, start_date=self.start_date, weeks=1, by_n_weeks=4,
+            mode='LRDK', input_folder=self.input_folder,
+            kpi_output_folder=self.kpi_output_folder,
+            generation_output_folder=self.generation_output_folder,
+            scen_names=self.scenario_names,
+            seeds_for_loads=self.seeds_for_loads,
+            seeds_for_res=self.seeds_for_res,
+            seeds_for_dispatch=self.seeds_for_disp,
+            ignore_warnings=self.ignore_warnings,
+            scenario_id=0)
+
     def test_lrdtk(self):
         main.generate_per_scenario(
             case=self.case, start_date=self.start_date, weeks=1, by_n_weeks=4,
