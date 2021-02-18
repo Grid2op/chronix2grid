@@ -18,6 +18,9 @@ import chronix2grid.constants as cst
 
 def move_chronics_temporarily(scenario_output_folder, grid_path):
     chronics_temporary_path = os.path.join(grid_path,'chronics')
+    if os.path.exists(chronics_temporary_path):
+        warnings.warn("Had to delete a previous chronic temporary path in input data", UserWarning)
+        shutil.rmtree(chronics_temporary_path)
     os.makedirs(chronics_temporary_path, exist_ok=True)
     chronics_temporary_path = os.path.join(chronics_temporary_path, '000')
     print("temporary copy of chronics in "+str(chronics_temporary_path))

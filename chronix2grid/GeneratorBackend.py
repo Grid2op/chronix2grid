@@ -12,17 +12,19 @@ from chronix2grid.generation.dispatch import generate_dispatch, EconomicDispatch
 from chronix2grid.generation.dispatch.DispatchBackend import DispatchBackend
 from chronix2grid.generation.renewable import generate_solar_wind
 from chronix2grid.generation.renewable.RenewableBackend import RenewableBackend
-
+from chronix2grid.generation.loss.LossBackend import LossBackend
 
 class GeneratorBackend:
     def __init__(self, consumption_backend_class=ConsumptionGeneratorBackend
                  , dispatch_backend_class=DispatchBackend
                  , hydro_backend_class=None
-                 , renewable_backend_class=RenewableBackend):
+                 , renewable_backend_class=RenewableBackend
+                 , loss_backend_class=LossBackend):
         self.consumption_backend_class = consumption_backend_class
         self.dispatch_backend_class = dispatch_backend_class
         self.hydro_backend_class = hydro_backend_class
         self.renewable_backend_class = renewable_backend_class
+        self.loss_backend_class = loss_backend_class
 
     # Call generation scripts n_scenario times with dedicated random seeds
     def run(self, case, n_scenarios, input_folder, output_folder, scen_names,
@@ -128,11 +130,10 @@ class GeneratorBackend:
                     input_directories=dict(params=case),
                     required_input_files=dict(params=['params_loss.json'])
                 )
-                loss_config_manager.validate_configuration()
-                params_loss = loss_config_manager.read_configuration()
-                loss = gen_loss.main(input_folder, scenario_folder_path,
+
+                self.do_d(input_folder, scenario_folder_path,
                                      load, prod_solar, prod_wind,
-                                     params, params_loss, write_results=True)
+                                     params, loss_config_manager)
             if 'T' in mode:
                 dispatch_results = self.do_t(dispatcher, scenario_name, load, prod_solar, prod_wind,
                                              grid_folder, scenario_folder_path, seed_disp, params, params_opf, loss)
@@ -152,6 +153,16 @@ class GeneratorBackend:
 
         prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = generator_enr.run()
         return prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted
+
+    def do_d(self, input_folder, scenario_folder_path,
+                                     load, prod_solar, prod_wind,
+                                     params, loss_config_manager):
+
+        generator_loss = self.loss_backend_class(input_folder, scenario_folder_path,
+                                     load, prod_solar, prod_wind,
+                                     params, loss_config_manager)
+        loss = generator_loss.run()
+        return loss
 
     def do_t(self, dispatcher, scenario_name, load, prod_solar, prod_wind, grid_folder,
              scenario_folder_path, seed_disp, params, params_opf, loss):

@@ -56,12 +56,32 @@ Note that D and T submodules can't be launched without previous L and R modules,
 
 .. image:: ../pictures/Launch_mode.png
 
+Notebooks and data to get started
+==================================
+
+Four notebooks are provided to get you started with this package:
+
+* **getting_started_cli.ipynb** guide you through the use of chronix2grid cli
+* **getting_started_api.ipynb** is a more detailed notebook that presents chronix2grid api and showcases several ways to
+ analyze the chronics produced
+* **running_chronics_grid2op.ipynb** is a notebook giving an example of how generated chronics can further be used to create power grid scenarios and run them
+ analyze the chronics produced
+* **RenewableNinja_Solar_WInd_KPI_format.ipynb** is an example on how to retrieve Solar and Wind reference chronics from the
+  [renewable ninja](https://www.renewables.ninja/) api. There will be use to compare the KPI's with the generated chronics.
+
+Additionally, a data starting kit is provided to run an example in the folder ``getting_started/example``
+
+ The output folder corresponds to the following run of chronix2grid :
+
+ ``chronix2grid --mode RLTK --output-folder ChroniX2Grid/getting_started/example/output --input-folder /ChroniX2Grid/getting_started/example/input --ignore-warnings --weeks 8 --case case118_l2rpn_wcci --n_scenarios 1 --start-date 2012-01-01 --by-n-weeks 4``
+
+
 Inputs and Configuration
 ========================
 
 For synthetic chronic generation, one should provide
 
-* Data that represents grid, demand and generators characteristics
+* Data that represents grid, demand and generators characteristics. See *getting_started/example/input/* for example.
 * Pattern data (ex: weekly load profile)
 * Json parameters for generation algorithms
 
@@ -73,6 +93,7 @@ Outputs
 ========================
 
 .. image:: ../pictures/ChroniX2Grid_outputs.png
+
 
 Tests
 =====
