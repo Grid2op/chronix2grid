@@ -56,7 +56,7 @@ Note that D and T submodules can't be launched without previous L and R modules,
 
 .. image:: ../pictures/Launch_mode.png
 
-Notebooks and data to get started
+Didactic examples
 ==================================
 
 Four notebooks are provided to get you started with this package:
@@ -74,6 +74,11 @@ Additionally, a data starting kit is provided to run an example in the folder ``
  The output folder corresponds to the following run of chronix2grid :
 
  ``chronix2grid --mode RLTK --output-folder ChroniX2Grid/getting_started/example/output --input-folder /ChroniX2Grid/getting_started/example/input --ignore-warnings --weeks 8 --case case118_l2rpn_wcci --n_scenarios 1 --start-date 2012-01-01 --by-n-weeks 4``
+
+The generated production chronics by carrier on 4 weeks of january 2012 can be represented as below.
+This visualization is available in interactive HTML format in *output/kpi/case/scenario/images/dispatch_view/*
+
+.. image:: ../pictures/Dispatch_view_example.png
 
 
 Inputs and Configuration
@@ -99,5 +104,9 @@ Tests
 =====
 
 To launch the test suite:
-``pipenv run python -m pytest --verbose --continue-on-collection-errors -p no:warnings``
+``pipenv shell``
+
+``cd tests``
+
+``python -m unittest discover``
 
