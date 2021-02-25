@@ -50,6 +50,7 @@ Else, if only wind and solar chronics have been generated, chronics from renewab
 
    Locations of wind generators requested in Renewable Ninja API
 
+A price chronic can also be provided optionally in order to compute high and low price KPIs (see :ref:`hydro-thermal-kpi`)
 
 Configuration json
 ^^^^^^^^^^^^^^^^^^^
@@ -80,9 +81,9 @@ Load KPIs
 
 2 indicators concerning the energy consumption are returned.
 
-* *load_by_day_of_week* - showing the average per day of week of the aggregate energy consumption (MWh)
+* *load_by_day_of_week* - showing the average per day of week of the aggregate energy consumption (normalized by max)
 .. image:: ../pictures/load_kpi/load_by_day_of_week.png
-* *load_by_week_of_year* - showing the average per week of year of the aggregate energy consumption (MWh)
+* *load_by_week_of_year* - showing the average per week of year of the aggregate energy consumption (normalized by max)
 .. image:: ../pictures/load_kpi/load_by_week_of_year.png
 
 Indicators showing the correlation between thermal production and energy consumption are returned, with one matrix for each region.
@@ -99,20 +100,56 @@ An equivalent is provided with wind production, which should be close to zero co
 
 Solar KPIs
 ^^^^^^^^^^
-C
+
+4 solar indicators are computed.
+
+* *Distribution of solar production* - Histogram and density plot representing the solar energy productions (MWh) of each time step. The y-axis is given in frequency percentage
+.. image:: ../pictures/solar_kpi/histogram.png
+* *Solar at night* - Shows for each season the percentage of solar energy production that occurs at night (night hours in *paramsKPI.json*)
+.. image:: ../pictures/solar_kpi/solar_at_night.png
+* *Cloudiness* - This indicator is an estimate of the percentage of "cloudy production days" in a given month, i.e. percentage of days in which "high" productions are below a certain level. For each month, we compute a threshold (production quantile multiplied by a certain ratio, those 2 parameters are in *paramsKPI.json*). Then we count the days whose production quantile are below this threshold in the month.
+.. image:: ../pictures/solar_kpi/cloudiness.png
+* *Solar generators correlation matrix* - Heatmap showing the Pearson correlation matrix between solar generators productions by day (night hours in *paramsKPI.json*). If the region have different climates, we should see submatrix appear
+.. image:: ../pictures/solar_kpi/solar_corr_heatmap.png
+
 
 Wind KPIs
 ^^^^^^^^^^
-C
 
-Hydro KPIs
-^^^^^^^^^^
-C
+Several indicators are provided for wind production:
+
+* *Distribution of wind production* - Histogram and density plot representing the wind energy productions (MWh) of each time step. The y-axis is given in frequency percentage
+.. image:: ../pictures/wind_kpi/histogram.png
+* *Monthly features on wind power distribution* - Skewness and Kurtosis of the energy production of each month
+* *Wind generators correlation matrix* - Heatmap showing the Pearson correlation matrix between wind generators productions by day (night hours in *paramsKPI.json*). If the region have different climates, we should see submatrix appear
+.. image:: ../pictures/wind_kpi/wind_corr_heatmap.png
+* *Auto-correlation* - For each generator (15 time step lags) and *cross-correlation plots* for each pair of generator (-10 to +10 time steps differences)
+* *Power spectral density* - Frequency and power are log-scaled
+.. image:: ../pictures/wind_kpi/power_spectral_density.png
+
+.. _hydro-thermal-kpi:
+
+Hydro and Thermal KPIs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+2 categories of hydraulic and thermal energy production are available:
+
+* *Hydro or Thermal per month* - Monthly average of the aggregate production. It is given as percentage of peak value
+.. image:: ../pictures/hydro_kpi/hydro_per_month.png
+* *Low price* and *High price* - for each generator, gives the percentage of time steps where production is above (below) 0.8*Pmax (0.2*Pmax) during high (low) price period. Low and high price period are given by extreme value of price (under percentile 10 and over percentile 90). If no price chronic is provided in KPI inputs, these quantiles are applied on energy demand
+.. image:: ../pictures/thermal_kpi/high_price.png
 
 Nuclear KPIs
 ^^^^^^^^^^^^^
-C
 
-Thermal KPIs
-^^^^^^^^^^^^^
-C
+3 nuclear indicators are returned:
+
+* *Production distribution* - Aggregate nuclear production distribution, one observation of the distribution being a time step
+.. image:: ../pictures/nuclear_kpi/production_distribution.png
+* *Lag distribution* - We compute the ramp in aggregate nuclear production between each successive time step, and plot the distribution
+.. image:: ../pictures/nuclear_kpi/lag_distribution.png
+* *Maintenance* - We compute the percentage of time steps in which the aggregate nuclear production is zero
+.. image:: ../pictures/nuclear_kpi/maintenance_percentage_of_time_per_month.png
+
+
+

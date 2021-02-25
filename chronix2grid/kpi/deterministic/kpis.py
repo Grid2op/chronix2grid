@@ -1054,26 +1054,30 @@ class EconomicDispatchValidator:
         # Normalized conso by day of week
         conso_day = self.syn_agg_conso.copy()
         conso_day.index = [date.weekday() for date in conso_day.index]
-        conso_day = conso_day.groupby(conso_day.index).sum() / conso_day.max()
+        conso_day = conso_day.groupby(conso_day.index).sum()
+        conso_day = conso_day/conso_day.max()
         conso_day.index = conso_day.index.set_names('Day_of_week')
 
         # Normalized conso by week of year
         conso_week = self.syn_agg_conso.copy()
         conso_week.index = [date.week for date in conso_week.index]
-        conso_week = conso_week.groupby(conso_week.index).sum() / conso_week.max()
+        conso_week = conso_week.groupby(conso_week.index).sum()
+        conso_week = conso_week/conso_week.max()
         conso_week.index = conso_week.index.set_names('Week_of_year')
 
         ## Reference
         # Normalized conso by day of week
         conso_day_ref = self.ref_agg_conso.copy()
         conso_day_ref.index = [date.weekday() for date in conso_day_ref.index]
-        conso_day_ref = conso_day_ref.groupby(conso_day_ref.index).sum() / conso_day_ref.max()
+        conso_day_ref = conso_day_ref.groupby(conso_day_ref.index).sum()
+        conso_day_ref = conso_day_ref/conso_day_ref.max()
         conso_day_ref.index = conso_day_ref.index.set_names('Day_of_week')
 
         # Normalized conso by week of year
         conso_week_ref = self.ref_agg_conso.copy()
         conso_week_ref.index = [date.week for date in conso_week_ref.index]
-        conso_week_ref = conso_week_ref.groupby(conso_week_ref.index).sum() / conso_week_ref.max()
+        conso_week_ref = conso_week_ref.groupby(conso_week_ref.index).sum()
+        conso_week_ref = conso_week_ref/conso_week_ref.max()
         conso_week_ref.index = conso_week_ref.index.set_names('Week_of_year')
 
         ## Plot results
