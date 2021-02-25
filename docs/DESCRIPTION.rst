@@ -35,7 +35,7 @@ At each node (x,y,t) an independent random gaussian noise :math:`N(0,1)` is comp
 Then a spatial interpolation is made at the specific location (x,y) of the generator,
 weighted by the distance ot its nearest neighbour in the mesh
 
-.. image:: ../pictures/spatial_correlation.png
+.. image:: ../pictures/spatial_correlation.PNG
 
 
 Temporal correlation
