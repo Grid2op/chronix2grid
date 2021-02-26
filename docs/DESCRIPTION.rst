@@ -72,13 +72,13 @@ of solar generators. It implies by the way that zero production timesteps remain
 Then a centered and independent gaussian noise is added to each generator. This quantity is smoothed and scaled in
 interval :math:`[0,1]`. Finally, this normal production is rescaled to :math:`P_\text{max}`
 
-.. figure:: ../pictures/solar_gen_10_5_chronic_example_year.png
+.. figure:: ../pictures/solar_gen_10_5_chronic_example_year.PNG
    :scale: 50 %
    :alt: Solar year example
 
    Example of generated solar chronic across year 2012. Pmax of the solar farm is 37.3 MW. :math:`solar_\text{corr} = 20 minutes` - :math:`smooth_\text{dist} = 0.001` - :math:`\sigma = 0.4`
 
-.. figure:: ../pictures/solar_gen_10_5_chronic_example_week.png
+.. figure:: ../pictures/solar_gen_10_5_chronic_example_week.PNG
    :scale: 50 %
    :alt: Solar week example
 
@@ -124,13 +124,13 @@ Where:
 * smooth is a smoothing function. We currently use :math:`smooth(x) = 1 - exp(-x)`
 * :math:`n_s(x,y,t,P_\text{max})` is an independent additional noise following distribution :math:`N(0,s/P_\text{max})`
 
-.. figure:: ../pictures/wind_gen_111_59_chronic_example_year.png
+.. figure:: ../pictures/wind_gen_111_59_chronic_example_year.PNG
    :scale: 50 %
    :alt: Wind year example
 
    Example of generated wind chronic across year 2012. Pmax of the wind farm is 67.2 MW. :math:`wind_\text{corr} = 300 min, 1440 min, 20160 min` - :math:`smooth_\text{dist} = 0.001` - :math:`\sigma = 0.02, 0.15, 0.15`
 
-.. figure:: ../pictures/wind_gen_111_59_chronic_example_week.png
+.. figure:: ../pictures/wind_gen_111_59_chronic_example_week.PNG
    :scale: 50 %
    :alt: Wind week example
 
@@ -163,13 +163,13 @@ Finally, for each load site located at x, y and with max power consumption of :m
 Where :math:`f_t^\text{temperature}(x,y)` is the temperature correlated noise (see section :ref:`correlated-noise`)
 
 
-.. figure:: ../pictures/load_87_70_chronic_example_year.png
+.. figure:: ../pictures/load_87_70_chronic_example_year.PNG
    :scale: 50 %
    :alt: Load year example
 
    Example of generated load chronic across year 2012 in region R3. Pmax of the load is 77.1 MW. :math:`temperature_\text{corr} = 400 min` - :math:`\sigma = 0.06`
 
-.. figure:: ../pictures/load_87_70_chronic_example_week.png
+.. figure:: ../pictures/load_87_70_chronic_example_week.PNG
    :scale: 50 %
    :alt: Load week example
 
