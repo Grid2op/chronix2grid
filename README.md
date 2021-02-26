@@ -13,6 +13,8 @@ so that the synthetic data reproduce some realistic criteria (KPIs) from the ref
 *   [5 Configuration](#configuration)
 *   [6 Running the test suite](#running-the-test-suite)
 
+See the documentation at https://chronix2grid.readthedocs.io/en/latest/
+
 ## Chronix2Grid at a glance
 ![Chronix2grid_inputs](pictures/ChroniX2Grid_inputs.png "Chronix2Grid Inputs") 
 
