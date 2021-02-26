@@ -244,6 +244,62 @@ class EconomicDispatchValidator:
             fig.write_html(os.path.join(self.image_repo,'dispatch_view',str(curve)+'_prod_per_carrier.html'))
         return fig, df_mw
 
+    def plot_load_pw(self ,stacked=True, max_col_splot=1, save_html = True):
+        """
+        Generate a temporal view of production by generators, one graph per carrier
+        The generated plot is an html interactive file
+        """
+
+        # Set chronics to consider
+        prod_p = self.syn_consumption.copy()
+
+        # Initialize full gen dataframe
+        df_mw = pd.DataFrame()
+
+        # Num unique carriers
+        unique_carriers = self.load_charac['type'].unique().tolist()
+
+        # Initialize the plot
+        rows = int(np.ceil(len(unique_carriers) / max_col_splot))
+        fig = make_subplots(rows=rows,
+                            cols=max_col_splot,
+                            subplot_titles=unique_carriers)
+
+        # Visualize stacked plots?
+        if stacked:
+            stacked_method = 'one'
+        else:
+            stacked_method = None
+
+        x = prod_p.index
+        row = col = 1
+        for carrier in unique_carriers:
+            # Get the gen names per carrier
+            carrier_filter = self.load_charac['type'].isin([carrier])
+            gen_names = self.load_charac.loc[carrier_filter]['name'].tolist()
+
+            # Agregate me per carrier in dt
+            tmp_df_mw = prod_p[gen_names].sum(axis=1)
+            df_mw = pd.concat([df_mw, tmp_df_mw], axis=1)
+
+            for gen in gen_names:
+                # Add trace per carrier in same axes
+                self.add_trace_in_subplot(fig, x=x, y=prod_p[gen],
+                                     in_row=row, in_col=col, stacked=stacked_method, name = gen)
+
+                # Once all ts have been added, create a new subplot
+            col += 1
+            if col > max_col_splot:
+                col = 1
+                row += 1
+
+        # Rename df_mw columns
+        df_mw.columns = unique_carriers
+
+        if save_html:
+            fig.write_html(os.path.join(self.image_repo,'dispatch_view','load_per_carrier.html'))
+        return fig, df_mw
+
 
     def __hydro_in_prices(self,
                           norm_mw,
