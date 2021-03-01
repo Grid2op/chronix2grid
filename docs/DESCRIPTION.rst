@@ -63,7 +63,7 @@ For each solar generator located at x, y and with max power generation of :math:
 Where :
 
 * :math:`f_t^\text{solar}(x,y)` is the solar correlated noise (see section :ref:`correlated-noise`)
-* smooth is a smoothing function. We currently use :math:`smooth(x) = 1 - exp(-x)`
+* smooth is a smoothing function. We currently use :math:`smooth(x) = 1 - exp(-x)`. It has the property to normalize data between 0 and 1, but also to operate a convex transformation of the distribution which better fits realistic data.
 * :math:`n_s(x,y,t,P_\text{max})` is an independent additional noise following distribution :math:`N(0,s/P_\text{max})`
 * 0.75 is the bias of the spatially and temporally correlated noise.
 
@@ -121,7 +121,7 @@ Finally, for a given generator located at coordinates :math:`(x,y)`, the shape o
 Where:
 
 * :math:`f_t^\text{wind_category}(x,y)` are the wind correlated noises (see section :ref:`correlated-noise`)
-* smooth is a smoothing function. We currently use :math:`smooth(x) = 1 - exp(-x)`
+* smooth is a smoothing function. We currently use :math:`smooth(x) = 1 - exp(-x)`. It has the property to normalize data between 0 and 1, but also to operate a convex transformation of the distribution which better fits realistic data.
 * :math:`n_s(x,y,t,P_\text{max})` is an independent additional noise following distribution :math:`N(0,s/P_\text{max})`
 
 .. figure:: ../pictures/wind_gen_111_59_chronic_example_year.PNG
@@ -190,5 +190,45 @@ Two inputs are necessary, with example provided in *getting_started/example/inpu
 Economic dispatch generation (hydro, nuclear and thermic generators)
 ====================================================================
 
-ATTENTION HYDRO + params.json pour le nucléaire !!
+In the economic dispatch step, an Optimal Power Flow (OPF) is computed on the grid.
+This is achieved thanks to `PyPSA package <https://pypsa.readthedocs.io/en/latest/>`_ which enable to have an object representation of the grid and an API to solve OPF.
+Inputs for the dispatch step are the following:
 
+* In *patterns/hydro_french.csv*: a hydro guide curve pattern that represents the seasonality of the minimum and maximum hydraulic stocks
+* In *case/params_opf.json*
+    * **step_opf_min** - time resolution of the OPF in minutes. It can be 5, 10, 15, 20, 30 or 60 and has to be superior or equal to dt (generation time resolution). In case it is strictly above, interpolation is done after dispatch resolution
+    * **mode_opf** - frequency at which we wan't to solve the OPF
+    * **dispatch_by_carrier** - if True, dispatch results will be returned for the whole carrier. If False, it will be returned by generator
+    * **ramp_mode** is essentially designed for debug purpose: when your OPF diverges, you may want to relax some constraints to know the reasons why the problem is unfeasible or leads to divergence
+        * If *hard*, all the ramp constraints will be taken into account.
+        * If *medium*, thermal ramp-constraints are skipped
+        * If *easy*, thermal and hydro ramp-constraints are skipped
+        * If *none*, thermal, hydro and nuclear ramp-constraints are skipped
+    * **reactive_comp** - Factor applied to consumption to compensate reactive part not modelled by linear opf
+    * **pyomo** - whether pypsa should use pyomo or not (boolean)
+    * **solver_name** - name of solver, that you should have installed in your environment and added in your environment variables.
+    * **losses_pct** - if D mode is deactivate, losses are estimated as a percentage of load.
+
+The object *chronix2grid.generation.dispatch.EconomicDispatch:Dispatch* facilitates the configuration of the optimization problem with PyPSA.
+We currently solve a simplified OPF that optimizes costs with respect towards the following constraints:
+
+* Match the net load - i.e. load minus solar and wind prod plus total loss
+* Features of each generator: Pmin, Pmax, Ramps up and down (min et max)
+* Hydro production should not go out of the hydro pattern guide curves
+
+
+Correction a posterori with simulated loss
+=============================================
+
+After computing the solution of the dispatch, it is possible to use a simulator of the grid to compute realistic loss
+a posteriori, on the basis og these chronics. We use grid2op to achieve this simulation.
+
+It is optional and set in *case/params_opf.json*
+
+* **loss_grid2op_simulation** - boolean to specify if we wan't to compute the simulation. If not provided, the user is warned that we assume it is False.
+* **idxSlack** and **genSlack** - id and name of the slack generator, on which the loss will be deduced from the production by convention
+* **early_stopping_mode** - after the simulation, the modification of the slack generator production can lead to violation of one or several constraints on this generator (Pmax, Pmin, max and min ramp-up, max and min ramp_down). If early_stopping_mode is true, an error is returned and the generation is aborted. If false, a warning that quantifies the violation is returned.
+* **pmin_margin**, **pmax_margin**, **rampup_margin**, **rampdown_margin** - deltas in MW that are allowed for the constraints on slack generator before triggering warning or error for violation
+* **agent_type** - represents the type of `grid2op agent <https://grid2op.readthedocs.io/en/latest/agent.html>`_. Can be reco for RecoPowerLineAgent or do-nothing for DoNothingAgent. Currently, there is only the DoNothingAgent handled
+
+At the end of this step, the files *prod_p.csv.bz2* *prod_p_forecasted.csv.bz2* are edited to modify the slack generator production chronic.

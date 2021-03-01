@@ -78,7 +78,7 @@ The output folder corresponds to the following run of chronix2grid :
 The generated production chronics by carrier on 4 weeks of january 2012 can be represented as below.
 This visualization is available in interactive HTML format in *output/kpi/case/scenario/images/dispatch_view/*
 
-.. image:: ../pictures/Dispatch_view_example.png
+.. image:: ../pictures/Dispatch_view_example.PNG
 
 
 Inputs and Configuration
@@ -96,6 +96,8 @@ One should also provide reference chronics data for comparison through a library
 
 Outputs
 ========================
+
+The outputs are serialized chronics (that can be grouped by chunks) and the KPIs (images and interactive HTML files)
 
 .. image:: ../pictures/ChroniX2Grid_outputs.png
 
