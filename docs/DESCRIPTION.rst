@@ -1,3 +1,5 @@
+.. _implemented-models:
+
 *********************************
 Description of implemented models
 *********************************

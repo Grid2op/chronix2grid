@@ -56,6 +56,16 @@ Note that D and T submodules can't be launched without previous L and R modules,
 
 .. image:: ../pictures/Launch_mode.png
 
+Workflow and model interface
+=============================
+
+The global workflow of chronix2grid is illustrated below, and shows the API used to operate each step of the process.
+
+.. image:: ../pictures/workflow.png
+
+.. note::
+   All the class, methods and functions described in the image above are designed to be edited with your own generation models. See :ref:`model-interface`.
+
 Didactic examples
 ==================================
 
