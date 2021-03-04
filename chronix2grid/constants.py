@@ -2,6 +2,8 @@
 This file gathers constants related to directories and files that chronix2grid
 reads/writes.
 """
+from chronix2grid.generation.renewable.RenewableBackend import RenewableBackend, RenewableBackendGAN
+from chronix2grid.config import ResConfigManager, ResConfigManagerGan
 
 GENERATION_FOLDER_NAME = 'generation'
 KPI_FOLDER_NAME = 'kpi'
@@ -23,3 +25,6 @@ RENEWABLE_NINJA_REFERENCE_FOLDER = 'renewable_ninja'
 REFERENCE_ZONE = 'France'
 
 GRID_FILENAME = 'grid.json'
+
+RENEWABLE_GENERATION_CONFIG = ResConfigManagerGan #ResConfigManager
+RENEWABLE_GENERATION_BACKEND = RenewableBackendGAN # RenewableBackend

@@ -20,10 +20,11 @@ class GeneratorBackend:
                  , hydro_backend_class=None
                  , renewable_backend_class=RenewableBackend
                  , loss_backend_class=LossBackend):
+        self.res_config_manager = constants.RENEWABLE_GENERATION_CONFIG
         self.consumption_backend_class = consumption_backend_class
         self.dispatch_backend_class = dispatch_backend_class
         self.hydro_backend_class = hydro_backend_class
-        self.renewable_backend_class = renewable_backend_class
+        self.renewable_backend_class = constants.RENEWABLE_GENERATION_BACKEND
         self.loss_backend_class = loss_backend_class
 
     # Call generation scripts n_scenario times with dedicated random seeds
@@ -75,7 +76,7 @@ class GeneratorBackend:
 
         params, loads_charac = load_config_manager.read_configuration()
 
-        res_config_manager = ResConfigManager(
+        res_config_manager = self.res_config_manager(
             name="Renewables Generation",
             root_directory=input_folder,
             input_directories=dict(case=case, patterns='patterns'),
