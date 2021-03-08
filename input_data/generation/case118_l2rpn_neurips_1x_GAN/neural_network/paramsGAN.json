@@ -1,0 +1,10 @@
+{
+  "model_name":"model_wind_test_70epochs",
+  "batch_size":32,
+  "n_gens": 24,
+  "n_timesteps":24,
+  "n_events":5,
+  "dim_inputs":100,
+  "mu":0,
+  "sigma":0.1
+}

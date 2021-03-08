@@ -94,6 +94,26 @@ class ConfigManager(ABC):
     def read_configuration(self):
         pass
 
+class GeneralConfigManager(ConfigManager):
+    def __init__(self, name, root_directory, input_directories, output_directory,
+                 required_input_files=None):
+        super(GeneralConfigManager, self).__init__(name, root_directory, input_directories,
+                                                 output_directory, required_input_files)
+
+    def read_configuration(self):
+        params_file_path = os.path.join(
+            self.root_directory,
+            self.input_directories['case'], 'params.json')
+        with open(params_file_path, 'r') as json1_file:
+            json1_str = json1_file.read()
+        params = json.loads(json1_str)
+        for key, value in params.items():
+            try:
+                params[key] = float(value)
+            except ValueError:
+                params[key] = pd.to_datetime(value, format='%Y-%m-%d')
+        return params
+
 
 class LoadsConfigManager(ConfigManager):
     def __init__(self, name, root_directory, input_directories, output_directory,
@@ -104,7 +124,7 @@ class LoadsConfigManager(ConfigManager):
     def read_configuration(self):
         params_file_path = os.path.join(
             self.root_directory,
-            self.input_directories['case'], 'params.json')
+            self.input_directories['case'], 'params_load.json')
         with open(params_file_path, 'r') as json1_file:
             json1_str = json1_file.read()
         params = json.loads(json1_str)
@@ -146,7 +166,7 @@ class ResConfigManager(ConfigManager):
     def read_configuration(self):
         params_file_path = os.path.join(
             self.root_directory,
-            self.input_directories['case'], 'params.json')
+            self.input_directories['case'], 'params_res.json')
         with open(params_file_path, 'r') as params_json:
             params = json.load(params_json)
         for key, value in params.items():
@@ -191,11 +211,15 @@ class ResConfigManagerGan(ConfigManager):
                                       self.input_directories['case'],
                                       'neural_network')
         params_file_path_gan = os.path.join(network_folder, 'paramsGAN.json')
+
+        # Check timestep
         with open(params_file_path, 'r') as params_json:
-            params = json.load(params_json)
+            params_general = json.load(params_json)
+        if params_general["dt"] != 60:
+            raise ValueError('timesteps different from 60min are not supported yet with GAN. Please use another model')
+
         with open(params_file_path_gan, 'r') as params_json:
-            params_gan = json.load(params_json)
-        params = {**params, **params_gan}
+            params = json.load(params_json)
 
         for key, value in params.items():
             if key in ["mu","sigma"]:
@@ -220,12 +244,6 @@ class ResConfigManagerGan(ConfigManager):
                 sep=';')
         params["network_folder"] = network_folder
 
-        if params["dt"] != 60:
-            raise ValueError('timesteps different from 60min are not supported yet with GAN. Please use another model')
-
-        n_gens = len(prods_charac.columns)
-        if params["n_gens"] < n_gens:
-            raise ValueError("the neural network should be trained on at least the same number of generators as in the generation process")
         return params, prods_charac
 
 

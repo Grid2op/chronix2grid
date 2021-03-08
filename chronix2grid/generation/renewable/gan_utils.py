@@ -11,9 +11,8 @@ def load_wind_model(sess, params, network_folder):
     dcgan_model = ReplayedGAN(
         dim_y=params["n_events"],
         batch_size=params["batch_size"],
-        image_shape=[params["n_gens"], params["n_timesteps_in_day"],1],
-        tf_saver=saver,
-        num_checkpoint=0
+        image_shape=[params["n_gens"], params["n_timesteps"],1],
+        dim_z=params["dim_inputs"]
     )
     print("Replayed_W_DCGAN model loaded")
 
@@ -44,17 +43,29 @@ def compute_n_preds(params):
     n_preds = (n_days // n_days_by_pred) + 1
     return n_preds
 
-def post_process_sample(generated_batches, params, prods_charac):
-    gens = prods_charac.columns
+def post_process_sample(generated_batches, params, prods_charac, datetime_index, carrier = "wind"):
+    gens = prods_charac[prods_charac['type']==carrier]["name"].unique()
     wind = pd.DataFrame(columns = gens)
+
+    if len(gens) > params['n_gens']:
+        raise ValueError("the neural network should be trained on at least the same number of generators as in the generation process")
 
     for day, batch in enumerate(generated_batches):
         for i in range(params["batch_size"]):
             matrix = batch[i,:,:len(gens),0]
             df = pd.DataFrame(matrix, columns=gens)
             wind = pd.concat([wind, df], axis = 0)
-    wind = wind.reset_index()
-    wind = wind.iloc[:params['T'],:]
+    # Truncate last batch
+    wind = wind.reset_index(drop=True)
+    wind = wind.iloc[:len(datetime_index),:]
+
+    # Time index
+    wind['datetime'] = datetime_index
+
+    # Power rescaling
+    for gen in gens:
+        Pmax = prods_charac.loc[prods_charac['name']==gen,'Pmax'].values[0]
+        wind[gen] = wind[gen] * Pmax
     return wind
 
 def batchnormalize(X, eps=1e-8, g=None, b=None):
@@ -103,7 +114,6 @@ class ReplayedGAN():
             dim_W2=128,
             dim_W3=64,
             dim_channel=1,
-            tf_saver = None,
             num_checkpoint = 0
             ):
 
@@ -128,85 +138,6 @@ class ReplayedGAN():
         self.discrim_W2 = graph.get_tensor_by_name("discrim_W2:"+str(num_checkpoint))
         self.discrim_W3 = graph.get_tensor_by_name("discrim_W3:"+str(num_checkpoint))
         self.discrim_W4 = graph.get_tensor_by_name("discrim_W4:"+str(num_checkpoint))
-
-
-    def build_model(self):
-
-        Z = tf.placeholder(tf.float32, [self.batch_size, self.dim_z])
-        Y = tf.placeholder(tf.float32, [self.batch_size, self.dim_y])
-
-        image_real = tf.placeholder(tf.float32, [self.batch_size]+self.image_shape)
-        h4 = self.generate(Z,Y)
-        #image_gen comes from sigmoid output of generator
-        image_gen = tf.nn.sigmoid(h4)
-
-        raw_real2 = self.discriminate(image_real, Y)
-        #p_real = tf.nn.sigmoid(raw_real)
-        p_real=tf.reduce_mean(raw_real2)
-
-        raw_gen2 = self.discriminate(image_gen, Y)
-        #p_gen = tf.nn.sigmoid(raw_gen)
-        p_gen = tf.reduce_mean(raw_gen2)
-
-        discrim_cost = tf.reduce_sum(raw_real2) - tf.reduce_sum(raw_gen2)
-        gen_cost = -tf.reduce_mean(raw_gen2)
-
-        return Z, Y, image_real, discrim_cost, gen_cost, p_real, p_gen
-
-
-    def discriminate(self, image, Y):
-        print("Initializing the discriminator")
-        print("Y shape", Y.get_shape())
-        yb = tf.reshape(Y, tf.stack([self.batch_size, 1, 1, self.dim_y]))
-        print("image shape", image.get_shape())
-        print("yb shape", yb.get_shape())
-        X = tf.concat([image, yb * tf.ones([self.batch_size, 24, 24, self.dim_y])],3)
-        print("X shape", X.get_shape())
-        h1 = lrelu( tf.nn.conv2d( X, self.discrim_W1, strides=[1,2,2,1], padding='SAME' ))
-        print("h1 shape", h1.get_shape())
-        h1 = tf.concat([h1, yb * tf.ones([self.batch_size, 12, 12, self.dim_y])],3)
-        print("h1 shape", h1.get_shape())
-        h2 = lrelu(batchnormalize( tf.nn.conv2d( h1, self.discrim_W2, strides=[1,2,2,1], padding='SAME')) )
-        print("h2 shape", h2.get_shape())
-        h2 = tf.reshape(h2, [self.batch_size, -1])
-        h2 = tf.concat([h2, Y], 1)
-        discri=tf.matmul(h2, self.discrim_W3 )
-        print("discri shape", discri.get_shape())
-        h3 = lrelu(batchnormalize(discri))
-        return h3
-
-
-    def generate(self, Z, Y):
-        print("Initializing the generator")
-        print("Input Z shape", Z.get_shape())
-        print("Input Y shape", Y.get_shape())
-        yb = tf.reshape(Y, [self.batch_size, 1, 1, self.dim_y])
-        Z = tf.concat([Z,Y],1)
-        print("Z shape", Z.get_shape())
-        h1 = tf.nn.relu(batchnormalize(tf.matmul(Z, self.gen_W1)))
-        print("h1 shape", h1.get_shape())
-        h1 = tf.concat([h1, Y],1)
-        print("h1 shape", h1.get_shape())
-        h2 = tf.nn.relu(batchnormalize(tf.matmul(h1, self.gen_W2)))
-        print("h2 shape", h2.get_shape())
-        h2 = tf.reshape(h2, [self.batch_size,6,6,self.dim_W2])
-        print("h2 shape", h2.get_shape())
-        h2 = tf.concat([h2, yb*tf.ones([self.batch_size, 6,6, self.dim_y])],3)
-        n=yb*tf.ones([self.batch_size, 6,6, self.dim_y])
-        print("shape of yb new",n.get_shape() )
-        print("h2 shape", h2.get_shape())
-
-        output_shape_l3 = [self.batch_size,12,12,self.dim_W3]
-        h3 = tf.nn.conv2d_transpose(h2, self.gen_W3, output_shape=output_shape_l3, strides=[1,2,2,1])
-        h3 = tf.nn.relu( batchnormalize(h3))
-        print("h3 shape", h3.get_shape())
-        h3 = tf.concat([h3, yb*tf.ones([self.batch_size, 12, 12, self.dim_y])], 3)
-        print("h3 shape", h3.get_shape())
-
-        output_shape_l4 = [self.batch_size,24,24,self.dim_channel]
-        h4 = tf.nn.conv2d_transpose(h3, self.gen_W4, output_shape=output_shape_l4, strides=[1,2,2,1])
-        return h4
-
 
     def samples_generator(self, batch_size):
         Z = tf.placeholder(tf.float32, [batch_size, self.dim_z])

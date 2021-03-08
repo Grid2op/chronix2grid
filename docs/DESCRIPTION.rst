@@ -12,6 +12,14 @@ This chapter describes the methods they include and how to set their configurati
 
 .. _correlated-noise:
 
+General inputs
+===============
+
+In *params.json* there are some settings concerning the whole generation process
+
+* **dt** the time resolution of the final chronics that will be modeled.
+* **planned_std** standard deviation of noise for the forecasted chronics (e.g. *load_p_forecasted.csv.bz2* which correspond to non-exact planned chronics.
+
 Generation of correlated noise
 ================================
 In load, solar and wind current modelling, some spatial and temporal correlated noises are generated.
@@ -21,12 +29,11 @@ They are based on:
 * A coarse 3-dimensional mesh (x,y,t) with independent noise
 * The spatial and temporal interpolation of this noise at the specific location of generators and specific moments of time
 
-In params.json you can find all the required parameter for this correlated noise generation:
+In *params_res.json* and *params_load.json* you can find all the required parameter for this correlated noise generation, which can be set separately between load and renewable production generation:
 
 * **Lx**, **Ly** the total length of the mesh
 * **dx_corr**, **dy_corr** the granularity of the coarse mesh. it represents the distance at which we consider that spatial phenomenons are independent
 * **solar_corr**, **short_wind_corr**, **medium_wind_corr**, **long_wind_corr** and **temperature_corr** which define the coarse time resolution for each type of noise
-* **dt** the real time resolution of the final chronics that will be modeled.
 
 Spatial correlation
 ^^^^^^^^^^^^^^^^^^^^
@@ -53,7 +60,7 @@ Solar generation
 For solar generation, some additional parameters are provided:
 
 * A yearly smooth solar pattern file at .npy format. It will be marked as :math:`pattern_t` and it doesn't depend on x and y
-* In params.json:
+* In *params_res.json*:
     * **solar_corr** - resolution of temporal autocorrelation in noise (see :ref:`correlated-noise`)
     * **std_solar_noise** - standard deviation of the spatial and temporal correlated noise. It will be marked as :math:`\sigma`
     * **smooth_dist** - standard deviation of additional centered gaussian noise (will be normalized by Pmax). It will be marked as :math:`s`
@@ -100,7 +107,7 @@ It is at its highest value during December and its lowest value during June. It 
 
 For wind generation, some additional parameters are provided.
 Note that wind correlated noise structure is achieved with 3 components corresponding to short, medium and long time scales.
-It is in *params.json*:
+It is in *params_res.json*:
 
 * **short_wind_corr**, **medium_wind_corr** and **long_wind_corr** - resolutions of temporal auto-correlations in noises (see :ref:`correlated-noise`). The higher the time scale the longest is the dependency in the auto-correlation structure
 * **std_short_wind_noise**, **std_medium_wind_noise** and **std_long_wind_noise** - standard deviation of the spatial and temporal correlated noise. It will be marked as :math:`\sigma_\text{category}`
@@ -145,7 +152,7 @@ Load generation
 For load generation, parameters are similar to solar generation
 
 * A weekly consumption pattern file at .csv format. It will be marked as :math:`weeklypattern_t` and it doesn't depend on x and y
-* In params.json:
+* In *params_load.json*:
     * **temperature_corr** - resolution of temporal auto-correlation in noise (see :ref:`correlated-noise`)
     * **std_temperature_noise** - standard deviation of the spatial and temporal correlated noise. It will be marked as :math:`\sigma`
 

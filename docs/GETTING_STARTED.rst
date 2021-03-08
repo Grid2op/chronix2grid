@@ -109,7 +109,7 @@ Outputs
 
 The outputs are serialized chronics (that can be grouped by chunks) and the KPIs (images and interactive HTML files)
 
-.. image:: ../pictures/ChroniX2Grid_outputs.png
+.. image:: ../pictures/ChroniX2Grid_ouputs.png
 
 
 Tests

@@ -143,7 +143,10 @@ def smooth(x, alpha=0.5, beta=None):
 
 def create_csv(dict_, path, reordering=True, noise=None, shift=False,
                write_results=True, index=False):
-    df = pd.DataFrame.from_dict(dict_)
+    if type(dict_) is dict:
+        df = pd.DataFrame.from_dict(dict_)
+    else:
+        df = dict_.copy()
     df.set_index('datetime', inplace=True)
     df = df.sort_index(ascending=True)
     df = df.head(len(df ) -1)

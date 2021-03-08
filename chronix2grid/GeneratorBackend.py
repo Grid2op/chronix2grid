@@ -4,28 +4,22 @@ import pandas as pd
 
 from chronix2grid import constants
 from chronix2grid import utils
-from chronix2grid.config import LoadsConfigManager, ResConfigManager, DispatchConfigManager, LossConfigManager
-from chronix2grid.generation.loss import generate_loss as gen_loss
 from chronix2grid.generation import generation_utils
-from chronix2grid.generation.consumption.ConsumptionGeneratorBackend import ConsumptionGeneratorBackend
 from chronix2grid.generation.dispatch import generate_dispatch, EconomicDispatch
-from chronix2grid.generation.dispatch.DispatchBackend import DispatchBackend
-from chronix2grid.generation.renewable import generate_solar_wind
-from chronix2grid.generation.renewable.RenewableBackend import RenewableBackend
-from chronix2grid.generation.loss.LossBackend import LossBackend
 
 class GeneratorBackend:
-    def __init__(self, consumption_backend_class=ConsumptionGeneratorBackend
-                 , dispatch_backend_class=DispatchBackend
-                 , hydro_backend_class=None
-                 , renewable_backend_class=RenewableBackend
-                 , loss_backend_class=LossBackend):
+    def __init__(self):
+        self.general_config_manager = constants.GENERAL_CONFIG
+        self.load_config_manager = constants.LOAD_GENERATION_CONFIG
         self.res_config_manager = constants.RENEWABLE_GENERATION_CONFIG
-        self.consumption_backend_class = consumption_backend_class
-        self.dispatch_backend_class = dispatch_backend_class
-        self.hydro_backend_class = hydro_backend_class
+        self.loss_config_manager = constants.LOSS_GENERATION_CONFIG
+        self.dispatch_config_manager = constants.DISPATCH_GENERATION_CONFIG
+
+        self.consumption_backend_class = constants.LOAD_GENERATION_BACKEND
+        self.dispatch_backend_class = constants.DISPATCH_GENERATION_BACKEND
+        self.hydro_backend_class = constants.HYDRO_GENERATION_BACKEND
         self.renewable_backend_class = constants.RENEWABLE_GENERATION_BACKEND
-        self.loss_backend_class = loss_backend_class
+        self.loss_backend_class = constants.LOSS_GENERATION_BACKEND
 
     # Call generation scripts n_scenario times with dedicated random seeds
     def run(self, case, n_scenarios, input_folder, output_folder, scen_names,
@@ -64,33 +58,43 @@ class GeneratorBackend:
             seeds_for_disp = [seed_for_disp]
 
         # dispatch_input_folder, dispatch_input_folder_case, dispatch_output_folder = gu.make_generation_input_output_directories(input_folder, case, year, output_folder)
-        load_config_manager = LoadsConfigManager(
+        general_config_manager = self.general_config_manager(
+            name="Global Generation",
+            root_directory=input_folder,
+            input_directories=dict(case=case),
+            required_input_files=dict(case=['params.json']),
+            output_directory=output_folder
+        )
+        general_config_manager.validate_configuration()
+        params = general_config_manager.read_configuration()
+
+        params.update(time_params)
+        params = generation_utils.updated_time_parameters_with_timestep(params, params['dt'])
+
+        load_config_manager = self.load_config_manager(
             name="Loads Generation",
             root_directory=input_folder,
             input_directories=dict(case=case, patterns='patterns'),
-            required_input_files=dict(case=['loads_charac.csv', 'params.json'],
+            required_input_files=dict(case=['loads_charac.csv', 'params_load.json'],
                                       patterns=['load_weekly_pattern.csv']),
             output_directory=output_folder
         )
         load_config_manager.validate_configuration()
-
-        params, loads_charac = load_config_manager.read_configuration()
+        params_load, loads_charac = load_config_manager.read_configuration()
+        params_load.update(params)
 
         res_config_manager = self.res_config_manager(
             name="Renewables Generation",
             root_directory=input_folder,
             input_directories=dict(case=case, patterns='patterns'),
-            required_input_files=dict(case=['prods_charac.csv', 'params.json'],
+            required_input_files=dict(case=['prods_charac.csv', 'params_res.json'],
                                       patterns=['solar_pattern.npy']),
             output_directory=output_folder
         )
+        params_res, prods_charac = res_config_manager.read_configuration()
+        params_res.update(params)
 
-        params, prods_charac = res_config_manager.read_configuration()
-
-        params.update(time_params)
-        params = generation_utils.updated_time_parameters_with_timestep(params, params['dt'])
-
-        dispath_config_manager = DispatchConfigManager(
+        dispath_config_manager = self.dispatch_config_manager(
             name="Dispatch",
             root_directory=input_folder,
             output_directory=output_folder,
@@ -118,13 +122,13 @@ class GeneratorBackend:
 
             print("================ Generating " + scenario_name + " ================")
             if 'L' in mode:
-                load, load_forecasted = self.do_l(scenario_folder_path, seed_load, params, loads_charac, load_config_manager)
+                load, load_forecasted = self.do_l(scenario_folder_path, seed_load, params_load, loads_charac, load_config_manager)
             if 'R' in mode:
-                prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = self.do_r(scenario_folder_path, seed_res, params,
+                prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = self.do_r(scenario_folder_path, seed_res, params_res,
                                                                                                prods_charac,
                                                                                                res_config_manager)
             if 'D' in mode:
-                loss_config_manager = LossConfigManager(
+                loss_config_manager = self.loss_config_manager(
                     name="Loss",
                     root_directory=input_folder,
                     output_directory=output_folder,

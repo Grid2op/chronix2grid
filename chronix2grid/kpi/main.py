@@ -118,8 +118,8 @@ def main(kpi_input_folder, generation_output_folder, scenario_names,
         cond_below_cloud = float(paramsKPI['cloudiness_factor'])
         hours = paramsKPI["night_hours"]
         monthly_pattern = paramsKPI["seasons"]
-        dispatch_validator.solar_kpi(cloud_quantile=cloud_quantile, cond_below_cloud=cond_below_cloud,
-                                     monthly_pattern=monthly_pattern, hours=hours)
+        # dispatch_validator.solar_kpi(cloud_quantile=cloud_quantile, cond_below_cloud=cond_below_cloud,
+        #                              monthly_pattern=monthly_pattern, hours=hours)
 
         # Wind - Solar KPI
         dispatch_validator.wind_load_kpi()

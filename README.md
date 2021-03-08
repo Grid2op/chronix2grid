@@ -124,7 +124,7 @@ Note that D and T submodules can't be launched without previous L and R modules,
 ## Configuration
 
 ### Chronic generation detailed configuration
-More detailed configuration has to be set in *INPUT_FOLDER/generation/CASE/params.json* such as timestep, noise and
+More detailed configuration has to be set in the json files in *INPUT_FOLDER/generation/CASE/* such as timestep, noise and
  correlation
  intensity...
 
