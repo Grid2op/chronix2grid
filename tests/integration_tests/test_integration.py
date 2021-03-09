@@ -18,13 +18,13 @@ cst.RENEWABLE_GENERATION_CONFIG = ResConfigManager
 cst.RENEWABLE_GENERATION_BACKEND = RenewableBackend
 
 
-class TestMain(unittest.TestCase):
+class TestIntegration(unittest.TestCase):
     def setUp(self):
         self.input_folder = os.path.join(
-            pathlib.Path(__file__).parent.absolute(),
+            pathlib.Path(__file__).parent.parent.absolute(),
             'data', 'input')
         self.output_folder = os.path.join(
-            pathlib.Path(__file__).parent.absolute(),
+            pathlib.Path(__file__).parent.parent.absolute(),
             'output')
 
         self.start_date = '2012-01-01'
@@ -66,12 +66,12 @@ class TestMain(unittest.TestCase):
 
         # Expected outputs
         self.expected_folder_loss = os.path.join(
-            pathlib.Path(__file__).parent.absolute(),
+            pathlib.Path(__file__).parent.parent.absolute(),
             'data', 'output',"generation",
             "expected_case118_l2rpn_neurips_1x",
             "Scenario_january_0")
         self.expected_folder_noloss = os.path.join(
-            pathlib.Path(__file__).parent.absolute(),
+            pathlib.Path(__file__).parent.parent.absolute(),
             'data', 'output',"generation",
             "expected_case118_l2rpn_neurips_1x_modifySlackBeforeChronixGeneration",
             "Scenario_january_0")
@@ -80,7 +80,6 @@ class TestMain(unittest.TestCase):
 
     def tearDown(self) -> None:
         shutil.rmtree(self.output_folder, ignore_errors=False, onerror=None)
-
 
     def test_integration_lrt_nolosscorrection(self):
 

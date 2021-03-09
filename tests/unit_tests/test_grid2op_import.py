@@ -22,7 +22,7 @@ param.init_from_dict({"NO_OVERFLOW_DISCONNECTION": True})
 class TestGrid2OpImport(unittest.TestCase):
     def setUp(self):
         self.input_folder = os.path.join(
-            pathlib.Path(__file__).parent.absolute(),
+            pathlib.Path(__file__).parent.parent.absolute(),
             'data', 'input')
         self.CASE = 'case118_l2rpn_wcci'
         self.year = 2012
@@ -30,7 +30,7 @@ class TestGrid2OpImport(unittest.TestCase):
         self.grid_path = os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME,
                                       self.CASE, 'grid.json')
         self.generation_output_folder = os.path.join(
-            pathlib.Path(__file__).parent.absolute(), 'data', 'output',
+            pathlib.Path(__file__).parent.parent.absolute(), 'data', 'output',
             'generation', self.CASE, self.start_date
         )
         self.env = grid2op.make(
@@ -53,7 +53,7 @@ class TestGrid2OpImport(unittest.TestCase):
         os.makedirs(path_data_saved, exist_ok=True)
 
         nb_episode = 1
-        NB_CORE = 2
+        NB_CORE = 1
         max_iter = 1
         runner = Runner(**self.env.get_params_for_runner())
         res = runner.run(nb_episode=nb_episode, nb_process=NB_CORE,

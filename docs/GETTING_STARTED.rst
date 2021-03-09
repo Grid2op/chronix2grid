@@ -115,10 +115,26 @@ The outputs are serialized chronics (that can be grouped by chunks) and the KPIs
 Tests
 =====
 
-To launch the test suite:
-``pipenv shell``
+To launch the unit test suite:
 
-``cd tests``
+``pipenv run python -m pytest tests/unit_tests/ [--verbose -p no:warnings]``
 
-``python -m unittest discover``
+To launch integration tests:
+
+``pipenv run python -m pytest tests/integration_tests/ [--verbose -p no:warnings]``
+
+To launch the Command Line Interface (CLI) test (only if you installed chronix2grid package from Pypi)
+
+``pipenv run python -m pytest tests/cli_tests/``
+
+You can also analyse the coverage of the tests with coverage and generate an html report:
+
+``pip install coverage``
+
+``coverage run --source=./chronix2grid -m unittest discover``
+
+``coverage html``
+
+This will generate a htmlcov folder containing a static web site with the analysis. Open index.html in a browser
+ to analyse it.
 

@@ -145,10 +145,22 @@ You can develop your own load, renewable, loss and dispatch model using as input
 * Grid demand and generator characteristics in csv
 
 ## Running the test suite
-To run the tests, execute:
+
+To launch the unit test suite:
 ```commandline
-python -m unittest discover
+pipenv run python -m pytest tests/unit_tests/ [--verbose -p no:warnings]
 ```
+
+To launch integration tests:
+```commandline
+pipenv run python -m pytest tests/integration_tests/ [--verbose -p no:warnings]
+```
+
+To launch the Command Line Interface (CLI) test (only if you installed chronix2grid package from Pypi)
+```commandline
+pipenv run python -m pytest tests/cli_tests/
+```
+
 You can also analyse the coverage of the tests with coverage and generate an html report:
 ```commandline
 pip install coverage

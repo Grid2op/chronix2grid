@@ -18,7 +18,7 @@ class TestDispatch(unittest.TestCase):
     def setUp(self):
         self.grid_path = ''
         self.input_folder = os.path.join(
-            pathlib.Path(__file__).parent.absolute(),
+            pathlib.Path(__file__).parent.parent.absolute(),
             'data', 'input')
         self.CASE = 'case118_l2rpn_wcci'
         self.year = 2012
@@ -51,7 +51,7 @@ class TestDispatch(unittest.TestCase):
 class TestChronixScenario(unittest.TestCase):
     def setUp(self):
         self.input_folder = os.path.join(
-            pathlib.Path(__file__).parent.absolute(),
+            pathlib.Path(__file__).parent.parent.absolute(),
             'data', 'input')
         self.case = 'case118_l2rpn_wcci'
         self.grid2op_env = grid2op.make(

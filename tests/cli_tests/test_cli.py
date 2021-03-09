@@ -15,10 +15,10 @@ import chronix2grid.generation.generation_utils as gu
 class TestCli(unittest.TestCase):
     def setUp(self):
         self.input_folder = os.path.join(
-            pathlib.Path(__file__).parent.absolute(),
+            pathlib.Path(__file__).parent.parent.absolute(),
             'data', 'input')
         self.output_folder = os.path.join(
-            pathlib.Path(__file__).parent.absolute(),
+            pathlib.Path(__file__).parent.parent.absolute(),
             'output')
         os.makedirs(self.output_folder, exist_ok=True)
         self.case = 'case118_l2rpn_wcci'

@@ -19,10 +19,10 @@ cst.RENEWABLE_GENERATION_BACKEND = RenewableBackend
 class TestLoadProdCoherence(unittest.TestCase):
     def setUp(self):
         self.input_folder = os.path.join(
-            pathlib.Path(__file__).parent.absolute(),
+            pathlib.Path(__file__).parent.parent.absolute(),
             'data', 'input')
         self.output_folder = os.path.join(
-            pathlib.Path(__file__).parent.absolute(),
+            pathlib.Path(__file__).parent.parent.absolute(),
             'output')
         self.case = 'case118_l2rpn_wcci'
         self.start_date = '2012-01-01'
