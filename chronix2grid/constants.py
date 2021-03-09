@@ -30,13 +30,13 @@ REFERENCE_ZONE = 'France'
 GRID_FILENAME = 'grid.json'
 
 GENERAL_CONFIG = GeneralConfigManager
-RENEWABLE_GENERATION_CONFIG = ResConfigManagerGan #ResConfigManagerGan #ResConfigManager
+RENEWABLE_GENERATION_CONFIG = ResConfigManager #ResConfigManagerGan #ResConfigManager
 LOAD_GENERATION_CONFIG = LoadsConfigManager
 LOSS_GENERATION_CONFIG = LossConfigManager
 DISPATCH_GENERATION_CONFIG = DispatchConfigManager
 
 LOAD_GENERATION_BACKEND = ConsumptionGeneratorBackend
-RENEWABLE_GENERATION_BACKEND = RenewableBackendGAN #RenewableBackendGAN # RenewableBackend
+RENEWABLE_GENERATION_BACKEND = RenewableBackend #RenewableBackendGAN # RenewableBackend
 LOSS_GENERATION_BACKEND = LossBackend
 DISPATCH_GENERATION_BACKEND = DispatchBackend
 HYDRO_GENERATION_BACKEND = None

@@ -10,6 +10,12 @@ from chronix2grid import main
 from chronix2grid import constants as cst
 import chronix2grid.generation.generation_utils as gu
 
+from chronix2grid.config import ResConfigManager
+from chronix2grid.generation.renewable.RenewableBackend import RenewableBackend
+
+cst.RENEWABLE_GENERATION_CONFIG = ResConfigManager
+cst.RENEWABLE_GENERATION_BACKEND = RenewableBackend
+
 
 class TestMain(unittest.TestCase):
     def setUp(self):

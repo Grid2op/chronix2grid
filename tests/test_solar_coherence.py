@@ -11,7 +11,10 @@ from chronix2grid import main
 from chronix2grid import constants as cst
 import chronix2grid.generation.generation_utils as gu
 from chronix2grid.config import ResConfigManager
+from chronix2grid.generation.renewable.RenewableBackend import RenewableBackend
 
+cst.RENEWABLE_GENERATION_CONFIG = ResConfigManager
+cst.RENEWABLE_GENERATION_BACKEND = RenewableBackend
 
 class TestLoadProdCoherence(unittest.TestCase):
     def setUp(self):
@@ -71,16 +74,28 @@ class TestLoadProdCoherence(unittest.TestCase):
         generation_input_folder = os.path.join(
             self.input_folder, cst.GENERATION_FOLDER_NAME
         )
-        res_config_manager = ResConfigManager(
+
+        general_config_manager = cst.GENERAL_CONFIG(
+            name="Global Generation",
+            root_directory=generation_input_folder,
+            input_directories=dict(case=self.case),
+            required_input_files=dict(case=['params.json']),
+            output_directory=self.generation_output_folder
+        )
+        general_config_manager.validate_configuration()
+        params = general_config_manager.read_configuration()
+
+        res_config_manager = cst.RENEWABLE_GENERATION_CONFIG(
             name="Renewables Generation",
             root_directory=generation_input_folder,
             input_directories=dict(case=self.case, patterns='patterns'),
-            required_input_files=dict(case=['prods_charac.csv', 'params.json'],
+            required_input_files=dict(case=['prods_charac.csv', 'params_res.json'],
                                       patterns=['solar_pattern.npy']),
             output_directory=self.generation_output_folder
         )
 
-        params, prods_charac = res_config_manager.read_configuration()
+        params_res, prods_charac = res_config_manager.read_configuration()
+        params_res.update(params)
 
         scenario_path = os.path.join(
             self.generation_output_folder,
@@ -98,11 +113,11 @@ class TestLoadProdCoherence(unittest.TestCase):
 
         # Get datetime index
         start = pd.to_datetime(self.start_date) #+ dt.timedelta(minutes=int(params['dt']))  # Commence à 0h00
-        end = start + dt.timedelta(days=7 * int(self.weeks)) - 2*dt.timedelta(minutes=int(params['dt']))
+        end = start + dt.timedelta(days=7 * int(self.weeks)) - 2*dt.timedelta(minutes=int(params_res['dt']))
         datetime_index = pd.date_range(
             start=start,
             end=end,
-            freq=str(params['dt']) + 'min')
+            freq=str(params_res['dt']) + 'min')
         prods['Hour'] = datetime_index.hour
 
         # Check for average daily profile of all generators

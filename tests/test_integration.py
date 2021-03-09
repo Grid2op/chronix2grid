@@ -11,6 +11,12 @@ from chronix2grid import main
 from chronix2grid import constants as cst
 import chronix2grid.generation.generation_utils as gu
 
+from chronix2grid.config import ResConfigManager
+from chronix2grid.generation.renewable.RenewableBackend import RenewableBackend
+
+cst.RENEWABLE_GENERATION_CONFIG = ResConfigManager
+cst.RENEWABLE_GENERATION_BACKEND = RenewableBackend
+
 
 class TestMain(unittest.TestCase):
     def setUp(self):
@@ -114,7 +120,7 @@ class TestMain(unittest.TestCase):
             bool = self.check_frames_equal(path_out, path_ref, self.files_tocheck)
             # Check that we obtain the right result dataframe
             self.assertTrue(bool)
-            # Check that we have raised a UserWarning for ramp up  (one among all warnings that have been raised)
+            # Check that we have raised a UserWarning for ramp up (one among all warnings that have been raised)
             boolvec_types = [issubclass(w_.category, UserWarning) for w_ in w]
             self.assertTrue(np.any(boolvec_types))
             boolvec_msg = ["Ramp up" in str(w_.message) for w_ in w]

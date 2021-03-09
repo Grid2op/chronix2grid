@@ -11,6 +11,10 @@ from chronix2grid import main
 from chronix2grid import constants as cst
 import chronix2grid.generation.generation_utils as gu
 from chronix2grid.config import ResConfigManager
+from chronix2grid.generation.renewable.RenewableBackend import RenewableBackend
+
+cst.RENEWABLE_GENERATION_CONFIG = ResConfigManager
+cst.RENEWABLE_GENERATION_BACKEND = RenewableBackend
 
 
 class TestLoadProdCoherence(unittest.TestCase):
@@ -69,16 +73,17 @@ class TestLoadProdCoherence(unittest.TestCase):
         generation_input_folder = os.path.join(
             self.input_folder, cst.GENERATION_FOLDER_NAME
         )
-        res_config_manager = ResConfigManager(
-            name="Renewables Generation",
+
+        general_config_manager = cst.GENERAL_CONFIG(
+            name="Global Generation",
             root_directory=generation_input_folder,
-            input_directories=dict(case=self.case, patterns='patterns'),
-            required_input_files=dict(case=['prods_charac.csv', 'params.json'],
-                                      patterns=['solar_pattern.npy']),
+            input_directories=dict(case=self.case),
+            required_input_files=dict(case=['params.json']),
             output_directory=self.generation_output_folder
         )
 
-        params, prods_charac = res_config_manager.read_configuration()
+        general_config_manager.validate_configuration()
+        params = general_config_manager.read_configuration()
 
         scenario_path = os.path.join(
             self.generation_output_folder,
