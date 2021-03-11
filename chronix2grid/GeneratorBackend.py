@@ -8,6 +8,18 @@ from chronix2grid.generation import generation_utils
 from chronix2grid.generation.dispatch import generate_dispatch, EconomicDispatch
 
 class GeneratorBackend:
+    """
+    Class that gathers the Backends of the different generation processes.
+    It will allow to generate each step successively, thanks to its method :func:`GeneratorBackend.run`.
+    It will load and check the parameters for each step thanks to instances of :class:`chronix2grid.config.ConfigManager`
+    It will then do the proper generation thanks to its methods :func:`GeneratorBackend.do_l`, :func:`GeneratorBackend.do_r`,
+    :func:`GeneratorBackend.do_d` and :func:`GeneratorBackend.do_t`. This methods rely on other specific backends.
+
+    Attributes
+    ----------
+    general_config_manager: :class:`chronix2grid.config.ConfigManager`
+        Class inheriting from ConfigManager that loads and checks the general parameters of the overall generation process, such as time resolution.
+    """
     def __init__(self):
         self.general_config_manager = constants.GENERAL_CONFIG
         self.load_config_manager = constants.LOAD_GENERATION_CONFIG

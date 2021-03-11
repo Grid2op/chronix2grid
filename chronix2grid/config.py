@@ -9,6 +9,15 @@ from chronix2grid.generation.dispatch import utils as du
 
 
 class ConfigManager(ABC):
+    """
+    Class that validates a configuration setting by checking that the input files are correctly provided.
+    It also provided a static method for specific reading of different input files
+
+    Attributes
+    ----------
+    name: ``str``
+        Name of config manager
+    """
     def __init__(self, name, root_directory, input_directories, output_directory,
                  required_input_files=None):
         self.name = name

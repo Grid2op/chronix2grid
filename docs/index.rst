@@ -16,8 +16,13 @@ Welcome to Chronix2grid documentation!
 
 .. toctree::
    :maxdepth: 2
-   :caption: Algorithms documentation
+   :caption: Current implementation
 
    DESCRIPTION.rst
-   INTERFACE.rst
    KPI.rst
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Model interface
+
+   INTERFACE.rst
