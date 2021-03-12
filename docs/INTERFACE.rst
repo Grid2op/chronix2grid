@@ -19,11 +19,18 @@ and then compare it with its training data. See example in *input_data/generatio
 GeneratorBackend
 ==================
 
-.. automodule:: chronix2grid.GeneratorBackend
+.. autoclass:: chronix2grid.GeneratorBackend.GeneratorBackend
     :members:
+
 
 ConfigManager
 ==================
 
 .. automodule:: chronix2grid.config
+    :members:
+
+RenewableBackend
+==================
+
+.. automodule:: chronix2grid.generation.renewable.RenewableBackend
     :members:

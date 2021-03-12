@@ -18,9 +18,9 @@ class ConfigManager(ABC):
     name: ``str``
         Name of config manager
     root_directory: ``str``
-    input_directories: ``str``
+    input_directories: ``str`` or ``dict``
     output_directory: ``str``
-    required_input_files: ``list`` or ``None``
+    required_input_files: ``dict`` or ``None``
     """
     def __init__(self, name, root_directory, input_directories, output_directory,
                  required_input_files=None):
@@ -31,10 +31,10 @@ class ConfigManager(ABC):
         ----------
         name: ``str``
         root_directory: ``str``
-        input_directories: ``str``
+        input_directories: ``str`` or ``dict``
         output_directory: ``str``
         required_input_files: ``str``
-        required_input_files: ``list`` or ``None``
+        required_input_files: ``dict`` or ``None``
         """
         self.name = name
         self.root_directory = root_directory
