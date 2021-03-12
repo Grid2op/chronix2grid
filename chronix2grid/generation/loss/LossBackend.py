@@ -2,7 +2,25 @@ from .generate_loss import main
 
 
 class LossBackend:
+    """
+    Backend that generates loss simply based on a provided yearly pattern.
+    An API enables one to use power consumption and wind and solar as input to more complex loss computation
 
+    Attributes
+    ----------
+    input_folder: ``str``
+        base input folder to get parameters and patterns
+    scenario_folder_path: ``str``
+        path to output folder for generated chronics
+    load: :class: ``pandas.DataFrame`` or ``dict``
+    prod_solar: :class: ``pandas.DataFrame`` or ``dict``
+    prod_wind: :class: ``pandas.DataFrame`` or ``dict``
+    params: ``dict``
+        dictionnary with the model parameters. It needs to contain keys "dt" and  "loss_pattern"
+    loss_config_manager: :class: ``chronix2grid.config.LossConfigManager``
+        config manager used to load specific patterns used for the model (yearly explicit loss pattern)
+    write_results: ``bool``
+    """
     def __init__(self, input_folder, scenario_folder_path,
                                      load, prod_solar, prod_wind,
                                      params, loss_config_manager, write_results = True):
@@ -16,6 +34,9 @@ class LossBackend:
         self.prod_wind = prod_wind
 
     def run(self):
+        """
+        Runs the loss generation model in ``chronix2grid.generation.loss.generate_loss`` and writes loss chronics
+        """
         self.loss_config_manager.validate_configuration()
         params_loss = self.loss_config_manager.read_configuration()
         return main(self.input_folder, self.scenario_folder_path,

@@ -22,6 +22,11 @@ GeneratorBackend
 .. autoclass:: chronix2grid.GeneratorBackend.GeneratorBackend
     :members:
 
+Constants
+==================
+
+.. automodule:: chronix2grid.constants
+    :members:
 
 ConfigManager
 ==================
@@ -29,8 +34,47 @@ ConfigManager
 .. automodule:: chronix2grid.config
     :members:
 
+ConsumptionGeneratorBackend
+==============================
+
+.. automodule:: chronix2grid.generation.consumption.ConsumptionGeneratorBackend
+    :members:
+
 RenewableBackend
 ==================
 
 .. automodule:: chronix2grid.generation.renewable.RenewableBackend
     :members:
+
+LossBackend
+==================
+
+.. automodule:: chronix2grid.generation.loss.LossBackend
+    :members:
+
+DispatchBackend
+==================
+
+.. automodule:: chronix2grid.generation.dispatch.DispatchBackend
+    :members:
+
+Dispatcher
+==================
+
+.. autoclass:: chronix2grid.generation.dispatch.EconomicDispatch.Dispatcher
+    :members:
+
+
+KPI preprocessing
+=================
+
+.. automodule:: chronix2grid.kpi.preprocessing.pivot_KPI
+    :members:
+
+EconomicDispatchValidator
+=================================
+
+.. automodule:: chronix2grid.kpi.deterministic.kpis
+    :members:
+
+

@@ -7,31 +7,32 @@ from .pivot_utils import chronics_to_kpi, renewableninja_to_kpi, eco2mix_to_kpi_
 
 def pivot_format(chronics_folder, kpi_input_folder, year, prods_charac, loads_charac, wind_solar_only, params, case):
     """
-        This functions contains pivot formatting of reference and synthetic chronics, in a usable format by KPI computation.
+    This function contains pivot formatting of reference and synthetic chronics, in a usable format by
+    kpi computation object :class: `chronix2grid.kpi.deterministic.kpis.EconomicDispatchValidator`
 
-        Parameters
-        ----------
-        chronics_folder (str): path to folder which contains generated chronics
-        kpi_input_folder (str): path to folder of kpi inputs, which contains paramsKPI.json and benchmark folders. paramsKPI.json tells which benchmark to read as reference
-        year (int): year in which results are written
-        scenario_name (int): name of the scenario to study (KPIs are computed for each scenario separately)
-        prods_charac (pandas.DataFrame): characteristics of generators such as Pmax, carrier and region
-        loads_charac (pandas.DataFrame): characteristics of loads node such as Pmax, type of demand and region
-        wind_solar_only (boolean): True if the generated chronics contain only wind, solar and load chronics, False otherwise
-        params (dict): configuration params computed from params.json, such as timestep or mesh characteristics
-        case (str): identify the studied case for chronics generation, such as l2rpn_118
+    Parameters
+    ----------
+    chronics_folder (str): path to folder which contains generated chronics
+    kpi_input_folder (str): path to folder of kpi inputs, which contains paramsKPI.json and benchmark folders. paramsKPI.json tells which benchmark to read as reference
+    year (int): year in which results are written
+    scenario_name (int): name of the scenario to study (KPIs are computed for each scenario separately)
+    prods_charac (pandas.DataFrame): characteristics of generators such as Pmax, carrier and region
+    loads_charac (pandas.DataFrame): characteristics of loads node such as Pmax, type of demand and region
+    wind_solar_only (boolean): True if the generated chronics contain only wind, solar and load chronics, False otherwise
+    params (dict): configuration params computed from params.json, such as timestep or mesh characteristics
+    case (str): identify the studied case for chronics generation, such as l2rpn_118
 
-        Returns
-        -------
-        pandas.DataFrame: reference productions per generator
-        pandas.DataFrame: reference consumption per load node
-        pandas.DataFrame: synthetic productions per generator
-        pandas.DataFrame: synthetic consumption per load node
-        dict: monthly patterns for seasons in KPI computation, read in paramsKPI.json
-        dict: night hours per season to use in KPI computation, read in paramsKPI.json
-        pandas.DataFrame: (only if wind_solar_only is False) reference prices per timestep
-        pandas.DataFrame: (only if wind_solar_only is False) synthetic prices per timestep
-        """
+    Returns
+    -------
+    pandas.DataFrame: reference productions per generator
+    pandas.DataFrame: reference consumption per load node
+    pandas.DataFrame: synthetic productions per generator
+    pandas.DataFrame: synthetic consumption per load node
+    dict: monthly patterns for seasons in KPI computation, read in paramsKPI.json
+    dict: night hours per season to use in KPI computation, read in paramsKPI.json
+    pandas.DataFrame: (only if wind_solar_only is False) reference prices per timestep
+    pandas.DataFrame: (only if wind_solar_only is False) synthetic prices per timestep
+    """
 
     # Read json parameters for KPI configuration
     kpi_case_input_folder = os.path.join(kpi_input_folder, case)

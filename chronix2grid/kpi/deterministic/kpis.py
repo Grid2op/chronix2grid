@@ -17,7 +17,9 @@ import seaborn as sns
 
 # Class definition
 class EconomicDispatchValidator:
-
+    """
+    Computes thematic KPIs from reference and synthetic power chronics, and write resulting charts in an image repository
+    """
     def __init__(self, ref_consumption, syn_consumption, ref_dispatch,
                  synthetic_dispatch, year, images_repo,
                  prods_charac=None, loads_charac=None, ref_prices=None,

@@ -15,6 +15,8 @@ class GeneratorBackend:
     It will then do the proper generation thanks to its methods :func:`GeneratorBackend.do_l`, :func:`GeneratorBackend.do_r`,
     :func:`GeneratorBackend.do_d` and :func:`GeneratorBackend.do_t`. This methods rely on other specific backends.
 
+    All the attributes are static variables passed via module :class:`chronix2grid.constants`
+
     Attributes
     ----------
     general_config_manager: :class:`chronix2grid.config.ConfigManager`
@@ -178,7 +180,8 @@ class GeneratorBackend:
 
     def do_l(self, scenario_folder_path, seed_load, params, loads_charac, load_config_manager):
         """
-        
+        Generates load chronics thanks to the backend in ``self.consumption_backend_class``
+
         Parameters
         ----------
         scenario_folder_path
@@ -189,7 +192,10 @@ class GeneratorBackend:
 
         Returns
         -------
-
+        loads: :class: `pandas.DataFrame`
+            generated loads chronics
+        prods_charac: :class: `pandas.DataFrame`
+            generated forecasted loads chronics (currently loads chronics with gaussian noise)
         """
         generator_loads = self.consumption_backend_class(scenario_folder_path, seed_load, params, loads_charac, load_config_manager,
                                                          write_results=True)
@@ -197,6 +203,28 @@ class GeneratorBackend:
         return load, load_forecasted
 
     def do_r(self, scenario_folder_path, seed_res, params, prods_charac, res_config_manager):
+        """
+        Generates load chronics thanks to the backend in ``self.renewable_backend_class``
+
+        Parameters
+        ----------
+        scenario_folder_path
+        seed_res
+        params
+        prods_charac
+        res_config_manager
+
+        Returns
+        -------
+        prod_solar: :class: `pandas.DataFrame`
+            generated solar chronics
+        prod_solar_forecasted: :class: `pandas.DataFrame`
+            generated forecasted solar chronics
+        prod_wind: :class: `pandas.DataFrame`
+            generated wind chronics
+        prod_wind_forecasted: :class: `pandas.DataFrame`
+            generated forecasted wind chronics
+        """
         generator_enr = self.renewable_backend_class(scenario_folder_path, seed_res, params,
                                                      prods_charac,
                                                      res_config_manager, write_results=True)
@@ -207,6 +235,24 @@ class GeneratorBackend:
     def do_d(self, input_folder, scenario_folder_path,
                                      load, prod_solar, prod_wind,
                                      params, loss_config_manager):
+        """
+        Generates load chronics thanks to the backend in ``self.renewable_backend_class``
+
+        Parameters
+        ----------
+        input_folder
+        scenario_folder_path
+        load
+        prod_solar
+        prod_wind
+        params
+        loss_config_manager
+
+        Returns
+        -------
+        loss: :class: `pandas.DataFrame`
+            generated loss chronics
+        """
 
         generator_loss = self.loss_backend_class(input_folder, scenario_folder_path,
                                      load, prod_solar, prod_wind,
@@ -216,12 +262,39 @@ class GeneratorBackend:
 
     def do_t(self, dispatcher, scenario_name, load, prod_solar, prod_wind, grid_folder,
              scenario_folder_path, seed_disp, params, params_opf, loss):
+        """
+        Computes production chronics based on a dispatch computation. It uses a dispatcher object as an environment for simulation and
+        ``self.dispatch_backend_class`` for computation
+
+        Parameters
+        ----------
+        dispatcher
+        scenario_name
+        load
+        prod_solar
+        prod_wind
+        grid_folder
+        scenario_folder_path
+        seed_disp
+        params
+        params_opf
+        loss
+
+        Returns
+        -------
+        dispatch_results: :class: `collection.namedtuple`
+            contains resulting production chronics and terminal conditions from the optimization engine
+        """
         prods = pd.concat([prod_solar, prod_wind], axis=1)
         res_names = dict(wind=prod_wind.columns, solar=prod_solar.columns)
         dispatcher.chronix_scenario = EconomicDispatch.ChroniXScenario(load, prods, res_names,
                                                                        scenario_name, loss)
 
-        dispatch_results = generate_dispatch.main(dispatcher, scenario_folder_path,
+        generator_dispatch = self.dispatch_backend_class(dispatcher, scenario_folder_path,
                                                  scenario_folder_path, grid_folder,
                                                   seed_disp, params, params_opf)
+        dispatch_results = generator_dispatch.run()
+        # dispatch_results = generate_dispatch.main(dispatcher, scenario_folder_path,
+        #                                          scenario_folder_path, grid_folder,
+        #                                           seed_disp, params, params_opf)
         return dispatch_results

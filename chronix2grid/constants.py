@@ -1,6 +1,6 @@
 """
 This file gathers constants related to directories and files that chronix2grid
-reads/writes.
+reads/writes. It also defines the ConfigManager and the Backend used for each step of generation process (LRDT)
 """
 from chronix2grid.generation.consumption.ConsumptionGeneratorBackend import ConsumptionGeneratorBackend
 from chronix2grid.generation.renewable.RenewableBackend import RenewableBackend, RenewableBackendGAN
