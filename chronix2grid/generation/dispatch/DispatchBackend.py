@@ -36,4 +36,5 @@ class DispatchBackend:
         """
         Runs Economic dispatch as in ``chronix2grid.dispatch.generate_dispatch``
         """
-        return main(self.dispatcher, self.scenario_folder_path, self.scenario_folder_path, self.grid_folder, self.seed_disp, self.params, self.params_opf)
+        return main(self.dispatcher, self.scenario_folder_path, self.scenario_folder_path,
+                    self.grid_folder, self.seed_disp, self.params, self.params_opf)

@@ -291,8 +291,7 @@ class GeneratorBackend:
                                                                        scenario_name, loss)
 
         generator_dispatch = self.dispatch_backend_class(dispatcher, scenario_folder_path,
-                                                 scenario_folder_path, grid_folder,
-                                                  seed_disp, params, params_opf)
+                                                 grid_folder, seed_disp, params, params_opf)
         dispatch_results = generator_dispatch.run()
         # dispatch_results = generate_dispatch.main(dispatcher, scenario_folder_path,
         #                                          scenario_folder_path, grid_folder,
