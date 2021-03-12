@@ -2,7 +2,7 @@ import os
 import sys
 import json
 
-from .pivot_utils import chronics_to_kpi, renewableninja_to_kpi, eco2mix_to_kpi_regional, nrel_to_kpi
+from .pivot_utils import chronics_to_kpi, renewableninja_to_kpi, eco2mix_to_kpi_regional, nrel_to_kpi, usa_gan_trainingset_to_kpi
 
 
 def pivot_format(chronics_folder, kpi_input_folder, year, prods_charac, loads_charac, wind_solar_only, params, case):
@@ -57,6 +57,12 @@ def pivot_format(chronics_folder, kpi_input_folder, year, prods_charac, loads_ch
             ref_prod, ref_load  = nrel_to_kpi(kpi_case_input_folder, timestep, prods_charac, loads_charac, params,year)
         else:
             print("Computation stopped: Texas Benchmark not implemented for a whole energy mix. Launch KPI computation in mode wind solar and load only.")
+            sys.exit()
+    elif comparison == 'USA':
+        if wind_solar_only:
+            ref_prod, ref_load = usa_gan_trainingset_to_kpi(kpi_case_input_folder, timestep, prods_charac, loads_charac, params,year)
+        else:
+            print("Computation stopped: USA Benchmark not implemented for a whole energy mix. Launch KPI computation with GAN in mode wind solar and load only.")
             sys.exit()
     else:
         print("Please chose one available benchmark in paramsKPI.json/comparison. Given comparison is: "+comparison)

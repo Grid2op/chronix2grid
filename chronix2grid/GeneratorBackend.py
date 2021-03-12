@@ -156,10 +156,12 @@ class GeneratorBackend:
             print("================ Generating " + scenario_name + " ================")
             if 'L' in mode:
                 load, load_forecasted = self.do_l(scenario_folder_path, seed_load, params_load, loads_charac, load_config_manager)
+                params.update(params_load)
             if 'R' in mode:
                 prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = self.do_r(scenario_folder_path, seed_res, params_res,
                                                                                                prods_charac,
                                                                                                res_config_manager)
+                params.update(params_res)
             if 'D' in mode:
                 loss_config_manager = self.loss_config_manager(
                     name="Loss",

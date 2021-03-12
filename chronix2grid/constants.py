@@ -25,18 +25,20 @@ TIME_STEP_FILE_NAME = 'time_interval.info'
 
 RENEWABLE_NINJA_REFERENCE_FOLDER = 'renewable_ninja'
 
+GAN_TRAINING_SET_REFERENCE_FOLDER = 'GAN_training_data'
+
 REFERENCE_ZONE = 'France'
 
 GRID_FILENAME = 'grid.json'
 
 GENERAL_CONFIG = GeneralConfigManager
-RENEWABLE_GENERATION_CONFIG = ResConfigManager #ResConfigManagerGan #ResConfigManager
+RENEWABLE_GENERATION_CONFIG = ResConfigManagerGan #ResConfigManagerGan #ResConfigManager
 LOAD_GENERATION_CONFIG = LoadsConfigManager
 LOSS_GENERATION_CONFIG = LossConfigManager
 DISPATCH_GENERATION_CONFIG = DispatchConfigManager
 
 LOAD_GENERATION_BACKEND = ConsumptionGeneratorBackend
-RENEWABLE_GENERATION_BACKEND = RenewableBackend #RenewableBackendGAN # RenewableBackend
+RENEWABLE_GENERATION_BACKEND = RenewableBackendGAN #RenewableBackendGAN # RenewableBackend
 LOSS_GENERATION_BACKEND = LossBackend
 DISPATCH_GENERATION_BACKEND = DispatchBackend
 HYDRO_GENERATION_BACKEND = None

@@ -1,10 +1,73 @@
 import os
+import csv
 import sys
 import numpy as np
 import pandas as pd
 
 import chronix2grid.constants as cst
 
+def usa_gan_trainingset_to_kpi(kpi_case_input_folder, timestep, prods_charac, loads_charac, params,year):
+
+    if int(timestep[:2]) < 60:
+        print('Erreur: GAN requires timestep >60 min to compute KPI. Please change timestep in paramsKPI.json')
+        sys.exit()
+
+    ## WIND
+    # Loading and reshaping raw data from NREL (State of Washington wind farms)
+    repo_in = os.path.join(kpi_case_input_folder, 'USA/NREL',cst.GAN_TRAINING_SET_REFERENCE_FOLDER, "wind.csv")
+    with open(repo_in, 'r') as csvfile:
+        reader = csv.reader(csvfile)
+        rows = [row for row in reader]
+    rows = np.array(rows, dtype=float)
+    trX = []
+    print(np.shape(rows))
+    m = np.ndarray.max(rows)
+    print("Maximum value of wind", m)
+    print(np.shape(rows))
+    for x in range(rows.shape[1]):
+        train = rows[:-288, x].reshape(-1, 24, 24)
+        train = train / 16 # Pmax in data
+
+        # print(shape(train))
+        if trX == []:
+            trX = train
+        else:
+            trX = np.concatenate((trX, train), axis=0)
+    print("Shape TrX", np.shape(trX))
+
+    # Selecting desired time index
+    start_date = params["start_date"]
+    end_date = params['end_date']
+    datetime_index = pd.date_range(
+        start=start_date,
+        end=end_date,
+        freq=str(timestep))
+    T = len(datetime_index)
+
+    # Getting wind farms generations
+    wind_gens = prods_charac[prods_charac['type'] == 'wind']['name'].unique()
+    N = len(wind_gens)
+    ref_prod_wind = pd.DataFrame(columns = wind_gens)
+    for day in range(T//params["n_timesteps"]):
+        day_production = np.transpose(trX[day,:N,:])
+        new_df = pd.DataFrame(day_production, columns=wind_gens)
+        ref_prod_wind = pd.concat([ref_prod_wind,new_df], axis = 0)
+    day_production = np.transpose(trX[(day+1), :N, :(T%params["n_timesteps"])])
+    new_df = pd.DataFrame(day_production, columns=wind_gens)
+    ref_prod_wind = pd.concat([ref_prod_wind, new_df], axis=0)
+
+    ref_prod_wind['Time'] = datetime_index
+
+    ## Solar and others
+    other_gens = prods_charac[prods_charac['type'] != 'wind']['name'].unique()
+    other_prods = pd.DataFrame(np.zeros((T, len(other_gens))), columns=other_gens)
+    ref_prod_wind.index = other_prods.index
+    ref_prod = pd.concat([ref_prod_wind, other_prods], axis = 1)
+
+    ## Load
+    load_nodes = loads_charac['name'].unique()
+    ref_load = pd.DataFrame(np.zeros((T,len(load_nodes))), columns = load_nodes)
+    return ref_prod, ref_load
 
 def eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_charac, year, params, corresp_regions):
     # Initialize dataframes to fill
