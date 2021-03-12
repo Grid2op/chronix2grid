@@ -35,6 +35,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.autodoc',
      "sphinx_rtd_theme",
+    'sphinx.ext.napoleon'
     # toc of modules
     #'autodocsumm'
 ]

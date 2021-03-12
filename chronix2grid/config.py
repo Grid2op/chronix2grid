@@ -17,9 +17,25 @@ class ConfigManager(ABC):
     ----------
     name: ``str``
         Name of config manager
+    root_directory: ``str``
+    input_directories: ``str``
+    output_directory: ``str``
+    required_input_files: ``list`` or ``None``
     """
     def __init__(self, name, root_directory, input_directories, output_directory,
                  required_input_files=None):
+        """
+        Self initialization
+
+        Parameters
+        ----------
+        name: ``str``
+        root_directory: ``str``
+        input_directories: ``str``
+        output_directory: ``str``
+        required_input_files: ``str``
+        required_input_files: ``list`` or ``None``
+        """
         self.name = name
         self.root_directory = root_directory
         self.input_directories = input_directories
@@ -34,6 +50,10 @@ class ConfigManager(ABC):
         raise RuntimeError("input_directories must be either a string or a dictionnary")
 
     def validate_input(self):
+        """
+        Validate that the input folder exists and contains expected files. Returns an error message with :func:`ConfigManager.error_message`
+        if not the case
+        """
         if self.is_single_input_dir():
             directory_to_check = os.path.join(self.root_directory, self.input_directories)
             try:
@@ -56,9 +76,16 @@ class ConfigManager(ABC):
         return True
 
     def validate_output(self):
+        """
+        Check if the output path exists from root directory
+        """
         return os.path.exists(os.path.join(self.root_directory, self.output_directory))
 
     def error_message(self):
+        """
+        Returns an error message if inputs and outputs are not valid
+
+        """
         output_directory_abs_path = os.path.join(
             self.root_directory, self.output_directory)
         error_message_header = (

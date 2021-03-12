@@ -38,19 +38,38 @@ class GeneratorBackend:
             time_params, mode='LRTK', scenario_id=None,
             seed_for_loads=None, seed_for_res=None, seed_for_disp=None):
         """
-        Main function for chronics generation. It works with three steps: load generation, renewable generation (solar and wind) and then dispatch computation to get the whole energy mix
+        Main function for chronics generation. It works with three steps: load generation, renewable generation (solar and wind)
+        and then dispatch computation to get the whole energy mix. It writes the resulting chronics in the output_path in zipped csv format
 
         Parameters
         ----------
-        case (str): name of case to study (must be a folder within input_folder)
-        n_scenarios (int): number of desired scenarios to generate for the same timescale
-        input_folder (str): path of folder containing inputs
-        output_folder (str): path where outputs will be written (intermediate folder case/year/scenario will be used)
-        mode (str): options to launch certain parts of the generation process : L load R renewable T thermal
+        case: ``str``
+            name of case to study (must be a folder within input_folder)
+        n_scenarios: ``int``
+            number of desired scenarios to generate for the same timescale
+        input_folder: ``str``
+            path of folder containing inputs
+        output_folder: ``str``
+            path where outputs will be written (intermediate folder case/year/scenario will be used)
+        mode: ``str``
+            options to launch certain parts of the generation process : L load R renewable T thermal
+        scenario_id: ``int`` or ``None``
+            Id of scenario
+        seed_for_loads: ``int`` or ``None``
+            seed for the load generation process
+        seed_for_res: ``int`` or ``None``
+            seed for the renewable generation process
+        seed_for_disp: ``int`` or ``None``
+            seed for the dispatch generation process
 
         Returns
         -------
-
+        params: ``dict``
+            general parameters
+        loads_charac: :class: ``pandas.DataFrame``
+            characteristics of consumption nodes in the grid used in generation
+        prods_charac: :class: ``pandas.DataFrame``
+            characteristics of production nodes in the grid used in generation
         """
 
         utils.check_scenario(n_scenarios, scenario_id)
@@ -158,6 +177,20 @@ class GeneratorBackend:
         return params, loads_charac, prods_charac
 
     def do_l(self, scenario_folder_path, seed_load, params, loads_charac, load_config_manager):
+        """
+        
+        Parameters
+        ----------
+        scenario_folder_path
+        seed_load
+        params
+        loads_charac
+        load_config_manager
+
+        Returns
+        -------
+
+        """
         generator_loads = self.consumption_backend_class(scenario_folder_path, seed_load, params, loads_charac, load_config_manager,
                                                          write_results=True)
         load, load_forecasted = generator_loads.run()
