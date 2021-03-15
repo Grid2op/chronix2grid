@@ -20,12 +20,12 @@ def usa_gan_trainingset_to_kpi(kpi_case_input_folder, timestep, prods_charac, lo
         rows = [row for row in reader]
     rows = np.array(rows, dtype=float)
     trX = []
-    print(np.shape(rows))
+    # print(np.shape(rows))
     m = np.ndarray.max(rows)
-    print("Maximum value of wind", m)
-    print(np.shape(rows))
+    # print("Maximum value of wind", m)
+    # print(np.shape(rows))
     for x in range(rows.shape[1]):
-        train = rows[:-288, x].reshape(-1, 24, 24)
+        train = rows[:-288, x].reshape(-1, params['n_timesteps'], params['n_gens']) # DIMENSIONS
         train = train / 16 # Pmax in data
 
         # print(shape(train))
@@ -33,7 +33,7 @@ def usa_gan_trainingset_to_kpi(kpi_case_input_folder, timestep, prods_charac, lo
             trX = train
         else:
             trX = np.concatenate((trX, train), axis=0)
-    print("Shape TrX", np.shape(trX))
+    # print("Shape TrX", np.shape(trX))
 
     # Selecting desired time index
     start_date = params["start_date"]
@@ -56,17 +56,26 @@ def usa_gan_trainingset_to_kpi(kpi_case_input_folder, timestep, prods_charac, lo
     new_df = pd.DataFrame(day_production, columns=wind_gens)
     ref_prod_wind = pd.concat([ref_prod_wind, new_df], axis=0)
 
-    ref_prod_wind['Time'] = datetime_index
+    # Scale with Pmax
+    for gen in wind_gens:
+        Pmax = prods_charac.loc[prods_charac['name']==gen,'Pmax'].values[0]
+        ref_prod_wind[gen] = ref_prod_wind[gen] * Pmax
 
-    ## Solar and others
-    other_gens = prods_charac[prods_charac['type'] != 'wind']['name'].unique()
-    other_prods = pd.DataFrame(np.zeros((T, len(other_gens))), columns=other_gens)
+    ## Solar TEMPORARY ============
+    other_gens = prods_charac[prods_charac['type'] == 'solar']['name'].unique()
+    other_prods = pd.DataFrame(np.ones((T, len(other_gens)))*16, columns=other_gens)
     ref_prod_wind.index = other_prods.index
     ref_prod = pd.concat([ref_prod_wind, other_prods], axis = 1)
 
-    ## Load
+    ## Load TEMPORARY ============
     load_nodes = loads_charac['name'].unique()
-    ref_load = pd.DataFrame(np.zeros((T,len(load_nodes))), columns = load_nodes)
+    ref_load = pd.DataFrame(np.ones((T,len(load_nodes)))*25, columns = load_nodes)
+
+    ## Time index
+    ref_prod['Time'] = datetime_index
+    ref_prod.index = ref_prod['Time']
+    ref_load['Time'] = datetime_index
+    ref_load.index = ref_load['Time']
     return ref_prod, ref_load
 
 def eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_charac, year, params, corresp_regions):

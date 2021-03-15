@@ -52,8 +52,8 @@ def post_process_sample(generated_batches, params, prods_charac, datetime_index,
 
     for day, batch in enumerate(generated_batches):
         for i in range(params["batch_size"]):
-            matrix = batch[i,:,:len(gens),0]
-            df = pd.DataFrame(matrix, columns=gens)
+            matrix = batch[i,:len(gens),:,0] # batch[i,:,:len(gens),0] # DIMENSIONS
+            df = pd.DataFrame(np.transpose(matrix), columns=gens) # Enlever ou ajouter np.transpose en conséquence
             wind = pd.concat([wind, df], axis = 0)
     # Truncate last batch
     wind = wind.reset_index(drop=True)

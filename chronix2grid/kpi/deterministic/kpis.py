@@ -798,8 +798,8 @@ class EconomicDispatchValidator:
         # Get correlation matrix (10 x 10)
         solar_ref_by_day = self.__solar_by_day(solar_ref, params)
         solar_syn_by_day = self.__solar_by_day(solar_syn, params)
-        ref_corr_solar = self._pairwise_corr_different_dfs(solar_ref_by_day, solar_ref_by_day)
-        syn_corr_solar = self._pairwise_corr_different_dfs(solar_syn_by_day, solar_syn_by_day)
+        ref_corr_solar = self._pairwise_corr_different_dfs(solar_ref_by_day, solar_ref_by_day).fillna(0)
+        syn_corr_solar = self._pairwise_corr_different_dfs(solar_syn_by_day, solar_syn_by_day).fillna(0)
 
         # Plot results
         # Correlation heatmaps
