@@ -32,15 +32,15 @@ REFERENCE_ZONE = 'France'
 GRID_FILENAME = 'grid.json'
 
 GENERAL_CONFIG = GeneralConfigManager
-from chronix2grid.config import ResConfigManagerGan
-RENEWABLE_GENERATION_CONFIG = ResConfigManagerGan #ResConfigManagerGan #ResConfigManager
+#from chronix2grid.config import ResConfigManagerGan
+RENEWABLE_GENERATION_CONFIG = ResConfigManager #ResConfigManagerGan #ResConfigManager
 LOAD_GENERATION_CONFIG = LoadsConfigManager
 LOSS_GENERATION_CONFIG = LossConfigManager
 DISPATCH_GENERATION_CONFIG = DispatchConfigManager
 
 LOAD_GENERATION_BACKEND = ConsumptionGeneratorBackend
-from chronix2grid.generation.renewable.RenewableBackend import RenewableBackendGAN
-RENEWABLE_GENERATION_BACKEND = RenewableBackendGAN #RenewableBackendGAN # RenewableBackend
+# from chronix2grid.generation.renewable.RenewableBackend import RenewableBackendGAN
+RENEWABLE_GENERATION_BACKEND = RenewableBackend #RenewableBackendGAN # RenewableBackend
 LOSS_GENERATION_BACKEND = LossBackend
 DISPATCH_GENERATION_BACKEND = DispatchBackend
 HYDRO_GENERATION_BACKEND = None

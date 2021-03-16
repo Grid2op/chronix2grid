@@ -235,15 +235,15 @@ def create_directory_tree(case, start_date, output_directory, scenario_name,
 
 if __name__ == "__main__":
     # Default arguments for dev mode
-    case = 'case118_l2rpn_neurips_1x_GAN' #'case118_l2rpn_wcci' #'case118_l2rpn_neurips_1x' #'case118_l2rpn_neurips_1x_GAN'
+    case = 'case118_l2rpn_wcci' #'case118_l2rpn_wcci' #'case118_l2rpn_neurips_1x' #'case118_l2rpn_neurips_1x_GAN'
     start_date = '2012-01-01'
-    weeks = 52
-    by_n_weeks = 52
+    weeks = 4
+    by_n_weeks = 4
     n_scenarios = 1
     mode = 'LRK'
-    input_folder = 'input_data' #'getting_started/example/input' #'input_data'
-    output_folder =  'output_gan' #'getting_started/example/output' #'output' #'output_gan'
-    scenario_name = "year_wind" #"january_wind" #"year_wind"
+    input_folder = 'getting_started/example/input' #'getting_started/example/input' #'input_data'
+    output_folder =  'getting_started/example/output' #'getting_started/example/output' #'output' #'output_gan'
+    scenario_name = "" #"january_wind" #"year_wind"
     seed_for_loads = 912206665
     seed_for_res = 912206665
     seed_for_dispatch = 912206665
