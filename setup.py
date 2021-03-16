@@ -100,7 +100,6 @@ setup(name='Chronix2Grid',
                         "Send2Trash==1.5.0",
                         "six==1.14.0",
                         "tables==3.6.1",
-                        "tensorflow==1.14.0",
                         "terminado==0.8.3",
                         "testpath==0.4.4",
                         "tornado==6.0.3",
@@ -112,6 +111,18 @@ setup(name='Chronix2Grid',
                         "xlrd==1.2.0",
                         "zipp==3.1.0"
                         ],
+      extras_requires = {
+                        "optional": [
+                            "tensorflow==1.15.4",
+                        ],
+                        "docs": [
+                            "numpydoc>=0.9.2",
+                            "sphinx>=2.4.4",
+                            "sphinx-rtd-theme>=0.4.3",
+                            "sphinxcontrib-trio>=1.1.0",
+                            "autodocsumm>=0.1.13"
+                        ]
+                    },
       zip_safe=False,
       entry_points={'console_scripts': ['chronix2grid=chronix2grid.main:generate_mp']}
 )

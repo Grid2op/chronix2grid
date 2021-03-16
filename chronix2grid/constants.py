@@ -3,10 +3,10 @@ This file gathers constants related to directories and files that chronix2grid
 reads/writes. It also defines the ConfigManager and the Backend used for each step of generation process (LRDT)
 """
 from chronix2grid.generation.consumption.ConsumptionGeneratorBackend import ConsumptionGeneratorBackend
-from chronix2grid.generation.renewable.RenewableBackend import RenewableBackend, RenewableBackendGAN
+from chronix2grid.generation.renewable.RenewableBackend import RenewableBackend
 from chronix2grid.generation.loss.LossBackend import LossBackend
 from chronix2grid.generation.dispatch.DispatchBackend import DispatchBackend
-from chronix2grid.config import GeneralConfigManager, LoadsConfigManager, ResConfigManager, ResConfigManagerGan, LossConfigManager, DispatchConfigManager
+from chronix2grid.config import GeneralConfigManager, LoadsConfigManager, ResConfigManager, LossConfigManager, DispatchConfigManager
 
 GENERATION_FOLDER_NAME = 'generation'
 KPI_FOLDER_NAME = 'kpi'
@@ -32,12 +32,14 @@ REFERENCE_ZONE = 'France'
 GRID_FILENAME = 'grid.json'
 
 GENERAL_CONFIG = GeneralConfigManager
+from chronix2grid.config import ResConfigManagerGan
 RENEWABLE_GENERATION_CONFIG = ResConfigManagerGan #ResConfigManagerGan #ResConfigManager
 LOAD_GENERATION_CONFIG = LoadsConfigManager
 LOSS_GENERATION_CONFIG = LossConfigManager
 DISPATCH_GENERATION_CONFIG = DispatchConfigManager
 
 LOAD_GENERATION_BACKEND = ConsumptionGeneratorBackend
+from chronix2grid.generation.renewable.RenewableBackend import RenewableBackendGAN
 RENEWABLE_GENERATION_BACKEND = RenewableBackendGAN #RenewableBackendGAN # RenewableBackend
 LOSS_GENERATION_BACKEND = LossBackend
 DISPATCH_GENERATION_BACKEND = DispatchBackend

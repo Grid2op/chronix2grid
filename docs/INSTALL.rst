@@ -17,6 +17,9 @@ Python >= 3.6
 
 ``pip install Chronix2Grid``
 
+To install optional dependencies (e.g. tensorflow if you want to use GAN generation for solar and wind)
+
+``pip install Chronix2Grid[optional]``
 
 [Second Option] Step 2 - Install from source
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
