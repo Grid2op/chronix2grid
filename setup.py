@@ -111,7 +111,7 @@ setup(name='Chronix2Grid',
                         "xlrd==1.2.0",
                         "zipp==3.1.0"
                         ],
-      extras_requires = {
+      extras_require = {
                         "optional": [
                             "tensorflow==1.15.4",
                         ],

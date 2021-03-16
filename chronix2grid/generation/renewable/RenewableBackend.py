@@ -1,5 +1,4 @@
 from .generate_solar_wind import main
-from .generate_solar_wind_gan import main_gan
 
 
 class RenewableBackend:
@@ -68,6 +67,7 @@ class RenewableBackendGAN:
         self.out_path = out_path
 
     def run(self):
+        from .generate_solar_wind_gan import main_gan
         """
         Runs the generation model in ``chronix2grid.generation.renewable.generate_solar_wind_gan`` and writes chronics
         """
