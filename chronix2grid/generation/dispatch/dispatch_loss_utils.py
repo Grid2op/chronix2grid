@@ -10,7 +10,6 @@ from grid2op.Parameters import Parameters
 from grid2op.Runner import Runner
 from grid2op.Episode import EpisodeData
 
-from lightsim2grid import LightSimBackend
 #from grid2op.Agent import RecoPowerlineAgent
 from grid2op.Agent import DoNothingAgent
 
