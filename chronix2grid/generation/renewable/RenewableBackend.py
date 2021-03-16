@@ -13,9 +13,9 @@ class RenewableBackend:
         path to output folder for generated chronics
     seed: ``int``
     params: ``dict``
-        dictionnary with the model parameters. It needs to contain keys "dt", "planned_std", "Lx", "Ly", "dx_corr", "dy_corr", "short_wind_corr",
+        dictionnary with the model parameters. It needs to contain keys **"dt", "planned_std", "Lx", "Ly", "dx_corr", "dy_corr", "short_wind_corr",
         "medium_wind_corr", "long_wind_corr", "solar_corr", "smoothdist", "std_short_wind_noise", "std_solar_noise",
-        "std_medium_wind_noise", "std_long_wind_noise", "year_solar_pattern"
+        "std_medium_wind_noise", "std_long_wind_noise", "year_solar_pattern"**
     prods_charac: :class: ``pandas.DataFrame``
         data frame with characteristics on wind and solar generators/power plants of the model
     res_config_manager: :class: ``chronix2grid.config.ResConfigManager``
@@ -44,14 +44,17 @@ class RenewableBackendGAN:
     It takes general parameters about generation and specific parameters about how the networks have been trained.
     It uses tensorflow checkpoints in order to load and replay network objects
 
+    .. warning::
+        You should install tensorflow 1.15.4 to run this model, which is an optional dependency of chronix2grid
+
     Attributes
     ----------
     out_path: ``str``
         path to output folder for generated chronics
     seed: ``int``
     params: ``dict``
-        dictionnary with the model parameters. It needs to contain keys "dt", "planned_std", "model_name", "batch_size",
-        "n_gens", "n_timesteps", "n_events","dim_inputs", "mu", "sigma", "network_folder".
+        dictionnary with the model parameters. It needs to contain keys **"dt", "planned_std", "model_name", "batch_size",
+        "n_gens", "n_timesteps", "n_events","dim_inputs", "mu", "sigma", "network_folder"**.
         It has normally been read by a :class: ``chronix2grid.config.ResConfigManagerGan`` instance
     prods_charac: :class: ``pandas.DataFrame``
         data frame with characteristics on wind and solar generators/power plants of the model

@@ -241,3 +241,7 @@ It is optional and set in *case/params_opf.json*
 * **agent_type** - represents the type of `grid2op agent <https://grid2op.readthedocs.io/en/latest/agent.html>`_. Can be reco for RecoPowerLineAgent or do-nothing for DoNothingAgent. Currently, there is only the DoNothingAgent handled
 
 At the end of this step, the files *prod_p.csv.bz2* *prod_p_forecasted.csv.bz2* are edited to modify the slack generator production chronic.
+
+.. note::
+    If no *loss_grid2op_simulation* is provided, chronix2grid follows considering it is False
+

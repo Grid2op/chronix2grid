@@ -21,6 +21,22 @@ class GeneratorBackend:
     ----------
     general_config_manager: :class:`chronix2grid.config.ConfigManager`
         Class inheriting from ConfigManager that loads and checks the general parameters of the overall generation process, such as time resolution.
+    load_config_manager: :class:`chronix2grid.config.ConfigManager`
+        Class inheriting from ConfigManager that loads and checks the load generation parameters
+    res_config_manager: :class:`chronix2grid.config.ConfigManager`
+        Class inheriting from ConfigManager that loads and checks the renewable (solar and wind) production parameters
+    loss_config_manager: :class:`chronix2grid.config.ConfigManager`
+        Class inheriting from ConfigManager that loads and checks the power loss generation parameters
+    dispatch_config_manager: :class:`chronix2grid.config.ConfigManager`
+        Class inheriting from ConfigManager that loads and checks the dispatch parameters
+    consumption_backend_class
+        A class that embeds a load generation backend such as :class:`chronix2grid.generation.consumption.ConsumptionGeneratorBackend`
+    renewable_backend_class
+        A class that embeds a solar and wind generation backend such as :class:`chronix2grid.generation.renewable.RenewableBackend`
+    loss_backend_class
+        A class that embeds a power loss generation backend such as :class:`chronix2grid.generation.loss.LossBackend`
+    dispatch_backend_class
+        A class that embeds a dispatch backend such as :class:`chronix2grid.generation.dispatch.DispatchBackend`
     """
     def __init__(self):
         self.general_config_manager = constants.GENERAL_CONFIG
@@ -40,8 +56,8 @@ class GeneratorBackend:
             time_params, mode='LRTK', scenario_id=None,
             seed_for_loads=None, seed_for_res=None, seed_for_disp=None):
         """
-        Main function for chronics generation. It works with three steps: load generation, renewable generation (solar and wind)
-        and then dispatch computation to get the whole energy mix. It writes the resulting chronics in the output_path in zipped csv format
+        Main function for chronics generation. It works with four steps: load generation (L), renewable generation (R, solar and wind), loss generation (D)
+        and then dispatch computation (T) to get the whole energy mix. It writes the resulting chronics in the output_path in zipped csv format
 
         Parameters
         ----------
@@ -68,9 +84,9 @@ class GeneratorBackend:
         -------
         params: ``dict``
             general parameters
-        loads_charac: :class: ``pandas.DataFrame``
+        loads_charac: :class:`pandas.DataFrame`
             characteristics of consumption nodes in the grid used in generation
-        prods_charac: :class: ``pandas.DataFrame``
+        prods_charac: :class:`pandas.DataFrame`
             characteristics of production nodes in the grid used in generation
         """
 
@@ -186,17 +202,17 @@ class GeneratorBackend:
 
         Parameters
         ----------
-        scenario_folder_path
-        seed_load
-        params
-        loads_charac
-        load_config_manager
+        scenario_folder_path: ``str``
+        seed_load :``int``
+        params: ``dict``
+        loads_charac: :class:`pandas.DataFrame`
+        load_config_manager: :class:`chronix2grid.config.ConfigManager`
 
         Returns
         -------
-        loads: :class: `pandas.DataFrame`
+        loads: :class:`pandas.DataFrame`
             generated loads chronics
-        prods_charac: :class: `pandas.DataFrame`
+        prods_charac: :class:`pandas.DataFrame`
             generated forecasted loads chronics (currently loads chronics with gaussian noise)
         """
         generator_loads = self.consumption_backend_class(scenario_folder_path, seed_load, params, loads_charac, load_config_manager,
@@ -210,21 +226,21 @@ class GeneratorBackend:
 
         Parameters
         ----------
-        scenario_folder_path
-        seed_res
-        params
-        prods_charac
-        res_config_manager
+        scenario_folder_path: ``str``
+        seed_res: ``int``
+        params: ``dict``
+        prods_charac: :class:`pandas.DataFrame`
+        res_config_manager: :class:`chronix2grid.config.ConfigManager`
 
         Returns
         -------
-        prod_solar: :class: `pandas.DataFrame`
+        prod_solar: :class:`pandas.DataFrame`
             generated solar chronics
-        prod_solar_forecasted: :class: `pandas.DataFrame`
+        prod_solar_forecasted: :class:`pandas.DataFrame`
             generated forecasted solar chronics
-        prod_wind: :class: `pandas.DataFrame`
+        prod_wind: :class:`pandas.DataFrame`
             generated wind chronics
-        prod_wind_forecasted: :class: `pandas.DataFrame`
+        prod_wind_forecasted: :class:`pandas.DataFrame`
             generated forecasted wind chronics
         """
         generator_enr = self.renewable_backend_class(scenario_folder_path, seed_res, params,
@@ -242,17 +258,17 @@ class GeneratorBackend:
 
         Parameters
         ----------
-        input_folder
-        scenario_folder_path
-        load
-        prod_solar
-        prod_wind
-        params
-        loss_config_manager
+        input_folder: ``str``
+        scenario_folder_path: ``str``
+        load: :class: `pandas.DataFrame`
+        prod_solar: :class: `pandas.DataFrame`
+        prod_wind: :class: `pandas.DataFrame`
+        params: ``dict``
+        loss_config_manager: :class:`chronix2grid.config.ConfigManager`
 
         Returns
         -------
-        loss: :class: `pandas.DataFrame`
+        loss: :class:`pandas.DataFrame`
             generated loss chronics
         """
 
@@ -270,21 +286,21 @@ class GeneratorBackend:
 
         Parameters
         ----------
-        dispatcher
-        scenario_name
-        load
-        prod_solar
-        prod_wind
-        grid_folder
-        scenario_folder_path
-        seed_disp
-        params
-        params_opf
-        loss
+        dispatcher: :class:`chronix2grid.dispatch.EconomicDispatch.Dispatcher`
+        scenario_name: ``str``
+        load: :class:`pandas.DataFrame`
+        prod_solar: :class:`pandas.DataFrame`
+        prod_wind: :class:`pandas.DataFrame`
+        grid_folder: ``str``
+        scenario_folder_path: ``str``
+        seed_disp: ``int``
+        params: ``dict``
+        params_opf: ``dict``
+        loss: :class:`pandas.DataFrame`
 
         Returns
         -------
-        dispatch_results: :class: `collection.namedtuple`
+        dispatch_results: :class:`collection.namedtuple`
             contains resulting production chronics and terminal conditions from the optimization engine
         """
         prods = pd.concat([prod_solar, prod_wind], axis=1)

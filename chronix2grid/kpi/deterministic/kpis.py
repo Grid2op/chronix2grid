@@ -24,7 +24,28 @@ class EconomicDispatchValidator:
                  synthetic_dispatch, year, images_repo,
                  prods_charac=None, loads_charac=None, ref_prices=None,
                  syn_prices=None):
-
+        """
+        ref_consumption: :class:`pandas.DataFrame`
+            reference power consumption chronics per load node of the grid
+        syn_consumption: :class:`pandas.DataFrame`
+            synthetic power consumption chronics per load node of the grid
+        ref_dispatch: :class:`pandas.DataFrame`
+            reference power generation chronics per generator of the grid
+        synthetic_dispatch: :class:`pandas.DataFrame`
+            synthetic power generation chronics per generator of the grid
+        year: ``int``
+            generation year
+        images_repo: ``str``
+            folder in which kpi images will be stored
+        prods_charac: :class:`pandas.DataFrame`
+            dataframe with infos on generators (region, carrier, Pmax...)
+        loads_charac: :class:`pandas.DataFrame`
+            dataframe with infos on load nodes (region, carrier, Pmax...)
+        ref_prices: :class:`pandas.DataFrame` or None
+            price scenario for reference chronics (used for thermal and hydro kpi). If not provided, those KPI will use quantiles on load instead of price
+        syn_prices: :class:`pandas.DataFrame` or None
+            price scenario for synthetic chronics (used for thermal and hydro kpi). If not provided, those KPI will use quantiles on load instead of price
+        """
         ## Constructor
 
         # Chronics
@@ -186,7 +207,7 @@ class EconomicDispatchValidator:
 
     def plot_carriers_pw(self, curve = 'synthetic' ,stacked=True, max_col_splot=2, save_html = True, wind_solar_only = False):
         """
-        Generate a temporal view of production by generators, one graph per carrier
+        Generate a temporal view of production by generators, one graph per carrier.
         The generated plot is an html interactive file
         """
 

@@ -20,7 +20,8 @@ class ConfigManager(ABC):
     root_directory: ``str``
     input_directories: ``str`` or ``dict``
     output_directory: ``str``
-    required_input_files: ``dict`` or ``None``
+    required_input_files: ``list`` or ``None``
+        dict with compulsory files to be checked
     """
     def __init__(self, name, root_directory, input_directories, output_directory,
                  required_input_files=None):
@@ -137,6 +138,17 @@ class GeneralConfigManager(ConfigManager):
                                                  output_directory, required_input_files)
 
     def read_configuration(self):
+        """
+        Reads parameters for the overall generation process
+
+            * *dt* - temporal granularity of the process
+            * *planned_std* - noise level for forecast chronics
+
+        Returns
+        -------
+        params: ``dict``
+            dictionary of parameters
+        """
         params_file_path = os.path.join(
             self.root_directory,
             self.input_directories['case'], 'params.json')
@@ -152,6 +164,21 @@ class GeneralConfigManager(ConfigManager):
 
 
 class LoadsConfigManager(ConfigManager):
+    """
+    Reads parameters for :class:`chronix2grid.generation.consumption.ConsumptionGeneratorBackend`
+
+        * *Lx* - x dimension of coarse grid for spatially correlated noise
+        * *Ly* - y dimension of coarse grid for spatially correlated noise
+        * *dx_corr* - x granularity of coarse grid for spatially correlated noise
+        * *dy_corr* - y granularity of coarse grid for spatially correlated noise
+        * *temperature_corr* - noise level for spatially correlated noise
+        * *std_temperature_noise* - noise level for temporally autocorrelated noise
+
+    Returns
+    -------
+    params_load: ``dict``
+        dictionary of parameters
+    """
     def __init__(self, name, root_directory, input_directories, output_directory,
                  required_input_files=None):
         super(LoadsConfigManager, self).__init__(name, root_directory, input_directories,
@@ -187,6 +214,13 @@ class LoadsConfigManager(ConfigManager):
         return params, loads_charac
 
     def read_specific(self):
+        """
+        Reads data frame with loads characteristics
+
+        Returns
+        -------
+        loads_charac: :class:`pandas.DataFrame`
+        """
         load_weekly_pattern = pd.read_csv(
             os.path.join(self.root_directory, self.input_directories['patterns'],
                          'load_weekly_pattern.csv'))
@@ -200,6 +234,23 @@ class ResConfigManager(ConfigManager):
                                                output_directory, required_input_files)
 
     def read_configuration(self):
+        """
+        Reads parameters for :class:`chronix2grid.generation.renewable.RenewableBackend`
+
+            * *Lx* - x dimension of coarse grid for spatially correlated noise
+            * *Ly* - y dimension of coarse grid for spatially correlated noise
+            * *dx_corr* - x granularity of coarse grid for spatially correlated noise
+            * *dy_corr* - y granularity of coarse grid for spatially correlated noise
+            * *solar_corr*, *short_wind_corr*, *medium_wind_corr*, *long_wind_corr* - noise levels for spatially correlated noises
+            * *std_solar_noise*, *std_short_wind_noise*, *std_medium_wind_noise*, *std_long_wind_noise* - noise levels for temporally autocorrelated noises
+            * *smoothdist* - independent noise level
+            * *year_solar_pattern* - year of provided solar pattern
+
+        Returns
+        -------
+        params_res: ``dict``
+            dictionary of parameters
+        """
         params_file_path = os.path.join(
             self.root_directory,
             self.input_directories['case'], 'params_res.json')
@@ -228,6 +279,13 @@ class ResConfigManager(ConfigManager):
         return params, prods_charac
 
     def read_specific(self):
+        """
+        Reads data frame with generator characteristics
+
+        Returns
+        -------
+        prods_charac: :class:`pandas.DataFrame`
+        """
         solar_pattern = np.load(
             os.path.join(self.root_directory, self.input_directories['patterns'],
                          'solar_pattern.npy'))
@@ -240,6 +298,20 @@ class ResConfigManagerGan(ConfigManager):
                                                output_directory, required_input_files)
 
     def read_configuration(self):
+        """
+        Reads parameters for :class:`chronix2grid.generation.renewable.RenewableBackendGAN`
+
+            * *model_name* - name of tensorflow serialized model
+            * *batch_size*, *n_gens*, *n_timesteps* - dimensions of learning batches
+            * *n_events* -  number of labels handled as input, representing arbitrary events in learning
+            * *dim_input*, *mu*, *sigma* - characteristics of inpus (size of gaussian noise vector, mean and standard deviation)
+
+        Returns
+        -------
+        params_res: ``dict``
+            dictionary of parameters
+        prods_charac: :class:`pandas.DataFrame`
+        """
         params_file_path = os.path.join(
             self.root_directory,
             self.input_directories['case'], 'params.json')
@@ -291,6 +363,42 @@ class DispatchConfigManager(ConfigManager):
                                                  output_directory, required_input_files)
 
     def read_configuration(self):
+        """
+        Reads parameters for :class:`chronix2grid.generation.dispatch.DispatchBackend`
+
+            * *step_opf_min* - time resolution of the OPF in minutes. It can be 5, 10, 15, 20, 30 or 60 and has to be superior or equal to dt (generation time resolution). In case it is strictly above, interpolation is done after dispatch resolution
+            * *mode_opf* - frequency at which we wan't to solve the OPF
+            * *dispatch_by_carrier* - if True, dispatch results will be returned for the whole carrier. If False, it will be returned by generator
+            * *ramp_mode* is essentially designed for debug purpose: when your OPF diverges, you may want to relax some constraints to know the reasons why the problem is unfeasible or leads to divergence
+                * If *hard*, all the ramp constraints will be taken into account.
+                * If *medium*, thermal ramp-constraints are skipped
+                * If *easy*, thermal and hydro ramp-constraints are skipped
+                * If *none*, thermal, hydro and nuclear ramp-constraints are skipped
+            * *reactive_comp* - Factor applied to consumption to compensate reactive part not modelled by linear opf
+            * *pyomo* - whether pypsa should use pyomo or not (boolean)
+            * *solver_name* - name of solver, that you should have installed in your environment and added in your environment variables.
+            * *losses_pct**- if D mode is deactivate, losses are estimated as a percentage of load.
+
+        Optional parameters can be set for grid2op simulation of loss as a final step.
+        The production is updated on a slack generator and warnings or errors are returned if this update violates generator constraints
+
+        * *loss_grid2op_simulation* - if True, launches grid2Op simulation for loss
+        * *idxSlack*, *nameSlack* - identifies slack generator that will be updated
+        * *early_stopping_mode* if True returns errors if generator constraints are violated after updates. If False, only returns warnings
+        * *pmin_margin*, *pmax_margin*, *rampdown_margin*, *rampup_margin* - margins to tolerate constraints violations
+        * *agent_type* - Grid2op agent type ti use for simulation. Can be "reco" for RecoPowerLines or "do-nothing"
+
+        .. warning::
+            The dispatch optimization can rely on pypsa simulation. If it is the case you should ensure pypsa dependencies are installed
+
+        .. note::
+            If no *loss_grid2op_simulation* is provided, chronix2grid follows considering it is False
+
+        Returns
+        -------
+        params_opf: ``dict``
+            dictionary of parameters
+        """
         self.validate_configuration()
         params_filepath = os.path.join(
             self.root_directory,
@@ -337,6 +445,15 @@ def read_all_configuration(files, root_directory, input_directories):
     return params
 
 class LossConfigManager(ConfigManager):
+    """
+            Checks parameters for :class:`chronix2grid.generation.loss.LossBackend`
+                * *loss_pattern* - name of loss pattern to read
+
+            Returns
+            -------
+            params_loss: ``dict``
+                dictionary of parameters
+            """
     def __init__(self, name, root_directory, input_directories, output_directory,
                  required_input_files=None):
         super(LossConfigManager, self).__init__(name, root_directory, input_directories,

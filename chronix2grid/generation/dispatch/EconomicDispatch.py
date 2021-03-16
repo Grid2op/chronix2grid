@@ -179,16 +179,6 @@ class Dispatcher(pypsa.Network):
         return {'p_max_pu': self._max_hydro_pu.copy(), 'p_min_pu': self._min_hydro_pu.copy()}
 
     def modify_marginal_costs(self, new_costs):
-        """
-        Modify marginal costs used for the dispatch given a dictionary
-        providing new costs for carriers.
-
-        Parameters
-        ----------
-        new_costs: dict
-            new costs by carrier
-
-        """
         for carrier, new_cost in new_costs.items():
             try:
                 targeted_generators = self.generators.carrier.isin([carrier])
