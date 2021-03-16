@@ -1,6 +1,13 @@
 """
 This file gathers constants related to directories and files that chronix2grid
 reads/writes. It also defines the ConfigManager and the Backend used for each step of generation process (LRDT)
+
+.. note::
+    For the moment you can only change the backend for renewable generation and the associated config manager.
+
+    Switch from RenewableBackend to RenewableBackendGAN and from ResConfigManager to ResConfigManagerGan
+
+    Note that this would require tensorflow 1.15.4 which is an optional dependency of chronix2grid
 """
 from chronix2grid.generation.consumption.ConsumptionGeneratorBackend import ConsumptionGeneratorBackend
 from chronix2grid.generation.renewable.RenewableBackend import RenewableBackend
