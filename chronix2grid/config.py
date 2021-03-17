@@ -5,8 +5,6 @@ import os
 import numpy as np
 import pandas as pd
 
-from chronix2grid.generation.dispatch import utils as du
-
 
 class ConfigManager(ABC):
     """

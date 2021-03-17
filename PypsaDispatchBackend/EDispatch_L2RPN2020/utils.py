@@ -6,7 +6,7 @@ import pandas as pd
 import pypsa
 import copy 
 
-from chronix2grid.generation.dispatch.utils import RampMode
+from PypsaDispatchBackend.utils import RampMode
 
 
 def filter_ramps(net, mode):

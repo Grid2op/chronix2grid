@@ -1,11 +1,13 @@
 import os
+import warnings
 
 import pandas as pd
 
 from chronix2grid import constants
 from chronix2grid import utils
 from chronix2grid.generation import generation_utils
-from chronix2grid.generation.dispatch import generate_dispatch, EconomicDispatch
+
+MSG_PYPSA_DEPENDENCY = "Please install PypsaDispatchBackend dependency to launch chronix2grid with T mode. Chronix2grid stopped before dispatch computation. You should launch xithout letter T in mode"
 
 class GeneratorBackend:
     """
@@ -143,18 +145,9 @@ class GeneratorBackend:
         params_res, prods_charac = res_config_manager.read_configuration()
         params_res.update(params)
 
-        dispath_config_manager = self.dispatch_config_manager(
-            name="Dispatch",
-            root_directory=input_folder,
-            output_directory=output_folder,
-            input_directories=dict(params=case),
-            required_input_files=dict(params=['params_opf.json'])
-        )
-        dispath_config_manager.validate_configuration()
-        params_opf = dispath_config_manager.read_configuration()
+
         grid_folder = os.path.join(input_folder, case)
-        grid_path = os.path.join(grid_folder, constants.GRID_FILENAME)
-        dispatcher = EconomicDispatch.init_dispatcher_from_config(grid_path, input_folder)
+
         loss = None
 
         ## Launch proper scenarios generation
@@ -191,8 +184,19 @@ class GeneratorBackend:
                                      load, prod_solar, prod_wind,
                                      params, loss_config_manager)
             if 'T' in mode:
-                dispatch_results = self.do_t(dispatcher, scenario_name, load, prod_solar, prod_wind,
+                dispath_config_manager = self.dispatch_config_manager(
+                    name="Dispatch",
+                    root_directory=input_folder,
+                    output_directory=output_folder,
+                    input_directories=dict(params=case),
+                    required_input_files=dict(params=['params_opf.json'])
+                )
+                dispath_config_manager.validate_configuration()
+                params_opf = dispath_config_manager.read_configuration()
+
+                dispatch_results = self.do_t(input_folder, scenario_name, load, prod_solar, prod_wind,
                                              grid_folder, scenario_folder_path, seed_disp, params, params_opf, loss)
+
             print('\n')
         return params, loads_charac, prods_charac
 
@@ -278,7 +282,7 @@ class GeneratorBackend:
         loss = generator_loss.run()
         return loss
 
-    def do_t(self, dispatcher, scenario_name, load, prod_solar, prod_wind, grid_folder,
+    def do_t(self, input_folder, scenario_name, load, prod_solar, prod_wind, grid_folder,
              scenario_folder_path, seed_disp, params, params_opf, loss):
         """
         Computes production chronics based on a dispatch computation. It uses a dispatcher object as an environment for simulation and
@@ -303,15 +307,21 @@ class GeneratorBackend:
         dispatch_results: :class:`collection.namedtuple`
             contains resulting production chronics and terminal conditions from the optimization engine
         """
+
+        try:
+            from PypsaDispatchBackend import EconomicDispatch
+        except:
+            warnings.warn(MSG_PYPSA_DEPENDENCY, UserWarning)
+            return None
         prods = pd.concat([prod_solar, prod_wind], axis=1)
         res_names = dict(wind=prod_wind.columns, solar=prod_solar.columns)
+        grid_path = os.path.join(grid_folder, constants.GRID_FILENAME)
+        dispatcher = EconomicDispatch.init_dispatcher_from_config(grid_path, input_folder)
         dispatcher.chronix_scenario = EconomicDispatch.ChroniXScenario(load, prods, res_names,
                                                                        scenario_name, loss)
 
         generator_dispatch = self.dispatch_backend_class(dispatcher, scenario_folder_path,
                                                  grid_folder, seed_disp, params, params_opf)
         dispatch_results = generator_dispatch.run()
-        # dispatch_results = generate_dispatch.main(dispatcher, scenario_folder_path,
-        #                                          scenario_folder_path, grid_folder,
-        #                                           seed_disp, params, params_opf)
+
         return dispatch_results

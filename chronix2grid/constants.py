@@ -9,11 +9,7 @@ reads/writes. It also defines the ConfigManager and the Backend used for each st
 
     Note that this would require tensorflow 1.15.4 which is an optional dependency of chronix2grid
 """
-from chronix2grid.generation.consumption.ConsumptionGeneratorBackend import ConsumptionGeneratorBackend
-from chronix2grid.generation.renewable.RenewableBackend import RenewableBackend
-from chronix2grid.generation.loss.LossBackend import LossBackend
-from chronix2grid.generation.dispatch.DispatchBackend import DispatchBackend
-from chronix2grid.config import GeneralConfigManager, LoadsConfigManager, ResConfigManager, LossConfigManager, DispatchConfigManager
+
 
 GENERATION_FOLDER_NAME = 'generation'
 KPI_FOLDER_NAME = 'kpi'
@@ -30,24 +26,41 @@ FLOATING_POINT_PRECISION_FORMAT = '%.1f'
 
 TIME_STEP_FILE_NAME = 'time_interval.info'
 
-RENEWABLE_NINJA_REFERENCE_FOLDER = 'renewable_ninja'
-
-GAN_TRAINING_SET_REFERENCE_FOLDER = 'GAN_training_data'
-
 REFERENCE_ZONE = 'France'
 
 GRID_FILENAME = 'grid.json'
 
-GENERAL_CONFIG = GeneralConfigManager
-#from chronix2grid.config import ResConfigManagerGan
-RENEWABLE_GENERATION_CONFIG = ResConfigManager #ResConfigManagerGan #ResConfigManager
-LOAD_GENERATION_CONFIG = LoadsConfigManager
-LOSS_GENERATION_CONFIG = LossConfigManager
-DISPATCH_GENERATION_CONFIG = DispatchConfigManager
+##############################################
+################ BACKENDS ####################
+##############################################
 
+from chronix2grid.generation.consumption.ConsumptionGeneratorBackend import ConsumptionGeneratorBackend
+from chronix2grid.generation.renewable.RenewableBackend import RenewableBackend
+from chronix2grid.generation.loss.LossBackend import LossBackend
+from chronix2grid.config import GeneralConfigManager, LoadsConfigManager, ResConfigManager, LossConfigManager, DispatchConfigManager
+
+GENERAL_CONFIG = GeneralConfigManager
+
+#### LOAD (L) ####
+LOAD_GENERATION_CONFIG = LoadsConfigManager
 LOAD_GENERATION_BACKEND = ConsumptionGeneratorBackend
+
+#### RENEWABLE - SOLAR AND WIND (R) ####
+# from chronix2grid.config import ResConfigManagerGan
+RENEWABLE_GENERATION_CONFIG = ResConfigManager #ResConfigManagerGan #ResConfigManager
 # from chronix2grid.generation.renewable.RenewableBackend import RenewableBackendGAN
 RENEWABLE_GENERATION_BACKEND = RenewableBackend #RenewableBackendGAN # RenewableBackend
+
+#### LOSS (D) ####
+LOSS_GENERATION_CONFIG = LossConfigManager
 LOSS_GENERATION_BACKEND = LossBackend
-DISPATCH_GENERATION_BACKEND = DispatchBackend
+
+#### DISPATCH - HYDRO, THERMAL, NUCLEAR (T) ####
+DISPATCH_GENERATION_CONFIG = DispatchConfigManager
 HYDRO_GENERATION_BACKEND = None
+from PypsaDispatchBackend.DispatchBackend import DispatchBackend
+DISPATCH_GENERATION_BACKEND = DispatchBackend #DispatchBackend, None
+
+#### KPI (K) ####
+RENEWABLE_NINJA_REFERENCE_FOLDER = 'renewable_ninja'
+GAN_TRAINING_SET_REFERENCE_FOLDER = 'GAN_training_data'

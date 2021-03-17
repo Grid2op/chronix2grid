@@ -240,7 +240,7 @@ if __name__ == "__main__":
     weeks = 4
     by_n_weeks = 4
     n_scenarios = 1
-    mode = 'LRK'
+    mode = 'LRDTK'
     input_folder = 'getting_started/example/input' #'getting_started/example/input' #'input_data'
     output_folder =  'getting_started/example/output' #'getting_started/example/output' #'output' #'output_gan'
     scenario_name = "" #"january_wind" #"year_wind"
