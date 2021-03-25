@@ -3,20 +3,20 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 
-def load_wind_model(sess, params, network_folder):
+def load_model(sess, params, network_folder, carrier):
 
-    saver = tf.compat.v1.train.import_meta_graph(os.path.join(network_folder, 'wind', params["model_name"]+".meta"))
-    checkpoint = tf.compat.v1.train.latest_checkpoint(os.path.join(network_folder, 'wind'))
+    saver = tf.compat.v1.train.import_meta_graph(os.path.join(network_folder, carrier, params["model_name_"+carrier]+".meta"))
+    checkpoint = tf.compat.v1.train.latest_checkpoint(os.path.join(network_folder, carrier))
     saver.restore(sess, checkpoint)
     dcgan_model = ReplayedGAN(
-        dim_y=params["n_events"],
-        batch_size=params["batch_size"],
-        image_shape=[params["n_gens"], params["n_timesteps"],1],
-        dim_z=params["dim_inputs"]
+        dim_y=params["n_events_"+carrier],
+        batch_size=params["batch_size_"+carrier],
+        image_shape=[params["n_timesteps_"+carrier],params["n_gens_"+carrier],1],
+        dim_z=params["dim_inputs_"+carrier]
     )
-    print("Replayed_W_DCGAN model loaded")
-
-    return dcgan_model
+    del saver
+    print("Replayed_W_DCGAN model loaded for "+carrier)
+    return dcgan_model, sess
 
 def OneHot(X, n, negative_class=0.):
     X = np.asarray(X).flatten()
@@ -28,17 +28,17 @@ def OneHot(X, n, negative_class=0.):
         Xoh[i,m]=1
     return Xoh
 
-def generate_gaussian_inputs(params):
-    n_preds = compute_n_preds(params)
+def generate_gaussian_inputs(params, carrier):
+    n_preds = compute_n_preds(params, carrier)
     Y = []
     Z = []
     for pred in range(n_preds):
-        Y.append(OneHot(np.random.randint(int(params["n_events"]), size=[params["batch_size"]]), n=int(params["n_events"])))
-        Z.append(np.random.normal(params["mu"], params["sigma"], size=[int(params["batch_size"]), int(params["dim_inputs"])]).astype(np.float32))
+        Y.append(OneHot(np.random.randint(int(params["n_events_"+carrier]), size=[params["batch_size_"+carrier]]), n=int(params["n_events_"+carrier])))
+        Z.append(np.random.normal(params["mu_"+carrier], params["sigma_"+carrier], size=[int(params["batch_size_"+carrier]), int(params["dim_inputs_"+carrier])]).astype(np.float32))
     return Y,Z
 
-def compute_n_preds(params):
-    n_days_by_pred = params["batch_size"]
+def compute_n_preds(params, carrier):
+    n_days_by_pred = params["batch_size_"+carrier]
     n_days = (int(params["T"] / params["dt"]) // 24) + 1
     n_preds = (n_days // n_days_by_pred) + 1
     return n_preds
@@ -47,13 +47,13 @@ def post_process_sample(generated_batches, params, prods_charac, datetime_index,
     gens = prods_charac[prods_charac['type']==carrier]["name"].unique()
     wind = pd.DataFrame(columns = gens)
 
-    if len(gens) > params['n_gens']:
+    if len(gens) > params['n_gens_'+carrier]:
         raise ValueError("the neural network should be trained on at least the same number of generators as in the generation process")
 
     for day, batch in enumerate(generated_batches):
-        for i in range(params["batch_size"]):
-            matrix = batch[i,:len(gens),:,0] # batch[i,:,:len(gens),0] # DIMENSIONS
-            df = pd.DataFrame(np.transpose(matrix), columns=gens) # Enlever ou ajouter np.transpose en conséquence
+        for i in range(params["batch_size_"+carrier]):
+            matrix = batch[i,:,:len(gens),0] # batch[i,:,:len(gens),0] # DIMENSIONS
+            df = pd.DataFrame(matrix, columns=gens) # Enlever ou ajouter np.transpose en conséquence matric --> np.transpose(matrix)
             wind = pd.concat([wind, df], axis = 0)
     # Truncate last batch
     wind = wind.reset_index(drop=True)

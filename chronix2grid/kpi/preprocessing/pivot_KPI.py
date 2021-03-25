@@ -71,7 +71,7 @@ def pivot_format(chronics_folder, kpi_input_folder, year, prods_charac, loads_ch
         else:
             print("Computation stopped: Texas Benchmark not implemented for a whole energy mix. Launch KPI computation in mode wind solar and load only.")
             sys.exit()
-    elif comparison == 'USA':
+    elif comparison == 'USA - Washington State':
         if wind_solar_only:
             ref_prod, ref_load = usa_gan_trainingset_to_kpi(kpi_case_input_folder, timestep, prods_charac, loads_charac, params,year)
         else:

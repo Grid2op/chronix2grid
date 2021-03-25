@@ -12,29 +12,6 @@ def usa_gan_trainingset_to_kpi(kpi_case_input_folder, timestep, prods_charac, lo
         print('Erreur: GAN requires timestep >60 min to compute KPI. Please change timestep in paramsKPI.json')
         sys.exit()
 
-    ## WIND
-    # Loading and reshaping raw data from NREL (State of Washington wind farms)
-    repo_in = os.path.join(kpi_case_input_folder, 'USA/NREL',cst.GAN_TRAINING_SET_REFERENCE_FOLDER, "wind.csv")
-    with open(repo_in, 'r') as csvfile:
-        reader = csv.reader(csvfile)
-        rows = [row for row in reader]
-    rows = np.array(rows, dtype=float)
-    trX = []
-    # print(np.shape(rows))
-    m = np.ndarray.max(rows)
-    # print("Maximum value of wind", m)
-    # print(np.shape(rows))
-    for x in range(rows.shape[1]):
-        train = rows[:-288, x].reshape(-1, params['n_timesteps'], params['n_gens']) # DIMENSIONS
-        train = train / 16 # Pmax in data
-
-        # print(shape(train))
-        if trX == []:
-            trX = train
-        else:
-            trX = np.concatenate((trX, train), axis=0)
-    # print("Shape TrX", np.shape(trX))
-
     # Selecting desired time index
     start_date = params["start_date"]
     end_date = params['end_date']
@@ -44,28 +21,20 @@ def usa_gan_trainingset_to_kpi(kpi_case_input_folder, timestep, prods_charac, lo
         freq=str(timestep))
     T = len(datetime_index)
 
-    # Getting wind farms generations
-    wind_gens = prods_charac[prods_charac['type'] == 'wind']['name'].unique()
-    N = len(wind_gens)
-    ref_prod_wind = pd.DataFrame(columns = wind_gens)
-    for day in range(T//params["n_timesteps"]):
-        day_production = np.transpose(trX[day,:N,:])
-        new_df = pd.DataFrame(day_production, columns=wind_gens)
-        ref_prod_wind = pd.concat([ref_prod_wind,new_df], axis = 0)
-    day_production = np.transpose(trX[(day+1), :N, :(T%params["n_timesteps"])])
-    new_df = pd.DataFrame(day_production, columns=wind_gens)
-    ref_prod_wind = pd.concat([ref_prod_wind, new_df], axis=0)
 
-    # Scale with Pmax
-    for gen in wind_gens:
-        Pmax = prods_charac.loc[prods_charac['name']==gen,'Pmax'].values[0]
-        ref_prod_wind[gen] = ref_prod_wind[gen] * Pmax
+    ## WIND
+    repo_in = os.path.join(kpi_case_input_folder, 'USA - Washington State', 'NREL',
+                           cst.GAN_TRAINING_SET_REFERENCE_FOLDER, "wind.csv")
+    ref_prod_wind = gan_trainingdata_processing_wind(repo_in, T, prods_charac, params)
 
     ## Solar TEMPORARY ============
-    other_gens = prods_charac[prods_charac['type'] == 'solar']['name'].unique()
-    other_prods = pd.DataFrame(np.ones((T, len(other_gens)))*16, columns=other_gens)
-    ref_prod_wind.index = other_prods.index
-    ref_prod = pd.concat([ref_prod_wind, other_prods], axis = 1)
+    repo_in = os.path.join(kpi_case_input_folder, 'USA - Washington State', 'NREL',
+                           cst.GAN_TRAINING_SET_REFERENCE_FOLDER, "solar.csv")
+    ref_prod_solar = gan_trainingdata_processing_solar(repo_in, T, prods_charac, params)
+
+    ## Concatenate
+    ref_prod_wind.index = ref_prod_solar.index
+    ref_prod = pd.concat([ref_prod_wind, ref_prod_solar], axis = 1)
 
     ## Load TEMPORARY ============
     load_nodes = loads_charac['name'].unique()
@@ -77,6 +46,80 @@ def usa_gan_trainingset_to_kpi(kpi_case_input_folder, timestep, prods_charac, lo
     ref_load['Time'] = datetime_index
     ref_load.index = ref_load['Time']
     return ref_prod, ref_load
+
+def gan_trainingdata_processing_solar(repo_in, T, prods_charac, params):
+    carrier = 'solar'
+    # Loading and reshaping raw data from NREL (State of Washington wind and solar farms)
+    with open(repo_in, 'r') as csvfile:
+        reader = csv.reader(csvfile)
+        rows = [row for row in reader]
+    rows = np.array(rows, dtype=float)
+    rows=rows[:104832,:] #Change to the time points in your own dataset
+    print(np.shape(rows))
+    trX = np.reshape(rows.T,(-1, params['n_timesteps_' + carrier], params['n_gens_' + carrier])) #Corresponds to the GAN input dimensions.
+    print(np.shape(trX))
+    m = np.ndarray.max(rows)
+    print("maximum value of solar power", m)
+    trX=trX/m
+
+    # Getting wind farms generations
+    wind_gens = prods_charac[prods_charac['type'] == carrier]['name'].unique()
+    N = len(wind_gens)
+    ref_prod_wind = pd.DataFrame(columns=wind_gens)
+    for day in range(T // params["n_timesteps_" + carrier]):
+        day_production = trX[day, :, :N] # np.transpose(expr) si on inverse les gens et les timesteps
+        new_df = pd.DataFrame(day_production, columns=wind_gens)
+        ref_prod_wind = pd.concat([ref_prod_wind, new_df], axis=0)
+    day_production = trX[(day + 1), :(T % params["n_timesteps_" + carrier]), :N] # np.transpose(expr) si on inverse les gens et les timesteps
+    new_df = pd.DataFrame(day_production, columns=wind_gens)
+    ref_prod_wind = pd.concat([ref_prod_wind, new_df], axis=0)
+
+    # Scale with Pmax
+    for gen in wind_gens:
+        Pmax = prods_charac.loc[prods_charac['name'] == gen, 'Pmax'].values[0]
+        ref_prod_wind[gen] = ref_prod_wind[gen] * Pmax
+    return ref_prod_wind
+
+def gan_trainingdata_processing_wind(repo_in, T, prods_charac, params):
+    carrier = 'wind'
+    # Loading and reshaping raw data from NREL (State of Washington wind farms)
+    with open(repo_in, 'r') as csvfile:
+        reader = csv.reader(csvfile)
+        rows = [row for row in reader]
+    rows = np.array(rows, dtype=float)
+    trX = []
+    # print(np.shape(rows))
+    m = np.ndarray.max(rows)
+    # print("Maximum value of wind", m)
+    # print(np.shape(rows))
+    for x in range(rows.shape[1]):
+        train = rows[:-288, x].reshape(-1, params['n_timesteps_' + carrier], params['n_gens_' + carrier])  # DIMENSIONS
+        train = train / 16  # Pmax in data
+
+        # print(shape(train))
+        if trX == []:
+            trX = train
+        else:
+            trX = np.concatenate((trX, train), axis=0)
+    # print("Shape TrX", np.shape(trX))
+
+    # Getting wind farms generations
+    wind_gens = prods_charac[prods_charac['type'] == carrier]['name'].unique()
+    N = len(wind_gens)
+    ref_prod_wind = pd.DataFrame(columns=wind_gens)
+    for day in range(T // params["n_timesteps_" + carrier]):
+        day_production = trX[day, :, :N] # np.transpose(expr) si on inverse les gens et les timesteps
+        new_df = pd.DataFrame(day_production, columns=wind_gens)
+        ref_prod_wind = pd.concat([ref_prod_wind, new_df], axis=0)
+    day_production = trX[(day + 1), :(T % params["n_timesteps_" + carrier]), :N] # np.transpose(expr) si on inverse les gens et les timesteps
+    new_df = pd.DataFrame(day_production, columns=wind_gens)
+    ref_prod_wind = pd.concat([ref_prod_wind, new_df], axis=0)
+
+    # Scale with Pmax
+    for gen in wind_gens:
+        Pmax = prods_charac.loc[prods_charac['name'] == gen, 'Pmax'].values[0]
+        ref_prod_wind[gen] = ref_prod_wind[gen] * Pmax
+    return ref_prod_wind
 
 def eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_charac, year, params, corresp_regions):
     # Initialize dataframes to fill

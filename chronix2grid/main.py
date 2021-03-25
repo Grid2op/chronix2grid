@@ -243,7 +243,7 @@ if __name__ == "__main__":
     mode = 'LRDTK'
     input_folder = 'getting_started/example/input' #'getting_started/example/input' #'input_data'
     output_folder =  'getting_started/example/output' #'getting_started/example/output' #'output' #'output_gan'
-    scenario_name = "" #"january_wind" #"year_wind"
+    scenario_name = "" #"january_wind_solar" #"january_wind" #"year_wind"
     seed_for_loads = 912206665
     seed_for_res = 912206665
     seed_for_dispatch = 912206665

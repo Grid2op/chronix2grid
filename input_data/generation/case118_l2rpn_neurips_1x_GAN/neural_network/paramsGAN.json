@@ -1,10 +1,18 @@
 {
-  "model_name":"model_wind_test_70epochs",
-  "batch_size":32,
-  "n_gens": 24,
-  "n_timesteps":24,
-  "n_events":5,
-  "dim_inputs":100,
-  "mu":0,
-  "sigma":0.1
+  "model_name_wind":"model_wind_test_70epochs",
+  "batch_size_wind":32,
+  "n_gens_wind": 24,
+  "n_timesteps_wind":24,
+  "n_events_wind":5,
+  "dim_inputs_wind":100,
+  "mu_wind":0,
+  "sigma_wind":0.1,
+  "model_name_solar":"model_solar_test_70epochs",
+  "batch_size_solar":32,
+  "n_gens_solar": 24,
+  "n_timesteps_solar":24,
+  "n_events_solar":12,
+  "dim_inputs_solar":100,
+  "mu_solar":0,
+  "sigma_solar":0.1
 }

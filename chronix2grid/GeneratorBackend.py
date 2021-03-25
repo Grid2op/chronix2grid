@@ -8,6 +8,7 @@ from chronix2grid import utils
 from chronix2grid.generation import generation_utils
 
 MSG_PYPSA_DEPENDENCY = "Please install PypsaDispatchBackend dependency to launch chronix2grid with T mode. Chronix2grid stopped before dispatch computation. You should launch xithout letter T in mode"
+MSG_NO_DISPATCH_BACKEND = "Dispatch Backend is set to None - no dispatch has been computed"
 
 class GeneratorBackend:
     """
@@ -184,18 +185,21 @@ class GeneratorBackend:
                                      load, prod_solar, prod_wind,
                                      params, loss_config_manager)
             if 'T' in mode:
-                dispath_config_manager = self.dispatch_config_manager(
-                    name="Dispatch",
-                    root_directory=input_folder,
-                    output_directory=output_folder,
-                    input_directories=dict(params=case),
-                    required_input_files=dict(params=['params_opf.json'])
-                )
-                dispath_config_manager.validate_configuration()
-                params_opf = dispath_config_manager.read_configuration()
+                if self.dispatch_backend_class is None:
+                    warnings.warn(MSG_NO_DISPATCH_BACKEND, UserWarning)
+                else:
+                    dispath_config_manager = self.dispatch_config_manager(
+                        name="Dispatch",
+                        root_directory=input_folder,
+                        output_directory=output_folder,
+                        input_directories=dict(params=case),
+                        required_input_files=dict(params=['params_opf.json'])
+                    )
+                    dispath_config_manager.validate_configuration()
+                    params_opf = dispath_config_manager.read_configuration()
 
-                dispatch_results = self.do_t(input_folder, scenario_name, load, prod_solar, prod_wind,
-                                             grid_folder, scenario_folder_path, seed_disp, params, params_opf, loss)
+                    dispatch_results = self.do_t(input_folder, scenario_name, load, prod_solar, prod_wind,
+                                                 grid_folder, scenario_folder_path, seed_disp, params, params_opf, loss)
 
             print('\n')
         return params, loads_charac, prods_charac

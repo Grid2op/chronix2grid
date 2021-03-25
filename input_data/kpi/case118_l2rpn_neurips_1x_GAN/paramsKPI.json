@@ -1,5 +1,5 @@
 {
-  "comparison": "France",
+  "comparison": "USA - Washington State",
   "timestep": "60min",
   "cloudiness_quantile":0.95,
   "cloudiness_factor":0.85,

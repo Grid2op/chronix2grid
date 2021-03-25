@@ -9,10 +9,9 @@ import numpy as np
 # Libraries developed for this module
 from . import solar_wind_utils as swutils
 import chronix2grid.constants as cst
-from chronix2grid.generation.renewable.gan_utils import ReplayedGAN, generate_gaussian_inputs, post_process_sample, load_wind_model
+from chronix2grid.generation.renewable.gan_utils import ReplayedGAN, generate_gaussian_inputs, post_process_sample, load_model
 
 import tensorflow as tf
-
 
 def main_gan(scenario_destination_path, seed, params, prods_charac, write_results = True):
 
@@ -27,33 +26,39 @@ def main_gan(scenario_destination_path, seed, params, prods_charac, write_result
         end=params['end_date'],
         freq=str(params['dt']) + 'min')
 
-    # Read GAN network session
-    sess = tf.InteractiveSession()
-    dcgan_model = load_wind_model(sess, params, network_folder)
+    # Init tensorflow graphs and sessions
+    solar_graph = tf.Graph()
+    wind_graph = tf.Graph()
+    sess_solar = tf.InteractiveSession(graph=solar_graph)
+    sess_wind = tf.InteractiveSession(graph=wind_graph)
 
-    # Generate random inputs
-    Y,Z = generate_gaussian_inputs(params)
+    #### SOLAR
+    with sess_solar.as_default():
+        with solar_graph.as_default():
+            dcgan_model_solar, sess_solar = load_model(sess_solar, params, network_folder, carrier='solar')
+            solar_series = run_model(sess_solar, dcgan_model_solar, params, prods_charac, datetime_index, carrier='solar')
 
-    # Simulate with GAN
-    Z_tf_sample, Y_tf_sample, image_tf_sample = dcgan_model.samples_generator(batch_size=params["batch_size"])
-    generated_batches = []
-    for y, z in zip(Y,Z):
-        generated_samples = sess.run(
-            image_tf_sample,
-            feed_dict={
-                Z_tf_sample: z,
-                Y_tf_sample: y
-            })
-        generated_batches.append(generated_samples)
-    wind_series = post_process_sample(generated_batches, params, prods_charac, datetime_index, carrier="wind")
+    #### WIND
+    with sess_wind.as_default():
+        with wind_graph.as_default():
+            dcgan_model_wind, sess_wind = load_model(sess_wind, params, network_folder, carrier = 'wind')
+            wind_series = run_model(sess_wind, dcgan_model_wind, params, prods_charac, datetime_index, carrier = 'wind')
+
 
     ################### A changer
-    solar_gens = prods_charac[prods_charac['type']=='solar']['name'].unique()
-    solar_series_matrix = np.ones((len(datetime_index),len(solar_gens)))
-    solar_series = pd.DataFrame(solar_series_matrix, columns=solar_gens)
-    prods_series = pd.concat([wind_series,solar_series], axis = 1)
-    solar_series['datetime'] = datetime_index
+    # wind_gens = prods_charac[prods_charac['type'] == 'wind']['name'].unique()
+    # wind_series_matrix = np.ones((len(datetime_index),len(wind_gens)))
+    # wind_series = pd.DataFrame(wind_series_matrix, columns=wind_gens)
+    # wind_series['datetime'] = datetime_index
+    # solar_gens = prods_charac[prods_charac['type']=='solar']['name'].unique()
+    # solar_series_matrix = np.ones((len(datetime_index),len(solar_gens)))
+    # solar_series = pd.DataFrame(solar_series_matrix, columns=solar_gens)
+    # prods_series = pd.concat([wind_series,solar_series], axis = 1)
+    # solar_series['datetime'] = datetime_index
     ##########################
+
+    # Concatenate
+    prods_series = pd.concat([wind_series, solar_series.loc[:, solar_series.columns != 'datetime']], axis=1)
 
     # Save files
     print('Saving files in zipped csv')
@@ -115,4 +120,20 @@ def main_gan(scenario_destination_path, seed, params, prods_charac, write_result
 
     return prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted
 
+def run_model(sess, dcgan_model, params, prods_charac, datetime_index, carrier):
+    # Generate random inputs
+    Y, Z = generate_gaussian_inputs(params, carrier)
 
+    # Simulate with GAN
+    Z_tf_sample, Y_tf_sample, image_tf_sample = dcgan_model.samples_generator(batch_size=params["batch_size_"+carrier])
+    generated_batches = []
+    for y, z in zip(Y, Z):
+        generated_samples = sess.run(
+            image_tf_sample,
+            feed_dict={
+                Z_tf_sample: z,
+                Y_tf_sample: y
+            })
+        generated_batches.append(generated_samples)
+    series = post_process_sample(generated_batches, params, prods_charac, datetime_index, carrier=carrier)
+    return series

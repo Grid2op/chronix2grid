@@ -299,10 +299,12 @@ class ResConfigManagerGan(ConfigManager):
         """
         Reads parameters for :class:`chronix2grid.generation.renewable.RenewableBackendGAN`
 
-            * *model_name* - name of tensorflow serialized model
-            * *batch_size*, *n_gens*, *n_timesteps* - dimensions of learning batches
-            * *n_events* -  number of labels handled as input, representing arbitrary events in learning
-            * *dim_input*, *mu*, *sigma* - characteristics of inpus (size of gaussian noise vector, mean and standard deviation)
+            * *model_name_wind* - name of tensorflow serialized model for wind
+            * *batch_size_wind*, *n_gens_wind*, *n_timesteps_wind* - dimensions of learning batches of wind networks
+            * *n_events_wind* -  number of labels handled as input, representing arbitrary events in learning of wind
+            * *dim_input_wind*, *mu_wind*, *sigma_wind* - characteristics of inpus (size of gaussian noise vector, mean and standard deviation)
+
+        ALl the same parameters are expected for solar generation (with suffix *_solar*), that will use the same network architecture but with potentialy différent layout parameters
 
         Returns
         -------
@@ -328,9 +330,9 @@ class ResConfigManagerGan(ConfigManager):
             params = json.load(params_json)
 
         for key, value in params.items():
-            if key in ["mu","sigma"]:
+            if key in ["mu_wind","sigma_wind","mu_solar","sigma_solar"]:
                 params[key] = float(value)
-            elif key != "model_name":
+            elif "model_name" not in key:
                 try:
                     params[key] = int(value)
                 except ValueError:

@@ -510,8 +510,8 @@ class EconomicDispatchValidator:
         wind_syn = self.syn_dispatch[wind_names]
     
         # Compute correlation for all elements between both dataframes
-        ref_corr_wind = self._pairwise_corr_different_dfs(wind_ref, wind_ref)
-        syn_corr_wind = self._pairwise_corr_different_dfs(wind_syn, wind_syn)
+        ref_corr_wind = self._pairwise_corr_different_dfs(wind_ref, wind_ref).fillna(0)
+        syn_corr_wind = self._pairwise_corr_different_dfs(wind_syn, wind_syn).fillna(0)
         
         # Write results json output
         # -- + -- + -- + -- + -- + 
