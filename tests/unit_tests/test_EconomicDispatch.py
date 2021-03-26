@@ -1,5 +1,4 @@
 import datetime as dt
-import json
 import os
 import tempfile
 import unittest
@@ -7,9 +6,10 @@ import unittest
 import pandas as pd
 import pathlib
 
-from chronix2grid.generation.dispatch.EconomicDispatch import (
-    ChroniXScenario, init_dispatcher_from_config, Dispatcher)
 import chronix2grid.constants as cst
+from chronix2grid.generation.dispatch.EconomicDispatch import (
+            ChroniXScenario, init_dispatcher_from_config)
+
 import grid2op
 from grid2op.Chronics import ChangeNothing
 
@@ -27,7 +27,8 @@ class TestDispatch(unittest.TestCase):
                                self.CASE, 'grid.json')
         self.dispatcher = init_dispatcher_from_config(
             self.grid_path,
-            os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME)
+            os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME),
+            cst.DISPATCHER
         )
         self.hydro_file_path = os.path.join(self.input_folder,
                                             cst.GENERATION_FOLDER_NAME,
@@ -39,8 +40,8 @@ class TestDispatch(unittest.TestCase):
                                    test=True,
                                    grid_path=self.grid_path,
                                    chronics_class=ChangeNothing)
-        dispatcher = Dispatcher.from_gri2op_env(grid2op_env)
-        self.assertTrue(isinstance(dispatcher, Dispatcher))
+        dispatcher = cst.DISPATCHER.from_gri2op_env(grid2op_env)
+        self.assertTrue(isinstance(dispatcher, cst.DISPATCHER))
 
     def test_read_hydro_guide_curves(self):
         self.dispatcher.read_hydro_guide_curves(self.hydro_file_path)
