@@ -44,19 +44,6 @@ def main_gan(scenario_destination_path, seed, params, prods_charac, write_result
             dcgan_model_wind, sess_wind = load_model(sess_wind, params, network_folder, carrier = 'wind')
             wind_series = run_model(sess_wind, dcgan_model_wind, params, prods_charac, datetime_index, carrier = 'wind')
 
-
-    ################### A changer
-    # wind_gens = prods_charac[prods_charac['type'] == 'wind']['name'].unique()
-    # wind_series_matrix = np.ones((len(datetime_index),len(wind_gens)))
-    # wind_series = pd.DataFrame(wind_series_matrix, columns=wind_gens)
-    # wind_series['datetime'] = datetime_index
-    # solar_gens = prods_charac[prods_charac['type']=='solar']['name'].unique()
-    # solar_series_matrix = np.ones((len(datetime_index),len(solar_gens)))
-    # solar_series = pd.DataFrame(solar_series_matrix, columns=solar_gens)
-    # prods_series = pd.concat([wind_series,solar_series], axis = 1)
-    # solar_series['datetime'] = datetime_index
-    ##########################
-
     # Concatenate
     prods_series = pd.concat([wind_series, solar_series.loc[:, solar_series.columns != 'datetime']], axis=1)
 

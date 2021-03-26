@@ -1,13 +1,13 @@
 {
   "comparison": "USA - Washington State",
-  "timestep": "60min",
+  "timestep": "120min",
   "cloudiness_quantile":0.95,
   "cloudiness_factor":0.85,
   "night_hours": {
-    "summer": ["06:00", "22:00"],
-    "fall": ["07:00", "20:00"],
-    "winter": ["08:00", "18:00"],
-    "spring": ["07:00", "20:00"]
+    "summer": ["5:00", "22:00"],
+    "fall": ["5:00", "22:00"],
+    "winter": ["5:00", "22:00"],
+    "spring": ["5:00", "22:00"]
   },
   "seasons": {
     "summer": [6,7,8],

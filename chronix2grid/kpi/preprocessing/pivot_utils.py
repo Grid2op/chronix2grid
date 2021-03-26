@@ -7,10 +7,13 @@ import pandas as pd
 import chronix2grid.constants as cst
 
 def usa_gan_trainingset_to_kpi(kpi_case_input_folder, timestep, prods_charac, loads_charac, params,year):
+    try:
+        timestep_int = int(timestep[:3])
+        if timestep_int != 120:
+            raise ValueError('GAN requires timestep of 120 min to compute KPI. Please change timestep in paramsKPI.json')
+    except:
+        raise ValueError('GAN requires timestep of 120 min to compute KPI. Please change timestep in paramsKPI.json')
 
-    if int(timestep[:2]) < 60:
-        print('Erreur: GAN requires timestep >60 min to compute KPI. Please change timestep in paramsKPI.json')
-        sys.exit()
 
     # Selecting desired time index
     start_date = params["start_date"]
@@ -55,22 +58,28 @@ def gan_trainingdata_processing_solar(repo_in, T, prods_charac, params):
         rows = [row for row in reader]
     rows = np.array(rows, dtype=float)
     rows=rows[:104832,:] #Change to the time points in your own dataset
-    print(np.shape(rows))
+    # print(np.shape(rows))
     trX = np.reshape(rows.T,(-1, params['n_timesteps_' + carrier], params['n_gens_' + carrier])) #Corresponds to the GAN input dimensions.
-    print(np.shape(trX))
+    #print(np.shape(trX))
     m = np.ndarray.max(rows)
-    print("maximum value of solar power", m)
+    #print("maximum value of solar power", m)
     trX=trX/m
 
     # Getting wind farms generations
     wind_gens = prods_charac[prods_charac['type'] == carrier]['name'].unique()
     N = len(wind_gens)
+    N_learning = params['n_gens_solar']
+    if N % 2 == 0:
+        selection_gens = [i for i in range(N // 2)] + [i for i in range((N_learning-N//2), N_learning)]
+    else:
+        selection_gens = [i for i in range((N // 2) + 1)] + [i for i in range((N_learning-N//2), N_learning)]
+
     ref_prod_wind = pd.DataFrame(columns=wind_gens)
     for day in range(T // params["n_timesteps_" + carrier]):
-        day_production = trX[day, :, :N] # np.transpose(expr) si on inverse les gens et les timesteps
+        day_production = np.transpose(trX[day, :, selection_gens]) # np.transpose(expr) si on inverse les gens et les timesteps
         new_df = pd.DataFrame(day_production, columns=wind_gens)
         ref_prod_wind = pd.concat([ref_prod_wind, new_df], axis=0)
-    day_production = trX[(day + 1), :(T % params["n_timesteps_" + carrier]), :N] # np.transpose(expr) si on inverse les gens et les timesteps
+    day_production = np.transpose(trX[(day + 1), :(T % params["n_timesteps_" + carrier]), selection_gens]) # np.transpose(expr) si on inverse les gens et les timesteps
     new_df = pd.DataFrame(day_production, columns=wind_gens)
     ref_prod_wind = pd.concat([ref_prod_wind, new_df], axis=0)
 
@@ -106,12 +115,18 @@ def gan_trainingdata_processing_wind(repo_in, T, prods_charac, params):
     # Getting wind farms generations
     wind_gens = prods_charac[prods_charac['type'] == carrier]['name'].unique()
     N = len(wind_gens)
+    N_learning = params['n_gens_wind']
+    if N % 2 == 0:
+        selection_gens = [i for i in range(N // 2)] + [i for i in range((N_learning-N//2), N_learning)]
+    else:
+        selection_gens = [i for i in range((N // 2) + 1)] + [i for i in range((N_learning-N//2), N_learning)]
+
     ref_prod_wind = pd.DataFrame(columns=wind_gens)
     for day in range(T // params["n_timesteps_" + carrier]):
-        day_production = trX[day, :, :N] # np.transpose(expr) si on inverse les gens et les timesteps
+        day_production = np.transpose(trX[day, :, selection_gens]) # np.transpose(expr) si on inverse les gens et les timesteps
         new_df = pd.DataFrame(day_production, columns=wind_gens)
         ref_prod_wind = pd.concat([ref_prod_wind, new_df], axis=0)
-    day_production = trX[(day + 1), :(T % params["n_timesteps_" + carrier]), :N] # np.transpose(expr) si on inverse les gens et les timesteps
+    day_production = np.transpose(trX[(day + 1), :(T % params["n_timesteps_" + carrier]), selection_gens]) # np.transpose(expr) si on inverse les gens et les timesteps
     new_df = pd.DataFrame(day_production, columns=wind_gens)
     ref_prod_wind = pd.concat([ref_prod_wind, new_df], axis=0)
 

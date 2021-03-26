@@ -46,14 +46,21 @@ def compute_n_preds(params, carrier):
 def post_process_sample(generated_batches, params, prods_charac, datetime_index, carrier = "wind"):
     gens = prods_charac[prods_charac['type']==carrier]["name"].unique()
     wind = pd.DataFrame(columns = gens)
+    N = len(gens)
+    N_learning = params['n_gens_'+carrier]
 
-    if len(gens) > params['n_gens_'+carrier]:
+    if N > N_learning:
         raise ValueError("the neural network should be trained on at least the same number of generators as in the generation process")
+    else:
+        if N%2==0:
+            selection_gens = [i for i in range(N//2)] + [i for i in range((N_learning-N//2), N_learning)]
+        else:
+            selection_gens = [i for i in range((N // 2)+1)] + [i for i in range((N_learning - N // 2), N_learning)]
 
     for day, batch in enumerate(generated_batches):
         for i in range(params["batch_size_"+carrier]):
-            matrix = batch[i,:,:len(gens),0] # batch[i,:,:len(gens),0] # DIMENSIONS
-            df = pd.DataFrame(matrix, columns=gens) # Enlever ou ajouter np.transpose en conséquence matric --> np.transpose(matrix)
+            matrix = batch[i,:,selection_gens,0] # batch[i,:,:len(gens),0] # DIMENSIONS
+            df = pd.DataFrame(np.transpose(matrix), columns=gens) # Enlever ou ajouter np.transpose en conséquence matric --> np.transpose(matrix)
             wind = pd.concat([wind, df], axis = 0)
     # Truncate last batch
     wind = wind.reset_index(drop=True)

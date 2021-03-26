@@ -205,7 +205,7 @@ Inputs for the dispatch step are the following:
 
 * In *patterns/hydro_french.csv*: a hydro guide curve pattern that represents the seasonality of the minimum and maximum hydraulic stocks
 * In *case/params_opf.json*
-    * **step_opf_min** - time resolution of the OPF in minutes. It can be 5, 10, 15, 20, 30 or 60 and has to be superior or equal to dt (generation time resolution). In case it is strictly above, interpolation is done after dispatch resolution
+    * **step_opf_min** - time resolution of the OPF in minutes. It can be 5, 10, 15, 20, 30 or multiples of 60 and has to be superior or equal to dt (generation time resolution). In case it is strictly above, interpolation is done after dispatch resolution
     * **mode_opf** - frequency at which we wan't to solve the OPF
     * **dispatch_by_carrier** - if True, dispatch results will be returned for the whole carrier. If False, it will be returned by generator
     * **ramp_mode** is essentially designed for debug purpose: when your OPF diverges, you may want to relax some constraints to know the reasons why the problem is unfeasible or leads to divergence

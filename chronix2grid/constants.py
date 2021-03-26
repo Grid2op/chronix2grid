@@ -49,9 +49,9 @@ LOAD_GENERATION_CONFIG = LoadsConfigManager
 LOAD_GENERATION_BACKEND = ConsumptionGeneratorBackend
 
 #### RENEWABLE - SOLAR AND WIND (R) ####
-#from chronix2grid.config import ResConfigManagerGan
+# from chronix2grid.config import ResConfigManagerGan
 RENEWABLE_GENERATION_CONFIG = ResConfigManager #ResConfigManagerGan #ResConfigManager
-#from chronix2grid.generation.renewable.RenewableBackend import RenewableBackendGAN
+# from chronix2grid.generation.renewable.RenewableBackend import RenewableBackendGAN
 RENEWABLE_GENERATION_BACKEND = RenewableBackend #RenewableBackendGAN # RenewableBackend
 
 #### LOSS (D) ####

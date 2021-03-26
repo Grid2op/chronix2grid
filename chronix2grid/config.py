@@ -323,8 +323,8 @@ class ResConfigManagerGan(ConfigManager):
         # Check timestep
         with open(params_file_path, 'r') as params_json:
             params_general = json.load(params_json)
-        if params_general["dt"] != 60:
-            raise ValueError('timesteps different from 60min are not supported yet with GAN. Please use another model')
+        if params_general["dt"] % 60 != 0:
+            raise ValueError('timesteps different from 60min or multiples of 60min are not supported yet with GAN. Please use another model')
 
         with open(params_file_path_gan, 'r') as params_json:
             params = json.load(params_json)
