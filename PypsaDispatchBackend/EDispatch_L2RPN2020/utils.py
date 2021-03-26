@@ -6,7 +6,7 @@ import pandas as pd
 import pypsa
 import copy 
 
-from PypsaDispatchBackend.utils import RampMode
+from chronix2grid.generation.dispatch.utils import RampMode
 
 
 def filter_ramps(net, mode):
@@ -321,38 +321,6 @@ def run_opf(net, demand, gen_max, gen_min, params, **kwargs):
 
     return net.generators_t.p.copy(), termination_condition
 
-                           
-def add_noise_gen(dispatch, gen_cap, noise_factor):
-    """ Add noise to opf dispatch to have more
-    realistic real-time data
-    
-    Parameters
-    ----------
-    dispatch : dataframe
-        Opf PyPSA output
-    gen_cap : dataframe
-        Maximun capacity for gen
-    noise_factor : float
-        Noise factor applied to every gen col
-    
-    Returns
-    -------
-    dataframe
-        Distpach with noise
-    """    
-    dispatch_new=copy.deepcopy(dispatch)#dispatch.copy(deep=True)
-
-    #variance_per_col = gen_cap * noise_factor
-    print('applying noise to forecast of '+str(noise_factor)+' %')
-    for col in list(dispatch_new):
-        # Check for values greater than zero 
-        # (means unit has been distpached)
-        #only_dispatched_steps = dispatch_new[col][dispatch_new[col] > 0]
-        #print(only_dispatched_steps)
-        
-        noise = np.random.lognormal(mean=0.0,sigma=noise_factor, size=dispatch_new.shape[0])
-        dispatch_new[col] = dispatch[col] * noise
-    return dispatch_new.round(2)
 
 def interpolate_dispatch(dispatch, method='quadratic'):
     """Function to interpolate in case opf in running for 

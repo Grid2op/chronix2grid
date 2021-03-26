@@ -1,9 +1,4 @@
-import os
-import shutil
-
-import numpy as np
-
-from .EDispatch_L2RPN2020 import run_economic_dispatch
+from PypsaDispatchBackend.EDispatch_L2RPN2020 import run_economic_dispatch # TODO: Supprimer cette dépendance car pas utile (utiliser utils dans chronix2grid)
 from .dispatch_loss_utils import run_grid2op_simulation_donothing, correct_scenario_loss, move_chronics_temporarily, \
     remove_temporary_chronics, remove_simulation_data
 

@@ -1,7 +1,7 @@
 from .generate_dispatch import main
 
 
-class DispatchBackend:
+class DispatchBackend: # TODO - PypsaDispatchBackend - devra créer un PypsaDispatcher et l'utiliser. OU ALORS dans les constantes de Chronix2grid choisir la classe de Dispatcher
     """
     Backend that generates nuclear, hydro and thermal from consumption and renewable production constraints by
     computing an optimized economic dispatch.

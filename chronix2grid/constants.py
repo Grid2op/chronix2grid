@@ -40,6 +40,7 @@ GRID_FILENAME = 'grid.json'
 from chronix2grid.generation.consumption.ConsumptionGeneratorBackend import ConsumptionGeneratorBackend
 from chronix2grid.generation.renewable.RenewableBackend import RenewableBackend
 from chronix2grid.generation.loss.LossBackend import LossBackend
+from chronix2grid.generation.dispatch.DispatchBackend import DispatchBackend
 from chronix2grid.config import GeneralConfigManager, LoadsConfigManager, ResConfigManager, LossConfigManager, DispatchConfigManager
 
 GENERAL_CONFIG = GeneralConfigManager
@@ -61,8 +62,9 @@ LOSS_GENERATION_BACKEND = LossBackend
 #### DISPATCH - HYDRO, THERMAL, NUCLEAR (T) ####
 DISPATCH_GENERATION_CONFIG = DispatchConfigManager
 HYDRO_GENERATION_BACKEND = None
-from PypsaDispatchBackend.DispatchBackend import DispatchBackend
-DISPATCH_GENERATION_BACKEND = DispatchBackend #DispatchBackend, None
+from PypsaDispatchBackend.PypsaEconomicDispatch import PypsaDispatcher
+DISPATCHER = PypsaDispatcher
+DISPATCH_GENERATION_BACKEND = DispatchBackend
 
 #### KPI (K) ####
 RENEWABLE_NINJA_REFERENCE_FOLDER = 'renewable_ninja'

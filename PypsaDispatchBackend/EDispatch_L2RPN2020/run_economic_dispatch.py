@@ -5,14 +5,15 @@ import time
 import pandas as pd
 import pypsa
 
-from .utils import add_noise_gen
 from .utils import get_grouped_snapshots
 from .utils import interpolate_dispatch
 from .utils import preprocess_input_data
 from .utils import preprocess_net, filter_ramps
 from .utils import run_opf
 from .utils import update_gen_constrains, update_params
-from PypsaDispatchBackend.utils import RampMode
+
+## Dépendances Chronix2Grid !!
+from chronix2grid.generation.dispatch.utils import RampMode
 import chronix2grid.constants as cst
 
 

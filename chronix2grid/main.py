@@ -240,10 +240,10 @@ if __name__ == "__main__":
     weeks = 4
     by_n_weeks = 4
     n_scenarios = 1
-    mode = 'LRDTK'
+    mode = 'LRTK'
     input_folder = 'getting_started/example/input' #'getting_started/example/input' #'input_data'
     output_folder =  'getting_started/example/output' #'getting_started/example/output' #'output' #'output_gan'
-    scenario_name = "" #"january_wind_solar" #"january_wind" #"year_wind"
+    scenario_name = "" #"year_wind_solar" "january_wind_solar_dispatch"
     seed_for_loads = 912206665
     seed_for_res = 912206665
     seed_for_dispatch = 912206665

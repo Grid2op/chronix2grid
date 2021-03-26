@@ -7,7 +7,10 @@ from chronix2grid import constants
 from chronix2grid import utils
 from chronix2grid.generation import generation_utils
 
-MSG_PYPSA_DEPENDENCY = "Please install PypsaDispatchBackend dependency to launch chronix2grid with T mode. Chronix2grid stopped before dispatch computation. You should launch xithout letter T in mode"
+from chronix2grid.generation.dispatch import EconomicDispatch
+
+
+# MSG_PYPSA_DEPENDENCY = "Please install PypsaDispatchBackend dependency to launch chronix2grid with T mode. Chronix2grid stopped before dispatch computation. You should launch xithout letter T in mode"
 MSG_NO_DISPATCH_BACKEND = "Dispatch Backend is set to None - no dispatch has been computed"
 
 class GeneratorBackend:
@@ -47,6 +50,8 @@ class GeneratorBackend:
         self.res_config_manager = constants.RENEWABLE_GENERATION_CONFIG
         self.loss_config_manager = constants.LOSS_GENERATION_CONFIG
         self.dispatch_config_manager = constants.DISPATCH_GENERATION_CONFIG
+
+        self.dispatcher_class = constants.DISPATCHER
 
         self.consumption_backend_class = constants.LOAD_GENERATION_BACKEND
         self.dispatch_backend_class = constants.DISPATCH_GENERATION_BACKEND
@@ -312,15 +317,10 @@ class GeneratorBackend:
             contains resulting production chronics and terminal conditions from the optimization engine
         """
 
-        try:
-            from PypsaDispatchBackend import EconomicDispatch
-        except:
-            warnings.warn(MSG_PYPSA_DEPENDENCY, UserWarning)
-            return None
         prods = pd.concat([prod_solar, prod_wind], axis=1)
         res_names = dict(wind=prod_wind.columns, solar=prod_solar.columns)
         grid_path = os.path.join(grid_folder, constants.GRID_FILENAME)
-        dispatcher = EconomicDispatch.init_dispatcher_from_config(grid_path, input_folder)
+        dispatcher = EconomicDispatch.init_dispatcher_from_config(grid_path, input_folder,self.dispatcher_class)
         dispatcher.chronix_scenario = EconomicDispatch.ChroniXScenario(load, prods, res_names,
                                                                        scenario_name, loss)
 

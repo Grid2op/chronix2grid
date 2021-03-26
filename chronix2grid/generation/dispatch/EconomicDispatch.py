@@ -1,37 +1,33 @@
 """Class for the economic dispatch framework. Allows to parametrize and run
 an economic dispatch based on RES and consumption time series"""
 
-from collections import namedtuple
+import os
+from abc import ABC, abstractmethod
 from copy import deepcopy
 import datetime as dt
-import os
+from collections import namedtuple
 
 import grid2op
 from grid2op.Chronics import ChangeNothing
 import pandas as pd
 import plotly.express as px
-import pypsa
 
-from .utils import RampMode
-from .EDispatch_L2RPN2020.run_economic_dispatch import main_run_disptach
-from .EDispatch_L2RPN2020.utils import add_noise_gen
+from chronix2grid.generation.dispatch.utils import RampMode, add_noise_gen
 import chronix2grid.constants as cst
 
 DispatchResults = namedtuple('DispatchResults', ['chronix', 'terminal_conditions'])
 
-
-def init_dispatcher_from_config(grid_path, input_folder):
-
-    #Patch: we need to modify slighty Pmax and ramps according to the floating point number precision we have
+def init_dispatcher_from_config(grid_path, input_folder, dispatcher_class):
+    # Patch: we need to modify slighty Pmax and ramps according to the floating point number precision we have
     #
-    
-    #read Prod Caracts
+
+    # read Prod Caracts
     env118_withoutchron = grid2op.make("rte_case118_example",
                                        test=True,
                                        grid_path=grid_path,
                                        chronics_class=ChangeNothing)
 
-    dispatcher = Dispatcher.from_gri2op_env(env118_withoutchron)
+    dispatcher = dispatcher_class.from_gri2op_env(env118_withoutchron)
 
     dispatcher.read_hydro_guide_curves(
         os.path.join(input_folder, 'patterns', 'hydro_french.csv'))
@@ -39,18 +35,27 @@ def init_dispatcher_from_config(grid_path, input_folder):
     return dispatcher
 
 
-class Dispatcher(pypsa.Network):
-    """Wrapper around a pypsa.Network to add higher level methods"""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.add('Bus', 'node')
-        self.add('Load', name='agg_load', bus='node')
-        self._env = None  # The grid2op environment when instanciated with from_gri2dop_env
-        self._chronix_scenario = None
-        self._simplified_chronix_scenario = None
-        self._has_results = False
-        self._has_simplified_results = False
+class Dispatcher(ABC):
+    """Abstract Class Dispatcher with some operational method that don't depend on the dispatcher technology (pypsa...)
+    and some others that are implemented specificaly in inheriting classes"""
+
+    def __init__(self):
+        super().__init__()
+
+    @abstractmethod
+    def run(self, load, params, gen_constraints=None,
+            ramp_mode=RampMode.hard, by_carrier=False, **kwargs):
+        """Have to be implemented in inheriting classes"""
+
+    @abstractmethod
+    def simplify_net(self):
+        pass
+
+    @classmethod
+    @abstractmethod
+    def from_gri2op_env(cls, grid2op_env):
+        """Have to be implemented in inheriting classes"""
 
     @property
     def wind_p(self):
@@ -89,36 +94,6 @@ class Dispatcher(pypsa.Network):
     def nlargest_ramps(self, n, losses_pct):
         ramps = self.net_load(losses_pct, "").diff()
         return ramps.nlargest(n, ramps.columns[0])
-
-    @classmethod
-    def from_gri2op_env(cls, grid2op_env):
-        net = cls()
-        net._env = grid2op_env
-
-        carrier_types_to_exclude = ['wind', 'solar']
-        
-        #PATCH
-        #to avoid problems for respecting pmax and ramps when rounding production values in chronics at the end, we apply a correcting factor
-        PmaxCorrectingFactor=1
-        RampCorrectingFactor=0.1
-
-        for i, generator in enumerate(grid2op_env.name_gen):
-            gen_type = grid2op_env.gen_type[i]
-            if gen_type not in carrier_types_to_exclude:
-                p_max=grid2op_env.gen_pmax[i]
-                pnom=p_max-PmaxCorrectingFactor
-                rampUp=(grid2op_env.gen_max_ramp_up[i]-RampCorrectingFactor) / p_max
-                RampDown=(grid2op_env.gen_max_ramp_down[i]-RampCorrectingFactor) / p_max
-                
-                net.add(
-                    class_name='Generator', name=generator, bus='node',
-                    p_nom=pnom, carrier=grid2op_env.gen_type[i],
-                    marginal_cost=grid2op_env.gen_cost_per_MW[i],
-                    ramp_limit_up=rampUp,
-                    ramp_limit_down=RampDown,
-                )
-
-        return net
 
     def reset_ramps_from_grid2op_env(self):
         if self._env is None:
@@ -170,7 +145,7 @@ class Dispatcher(pypsa.Network):
                             'and renewables has been instantiated and hydro guide'
                             'curves have been read.')
         index_slice = self._chronix_scenario.loads.index.map(
-           lambda x: (x.month, x.day, x.hour, x.minute, x.second)
+            lambda x: (x.month, x.day, x.hour, x.minute, x.second)
         )
 
         self._min_hydro_pu = self._min_hydro_pu.reindex(index_slice).fillna(method='ffill')
@@ -197,63 +172,6 @@ class Dispatcher(pypsa.Network):
         )
         return fig
 
-    def simplify_net(self):
-        carriers = self.generators.carrier.unique()
-        simplified_net = Dispatcher()
-        for carrier in carriers:
-            names = self.generators[self.generators.carrier == carrier].index.tolist()
-
-            gens = self.generators.loc[
-                names,
-                ['p_nom', 'ramp_limit_up', 'ramp_limit_down', 'marginal_cost']
-            ]
-            gens['ramp_up_mw'] = gens['p_nom'] * gens['ramp_limit_up']
-            gens['ramp_down_mw'] = gens['p_nom'] * gens['ramp_limit_down']
-            params = gens.agg(['sum', 'mean'])
-            simplified_net.add(
-                class_name='Generator', name=carrier, bus='node',
-                p_nom=params.loc['sum', 'p_nom'], carrier=carrier,
-                marginal_cost=params.loc['mean', 'marginal_cost'],
-                ramp_limit_up=params.loc['sum', 'ramp_up_mw'] / params.loc['sum', 'p_nom'],
-                ramp_limit_down=params.loc['sum', 'ramp_down_mw'] / params.loc['sum', 'p_nom'],
-            )
-        simplified_net._hydro_file_path = self._hydro_file_path
-        simplified_net._min_hydro_pu = self._min_hydro_pu.iloc[:, 0]
-        simplified_net._max_hydro_pu = self._max_hydro_pu.iloc[:, 0]
-
-        print('simplified dispatch by carrier')
-        full_ramp = simplified_net.generators['p_nom'] * simplified_net.generators['ramp_limit_up']
-        df_full_ramp = pd.DataFrame({'full_ramp': full_ramp})
-
-        print(pd.concat(
-            [
-                simplified_net.generators[['p_nom', 'ramp_limit_up',
-                                           'ramp_limit_down', 'marginal_cost']],
-                df_full_ramp
-            ], axis=1))
-        return simplified_net
-
-    def run(self, load, params, gen_constraints=None,
-                     ramp_mode=RampMode.hard, by_carrier=False, **kwargs):
-        prods_dispatch, terminal_conditions, marginal_prices = main_run_disptach(
-            self if not by_carrier else self.simplify_net(),
-            load, params, gen_constraints, ramp_mode, **kwargs)
-        if by_carrier:
-            self._simplified_chronix_scenario = self._chronix_scenario.simplify_chronix()
-            self._simplified_chronix_scenario.prods_dispatch = prods_dispatch
-            self._simplified_chronix_scenario.marginal_prices = marginal_prices
-            results = self._simplified_chronix_scenario
-            self._has_simplified_results = True
-            self._has_results = False
-        else:
-            self._chronix_scenario.prods_dispatch = prods_dispatch
-            self._chronix_scenario.marginal_prices = marginal_prices
-            results = self._chronix_scenario
-            self._has_results = True
-            self._has_simplified_results = False
-        self.reset_ramps_from_grid2op_env()
-        return DispatchResults(chronix=results, terminal_conditions=terminal_conditions)
-
     def save_results(self, params, output_folder):
         if not self._has_results and not self._has_simplified_results:
             print('The optimization has first to run successfully in order to '
@@ -279,17 +197,16 @@ class Dispatcher(pypsa.Network):
 
         gen_cap = pd.Series({gen_name: gen_pmax for gen_name, gen_pmax in
                              zip(self._env.name_gen, self._env.gen_pmax)})
-        
+
         prod_p_forecasted_with_noise = add_noise_gen(full_opf_dispatch, gen_cap, noise_factor=params['planned_std'])
 
-          
-        #prod_p_forecasted_with_noise.to_csv(
+        # prod_p_forecasted_with_noise.to_csv(
         prod_p_forecasted_with_noise.to_csv(
             os.path.join(output_folder, "prod_p_forecasted.csv.bz2"),
             sep=';', index=False,
             float_format=cst.FLOATING_POINT_PRECISION_FORMAT
         )
-        #prod_p_with_noise.to_csv(
+        # prod_p_with_noise.to_csv(
         full_opf_dispatch.to_csv(
             os.path.join(output_folder, "prod_p.csv.bz2"),
             sep=';', index=False,
@@ -306,7 +223,6 @@ class Dispatcher(pypsa.Network):
             float_format=cst.FLOATING_POINT_PRECISION_FORMAT
         )
 
-
 class ChroniXScenario:
     def __init__(self, loads, prods, res_names, scenario_name, loss=None):
         self.loads = loads
@@ -314,13 +230,13 @@ class ChroniXScenario:
         self.solar_p = prods[res_names['solar']]
         self.total_res = pd.concat([self.wind_p, self.solar_p], axis=1).sum(axis=1)
         self.prods_dispatch = None  # Will receive the results of the dispatch
-        self.marginal_prices = None # Will receive the marginal prices associated to a dispatch
+        self.marginal_prices = None  # Will receive the marginal prices associated to a dispatch
         self.name = scenario_name
         self.loss = loss
 
     @classmethod
     def from_disk(cls, load_path_file, prod_path_file, res_names, scenario_name,
-                  start_date, end_date, dt, loss_path_file = None):
+                  start_date, end_date, dt, loss_path_file=None):
         loads = pd.read_csv(load_path_file, sep=';')
         prods = pd.read_csv(prod_path_file, sep=';')
         if loss_path_file is not None:
@@ -337,7 +253,7 @@ class ChroniXScenario:
 
     def net_load(self, losses_pct, name):
         if self.loss is None:
-            load_minus_losses = self.loads.sum(axis=1) * (1 + losses_pct/100)
+            load_minus_losses = self.loads.sum(axis=1) * (1 + losses_pct / 100)
         else:
             load_minus_losses = self.loads.sum(axis=1) + self.loss
         return (load_minus_losses - self.total_res).to_frame(name=name)
@@ -350,55 +266,47 @@ class ChroniXScenario:
         return simplified_chronix
 
 
-if __name__ == "__main__":
-    import os
-    import grid2op
-    from grid2op.Chronics import ChangeNothing
-    import chronix2grid.generation.dispatch.EDispatch_L2RPN2020.run_economic_dispatch as run_economic_dispatch
-
-    INPUT_FOLDER = 'chronix2grid/generation/input'
-    CASE = 'case118_l2rpn'
-    path_grid = os.path.join(INPUT_FOLDER, CASE)
-
-    losses_pct = 3.0
-
-    env118_blank = grid2op.make(
-        test=True,
-        grid_path=os.path.join(path_grid, "L2RPN_2020_case118_redesigned.json"),
-        chronics_class=ChangeNothing,
-    )
-    params = {'snapshots': [],
-              'step_opf_min': 5,
-              'mode_opf': 'week',
-              'reactive_comp': 1.025,
-              }
-    chronics_path_gen = os.path.join(INPUT_FOLDER, "dispatch", str(2012))
-    this_path = os.path.join(chronics_path_gen, 'Scenario_0')
-    dispatch = Dispatcher.from_gri2op_env(env118_blank)
-    dispatch.read_hydro_guide_curves(os.path.join(INPUT_FOLDER, 'patterns', 'hydro.csv'))
-    dispatch.read_load_and_res_scenario(os.path.join(this_path, 'load_p.csv.bz2'),
-                                        os.path.join(this_path, 'prod_p.csv.bz2'),
-                                        'Scenario_0')
-    dispatch.make_hydro_constraints_from_res_load_scenario()
-    net_by_carrier = dispatch.simplify_net()
-    agg_load_without_renew = dispatch.net_load(losses_pct, name=dispatch.loads.index[0])
-
-    # Prepare gen constraints for EDispatch module
-    hydro_constraints = {'p_max_pu': dispatch._max_hydro_pu.copy(),
-                         'p_min_pu': dispatch._min_hydro_pu.copy()}
-
-    opf_dispatch, term_conditions = dispatch.run(
-        agg_load_without_renew,
-        params=params,
-        gen_constraints=hydro_constraints,
-        ramp_mode=run_economic_dispatch.RampMode.easy,
-        by_carrier=False  # True to run the dispatch only aggregated generators by carrier
-    )
-
-    dispatch.save_results(params,'.')
-    test_prods = pd.read_csv('./Scenario_0/prod_p.csv.bz2', sep=";")
-    test_prices = pd.read_csv('./Scenario_0/prices.csv.bz2', sep=";")
-
-
-
-
+# if __name__ == "__main__":
+#
+#     INPUT_FOLDER = 'chronix2grid/generation/input'
+#     CASE = 'case118_l2rpn'
+#     path_grid = os.path.join(INPUT_FOLDER, CASE)
+#
+#     losses_pct = 3.0
+#
+#     env118_blank = grid2op.make(
+#         test=True,
+#         grid_path=os.path.join(path_grid, "L2RPN_2020_case118_redesigned.json"),
+#         chronics_class=ChangeNothing,
+#     )
+#     params = {'snapshots': [],
+#               'step_opf_min': 5,
+#               'mode_opf': 'week',
+#               'reactive_comp': 1.025,
+#               }
+#     chronics_path_gen = os.path.join(INPUT_FOLDER, "dispatch", str(2012))
+#     this_path = os.path.join(chronics_path_gen, 'Scenario_0')
+#     dispatch = Dispatcher.from_gri2op_env(env118_blank)
+#     dispatch.read_hydro_guide_curves(os.path.join(INPUT_FOLDER, 'patterns', 'hydro.csv'))
+#     dispatch.read_load_and_res_scenario(os.path.join(this_path, 'load_p.csv.bz2'),
+#                                         os.path.join(this_path, 'prod_p.csv.bz2'),
+#                                         'Scenario_0')
+#     dispatch.make_hydro_constraints_from_res_load_scenario()
+#     net_by_carrier = dispatch.simplify_net()
+#     agg_load_without_renew = dispatch.net_load(losses_pct, name=dispatch.loads.index[0])
+#
+#     # Prepare gen constraints for EDispatch module
+#     hydro_constraints = {'p_max_pu': dispatch._max_hydro_pu.copy(),
+#                          'p_min_pu': dispatch._min_hydro_pu.copy()}
+#
+#     opf_dispatch, term_conditions = dispatch.run(
+#         agg_load_without_renew,
+#         params=params,
+#         gen_constraints=hydro_constraints,
+#         ramp_mode=run_economic_dispatch.RampMode.easy,
+#         by_carrier=False  # True to run the dispatch only aggregated generators by carrier
+#     )
+#
+#     dispatch.save_results(params, '.')
+#     test_prods = pd.read_csv('./Scenario_0/prod_p.csv.bz2', sep=";")
+#     test_prices = pd.read_csv('./Scenario_0/prices.csv.bz2', sep=";")
