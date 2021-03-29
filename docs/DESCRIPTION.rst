@@ -20,8 +20,11 @@ In *params.json* there are some settings concerning the whole generation process
 * **dt** the time resolution of the final chronics that will be modeled.
 * **planned_std** standard deviation of noise for the forecasted chronics (e.g. *load_p_forecasted.csv.bz2* which correspond to non-exact planned chronics.
 
+Pattern-based methods with spatio-temporal correlated noise
+================================================================
+
 Generation of correlated noise
-================================
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 In load, solar and wind current modelling, some spatial and temporal correlated noises are generated.
 These functions  are written :math:`f_t^\text{category}(x,y)`, :math:`category` being the model category (solar, short medium or long term for wind, temperature for load).
 They are based on:
@@ -36,7 +39,7 @@ In *params_res.json* and *params_load.json* you can find all the required parame
 * **solar_corr**, **short_wind_corr**, **medium_wind_corr**, **long_wind_corr** and **temperature_corr** which define the coarse time resolution for each type of noise
 
 Spatial correlation
-^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""""""
 
 For each coarse time step t, a 2-dimensional coarse mesh is built.
 At each node (x,y,t) an independent random gaussian noise :math:`N(0,1)` is computed
@@ -48,14 +51,14 @@ weighted by the distance ot its nearest neighbour in the mesh
 
 
 Temporal correlation
-^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""""""
 
 Then a temporal auto-correlation structure is achieved. For each category, we go from
 resolution **[category]_corr** (at which noises have been generated independently in time)
 to resolution **dt** thanks to spline interpolation
 
 Solar generation
-=================
+^^^^^^^^^^^^^^^^^^
 
 For solar generation, some additional parameters are provided:
 
@@ -94,7 +97,7 @@ interval :math:`[0,1]`. Finally, this normal production is rescaled to :math:`P_
    Focus on one week in summer
 
 Wind generation
-=================
+^^^^^^^^^^^^^^^^^
 
 The wind normal seasonal pattern relies on a simple cosine which oscillation period is one full year.
 Its constant component has a part of 70% and the oscillating component accounts for 30%.
@@ -147,7 +150,7 @@ Where:
 
 
 Load generation
-=================
+^^^^^^^^^^^^^^^^
 
 For load generation, parameters are similar to solar generation
 
@@ -186,7 +189,7 @@ Where :math:`f_t^\text{temperature}(x,y)` is the temperature correlated noise (s
 
 
 Loss generation
-=================
+^^^^^^^^^^^^^^^^
 
 A simple module is actually implemented.
 It reads a csv containing a yearly loss pattern chronic (5 min time step in the example provided), given as an absolute power value in MW.
@@ -194,6 +197,78 @@ Two inputs are necessary, with example provided in *getting_started/example/inpu
 
 * A csv file containing the yearly loss pattern  in *patterns/loss_pattern.csv*
 * A json parameter file that indicates the path to loss pattern in *case118_l2rpn_wcci/generation/params_loss.json*
+
+Methods based on Generative Adversarial Networks (GAN)
+=======================================================
+
+Realistic chronics can be generated thanks to GAN trained on a wide chronics history.
+
+It has been implemented for solar and wind generation in *Chronix2Grid* via an optional backend :class:`chronix2grid.generation.renewable.RenewableBackend.RenewableBackendGAN`
+
+*RenewableBackendGAN* handles previously trained neural networks that rely on *tensorflow*. These networks can be trained apart from chronix2grid with the source code on a
+`public github repository <https://github.com/chennnnnyize/Renewables_Scenario_Gen_GAN>`_ that reproduces the results of a `research paper <https://arxiv.org/abs/1707.09676>`_.
+You will also have to serialize them thanks to *tensorflow.train.Saver* objects
+(see `this tutorial <https://cv-tricks.com/tensorflow-tutorial/save-restore-tensorflow-models-quick-complete-tutorial/>`_)
+
+Configuration
+^^^^^^^^^^^^^^^^
+
+A json parameters and some *tensorflow* models are required. An example is available in *input_data/generation/case118_l2rpn_neurips_1x_GAN*.
+Inputs should be provided in the following structure:
+
+* neural_network/
+    * paramsGAN.json
+    * solar/
+        * name_solar_model.data-00000-of-00001
+        * name_solar_model.meta
+        * name_solar_model.index
+        * checkpoint
+    * wind/
+        * name_wind_model.data-00000-of-00001
+        * name_wind_model.meta
+        * name_wind_model.index
+        * checkpoint
+
+File *paramsGAN.json* enables to indicate the shape of inputs in the underlying model used in training.
+
+Each has a suffix (*_wind* or *_solar*) corresponding to the 2 separated networks.
+
+    * *model_name*
+    * *batch_size*, *n_gens*, *n_timestep* - The 3 dimensions of each training batch - batch_size x number of generators in training - number of modeled consecutive timesteps
+    * *n_events* - number of events labels used in training
+    * *dim_inputs*, *mu*, *sigma* - size of gaussian input vector, mean and standard deviation
+
+
+Generation process
+^^^^^^^^^^^^^^^^^^^^
+
+According to the *Chronixgrid* chosen time horizon, the backend reads the trains networks and generates as many independent prediction batches as necessary.
+To perform this, it generates as many random inputs (gaussian noise and event labels).
+Then it picks as many generators chronics as needed in the grid. An error is returned if there is not enough generators returned by the network.
+
+.. figure:: ../pictures/gan/solar_1week.PNG
+   :scale: 50 %
+   :alt: solar 1 week
+
+   Generated solar production - 1-week example on one generator
+
+.. figure:: ../pictures/gan/wind_1week.PNG
+   :scale: 50 %
+   :alt: wind 1 week
+
+   Generated wind production - 1-week example on one generator
+
+
+.. warning::
+    The current trained network have been taken directly with the configuration of the paper with no additional tuning.
+
+    That implies in particular that GAN generation is only compatible with 2 hour time steps
+
+    The 2-days batch imply that no seasonality across year is taken into account.
+    It could be the case by changing the training tuning in two possible ways
+
+        * Growing the size of timesteps in one batch
+        * Using event labels to model apropriate seasons
 
 
 Economic dispatch generation (hydro, nuclear and thermic generators)

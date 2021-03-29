@@ -17,7 +17,7 @@ class ConsumptionGeneratorBackend:
         "temperature_corr", "std_temperature_noise"**
     loads_charac: :class:`pandas.DataFrame`
         data frame with characteristics on load nodes in the simulated grid
-    load_config_manager: :class: ``chronix2grid.config.LoadsConfigManager``
+    load_config_manager: :class:`chronix2grid.config.LoadsConfigManager`
         config manager used to load specific patterns used for the model (load weekly pattern for residential power consumption)
     write_results: ``bool``
     """

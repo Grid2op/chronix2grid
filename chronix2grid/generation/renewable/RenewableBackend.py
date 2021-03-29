@@ -16,9 +16,9 @@ class RenewableBackend:
         dictionnary with the model parameters. It needs to contain keys **"dt", "planned_std", "Lx", "Ly", "dx_corr", "dy_corr", "short_wind_corr",
         "medium_wind_corr", "long_wind_corr", "solar_corr", "smoothdist", "std_short_wind_noise", "std_solar_noise",
         "std_medium_wind_noise", "std_long_wind_noise", "year_solar_pattern"**
-    prods_charac: :class: ``pandas.DataFrame``
+    prods_charac: :class:`pandas.DataFrame`
         data frame with characteristics on wind and solar generators/power plants of the model
-    res_config_manager: :class: ``chronix2grid.config.ResConfigManager``
+    res_config_manager: :class:`chronix2grid.config.ResConfigManager`
         config manager used to load specific patterns used for the model (solar_pattern)
     write_results: ``bool``
     """
@@ -55,10 +55,10 @@ class RenewableBackendGAN:
     params: ``dict``
         dictionnary with the model parameters. It needs to contain keys **"dt", "planned_std", "model_name", "batch_size",
         "n_gens", "n_timesteps", "n_events","dim_inputs", "mu", "sigma", "network_folder"**.
-        It has normally been read by a :class: ``chronix2grid.config.ResConfigManagerGan`` instance
-    prods_charac: :class: ``pandas.DataFrame``
+        It has normally been read by a :class:`chronix2grid.config.ResConfigManagerGan` instance
+    prods_charac: :class:`pandas.DataFrame`
         data frame with characteristics on wind and solar generators/power plants of the model
-    res_config_manager: :class: ``chronix2grid.config.ResConfigManagerGan``
+    res_config_manager: :class:`chronix2grid.config.ResConfigManagerGan`
     write_results: ``bool``
     """
     def __init__(self, out_path, seed, params, prods_charac, res_config_manager, write_results):

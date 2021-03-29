@@ -12,15 +12,15 @@ class LossBackend:
         base input folder to get parameters and patterns
     scenario_folder_path: ``str``
         path to output folder for generated chronics
-    load: :class: ``pandas.DataFrame`` or ``dict``
+    load: :class:`pandas.DataFrame` or ``dict``
         generated load chronics by L mode
-    prod_solar: :class: ``pandas.DataFrame`` or ``dict``
+    prod_solar: :class:`pandas.DataFrame` or ``dict``
         generated solar chronics by R mode
-    prod_wind: :class: ``pandas.DataFrame`` or ``dict``
+    prod_wind: :class:`pandas.DataFrame` or ``dict``
         generated wind chronics by R mode
     params: ``dict``
         dictionnary with the model parameters. It needs to contain keys "dt" and  "loss_pattern"
-    loss_config_manager: :class: ``chronix2grid.config.LossConfigManager``
+    loss_config_manager: :class:`chronix2grid.config.LossConfigManager`
         config manager used to load specific patterns used for the model (yearly explicit loss pattern)
     write_results: ``bool``
     """
