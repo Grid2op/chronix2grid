@@ -12,12 +12,12 @@ from grid2op.Chronics import ChangeNothing
 import pandas as pd
 import plotly.express as px
 
-from chronix2grid.generation.dispatch.utils import RampMode, add_noise_gen
+from chronix2grid.generation.dispatch.utils import RampMode, add_noise_gen, modify_hydro_ramps
 import chronix2grid.constants as cst
 
 DispatchResults = namedtuple('DispatchResults', ['chronix', 'terminal_conditions'])
 
-def init_dispatcher_from_config(grid_path, input_folder, dispatcher_class):
+def init_dispatcher_from_config(grid_path, input_folder, dispatcher_class, params_opf):
     # Patch: we need to modify slighty Pmax and ramps according to the floating point number precision we have
     #
 
@@ -27,11 +27,12 @@ def init_dispatcher_from_config(grid_path, input_folder, dispatcher_class):
                                        grid_path=grid_path,
                                        chronics_class=ChangeNothing)
 
+    env118_withoutchron = modify_hydro_ramps(env118_withoutchron, params_opf["hydro_ramp_reduction_factor"])
+
     dispatcher = dispatcher_class.from_gri2op_env(env118_withoutchron)
 
     dispatcher.read_hydro_guide_curves(
         os.path.join(input_folder, 'patterns', 'hydro_french.csv'))
-
     return dispatcher
 
 

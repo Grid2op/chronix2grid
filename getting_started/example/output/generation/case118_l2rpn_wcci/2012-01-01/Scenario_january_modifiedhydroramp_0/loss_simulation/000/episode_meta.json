@@ -1,0 +1,10 @@
+{
+    "backend_type": "LightSimBackend_case118_l2rpn_wcci",
+    "chronics_max_timestep": "8062",
+    "chronics_path": "D:\\RTE\\Chronix2grid\\1 - D\u00e9veloppement\\ChroniX2Grid\\getting_started\\example\\input\\generation\\case118_l2rpn_wcci\\chronics\\000",
+    "cumulative_reward": 4327403.5,
+    "env_seed": null,
+    "env_type": "Environment_case118_l2rpn_wcci",
+    "grid_path": "D:\\RTE\\Chronix2grid\\1 - D\u00e9veloppement\\ChroniX2Grid\\getting_started\\example\\input\\generation\\case118_l2rpn_wcci\\grid.json",
+    "nb_timestep_played": 8062
+}

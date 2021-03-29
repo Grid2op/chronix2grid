@@ -160,7 +160,6 @@ class GeneralConfigManager(ConfigManager):
                 params[key] = pd.to_datetime(value, format='%Y-%m-%d')
         return params
 
-
 class LoadsConfigManager(ConfigManager):
     """
     Reads parameters for :class:`chronix2grid.generation.consumption.ConsumptionGeneratorBackend`
@@ -223,7 +222,6 @@ class LoadsConfigManager(ConfigManager):
             os.path.join(self.root_directory, self.input_directories['patterns'],
                          'load_weekly_pattern.csv'))
         return load_weekly_pattern
-
 
 class ResConfigManager(ConfigManager):
     def __init__(self, name, root_directory, input_directories, output_directory,
@@ -354,8 +352,6 @@ class ResConfigManagerGan(ConfigManager):
 
         return params, prods_charac
 
-
-
 class DispatchConfigManager(ConfigManager):
     def __init__(self, name, root_directory, input_directories, output_directory,
                  required_input_files=None):
@@ -377,6 +373,7 @@ class DispatchConfigManager(ConfigManager):
             * *reactive_comp* - Factor applied to consumption to compensate reactive part not modelled by linear opf
             * *pyomo* - whether pypsa should use pyomo or not (boolean)
             * *solver_name* - name of solver, that you should have installed in your environment and added in your environment variables.
+            * *hydro_ramp_reduction_factor* - optional factor which will divide max ramp up and down to all hydro generators
             * *losses_pct**- if D mode is deactivate, losses are estimated as a percentage of load.
 
         Optional parameters can be set for grid2op simulation of loss as a final step.
@@ -399,6 +396,8 @@ class DispatchConfigManager(ConfigManager):
         params_opf: ``dict``
             dictionary of parameters
         """
+
+        # Basics
         self.validate_configuration()
         params_filepath = os.path.join(
             self.root_directory,
@@ -411,6 +410,8 @@ class DispatchConfigManager(ConfigManager):
                 params_opf['mode_opf'] = None
         except KeyError:
             raise KeyError('The mode_opf field of params_opf.json is missing.')
+
+        # Grid2op loss simulation (optional)
         bool = False
         try:
             bool = params_opf["loss_grid2op_simulation"]
@@ -425,6 +426,11 @@ class DispatchConfigManager(ConfigManager):
                 except KeyError:
                     raise KeyError('loss_grid2op_simulation is set to True, key '+str(key) + ' must be provided')
 
+        # Hydro correction
+        if "hydro_ramp_reduction_factor" not in list(params_opf.keys()):
+            params_opf["hydro_ramp_reduction_factor"] = 1.
+        else:
+            params_opf["hydro_ramp_reduction_factor"] = float(params_opf["hydro_ramp_reduction_factor"])
         return params_opf
 
 

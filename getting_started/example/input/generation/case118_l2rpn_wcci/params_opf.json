@@ -1,5 +1,6 @@
 {"step_opf_min": 5, "mode_opf": "month", "reactive_comp": 1, "dispatch_by_carrier": false, "ramp_mode": "hard", "pyomo": false, "solver_name": "cbc",
-"losses_pct": 1,
+  "hydro_ramp_reduction_factor": 2,
+  "losses_pct": 1,
 "loss_grid2op_simulation": true,
 "idxSlack":37,
 "nameSlack": "gen_68_37",

@@ -292,6 +292,7 @@ Inputs for the dispatch step are the following:
     * **pyomo** - whether pypsa should use pyomo or not (boolean)
     * **solver_name** - name of solver, that you should have installed in your environment and added in your environment variables.
     * **losses_pct** - if D mode is deactivate, losses are estimated as a percentage of load.
+    * **hydro_ramp_reduction_factor** - optional factor which will divide max ramp up and down to all hydro generators
 
 The object *chronix2grid.generation.dispatch.EconomicDispatch:Dispatch* facilitates the configuration of the optimization problem with PyPSA.
 We currently solve a simplified OPF that optimizes costs with respect towards the following constraints:
