@@ -66,6 +66,18 @@ Dispatcher
 .. autoclass:: chronix2grid.generation.dispatch.EconomicDispatch.Dispatcher
     :members:
 
+PypsaDispatcher
+==================
+
+.. warning::
+    This class enables to compute an OPF thanks to `PyPSA package <https://pypsa.readthedocs.io/en/latest/>`_.
+
+    To make it work, don't forget to install *PyPSA* manually.
+
+    You can then import it in :class:`chronix2grid.constants` and set *chronix2grid.constants.DISPATCHER* to *PypsaDispatcher*
+
+.. autoclass:: PypsaDispatchBackend.PypsaEconomicDispatch.PypsaDispatcher
+    :members:
 
 KPI preprocessing
 =================

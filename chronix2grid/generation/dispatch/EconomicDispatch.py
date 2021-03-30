@@ -39,7 +39,7 @@ def init_dispatcher_from_config(grid_path, input_folder, dispatcher_class, param
 
 class Dispatcher(ABC):
     """Abstract Class Dispatcher with some operational method that don't depend on the dispatcher technology (pypsa...)
-    and some others that are implemented specificaly in inheriting classes"""
+    and some others that are implemented specifically in inheriting classes"""
 
     def __init__(self):
         super().__init__()
@@ -47,7 +47,7 @@ class Dispatcher(ABC):
     @abstractmethod
     def run(self, load, params, gen_constraints=None,
             ramp_mode=RampMode.hard, by_carrier=False, **kwargs):
-        """Have to be implemented in inheriting classes"""
+        """Run the proper dispatch optimization. Have to be implemented in inheriting classes"""
 
     @abstractmethod
     def simplify_net(self):
@@ -56,7 +56,8 @@ class Dispatcher(ABC):
     @classmethod
     @abstractmethod
     def from_gri2op_env(cls, grid2op_env):
-        """Have to be implemented in inheriting classes"""
+        """Reads grid features from a grid2op environment into a specific object.
+        Have to be implemented in inheriting classes according to the type of model"""
 
     @property
     def wind_p(self):
@@ -74,6 +75,13 @@ class Dispatcher(ABC):
 
     @property
     def chronix_scenario(self):
+        """
+
+        Returns
+        -------
+        chronix_scenario: :class:`chronix2grid.generation.dispatch.EconomicDispatch.ChroniXScenario`
+            Object that contains all the chronics that are relevant to perform a dispatch
+        """
         if self._chronix_scenario is None:
             raise Exception('Cannot access this property before instantiated the Load and '
                             'renewables scenario.')
@@ -108,6 +116,15 @@ class Dispatcher(ABC):
                     self._env.gen_max_ramp_down[i] / self._env.gen_pmax[i]
 
     def read_hydro_guide_curves(self, hydro_file_path):
+        """
+        Reads realistic hydro pattern that provides seasonal boundaries to the hydro production.
+        This constraint in the dispatch problem leads to more realistic hydro production
+
+        Parameters
+        ----------
+        hydro_file_path: ``str``
+
+        """
         dateparse = lambda x: dt.datetime.strptime(x, '%Y-%m-%d %H:%M')
         hydro_pattern = pd.read_csv(hydro_file_path, usecols=[0, 2, 3],
                                     parse_dates=[0], date_parser=dateparse)
@@ -174,6 +191,15 @@ class Dispatcher(ABC):
         return fig
 
     def save_results(self, params, output_folder):
+        """
+        Saves dispatch results in prod_p.csv.bz2, prod_p_forecasted.csv.bz2, load_p.csv.bz2, prices.csv
+
+        Parameters
+        ----------
+        params: ``dict``
+        output_folder: ``str``
+
+        """
         if not self._has_results and not self._has_simplified_results:
             print('The optimization has first to run successfully in order to '
                   'save results.')

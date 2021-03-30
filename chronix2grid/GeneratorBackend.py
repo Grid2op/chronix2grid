@@ -21,7 +21,8 @@ class GeneratorBackend:
     It will then do the proper generation thanks to its methods :func:`GeneratorBackend.do_l`, :func:`GeneratorBackend.do_r`,
     :func:`GeneratorBackend.do_d` and :func:`GeneratorBackend.do_t`. This methods rely on other specific backends.
 
-    All the attributes are static variables passed via module :class:`chronix2grid.constants`
+    All the attributes are static variables passed via module :class:`chronix2grid.constants`.
+    This is where you can choose all the type of objects that will be used by *Chronix2Grid*
 
     Attributes
     ----------
@@ -35,6 +36,8 @@ class GeneratorBackend:
         Class inheriting from ConfigManager that loads and checks the power loss generation parameters
     dispatch_config_manager: :class:`chronix2grid.config.ConfigManager`
         Class inheriting from ConfigManager that loads and checks the dispatch parameters
+    dispatcher_class: :class:`chronix2grid.generation.dispatch.EconomicDispatch.Dispatcher`
+        Class inheriting from Dispatcher that provides an API to a DispatchBackend in order to compute a proper dispatch
     consumption_backend_class
         A class that embeds a load generation backend such as :class:`chronix2grid.generation.consumption.ConsumptionGeneratorBackend`
     renewable_backend_class

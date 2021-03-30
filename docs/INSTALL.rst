@@ -21,6 +21,10 @@ or if you want to install optional dependencies (e.g. tensorflow if you want to 
 
 ``pip install Chronix2Grid[optional]``
 
+To achieve economic dispatch with :class:`PypsaDispatchBackend.PypsaEconomicDispatch.PypsaDispatcher`, you may want to install pypsa manually
+
+``pip install pypsa==0.17.0``
+
 [Second Option] Step 2 - Install from source
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ``source venv_chronix2grid/bin/activate``
@@ -34,6 +38,10 @@ or if you want to install optional dependencies (e.g. tensorflow if you want to 
 or if you want to install optional dependencies (e.g. tensorflow if you want to use GAN generation for solar and wind)
 
 ``pip install -U .[optional]``
+
+To achieve economic dispatch with :class:`chronix2grid.dispatch.PypsaEconomicDispatch.PypsaDispatcher`, you may want to install pypsa manually
+
+``pip install pypsa==0.17.0``
 
 [Optional] Compile and output the sphinx doc (this documentation)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

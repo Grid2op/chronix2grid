@@ -275,8 +275,7 @@ Economic dispatch generation (hydro, nuclear and thermic generators)
 ====================================================================
 
 In the economic dispatch step, an Optimal Power Flow (OPF) is computed on the grid.
-This is achieved thanks to `PyPSA package <https://pypsa.readthedocs.io/en/latest/>`_ which enable to have an object representation of the grid and an API to solve OPF.
-Inputs for the dispatch step are the following:
+Standard inputs for the dispatch step are the following:
 
 * In *patterns/hydro_french.csv*: a hydro guide curve pattern that represents the seasonality of the minimum and maximum hydraulic stocks
 * In *case/params_opf.json*
@@ -294,12 +293,16 @@ Inputs for the dispatch step are the following:
     * **losses_pct** - if D mode is deactivate, losses are estimated as a percentage of load.
     * **hydro_ramp_reduction_factor** - optional factor which will divide max ramp up and down to all hydro generators
 
-The object *chronix2grid.generation.dispatch.EconomicDispatch:Dispatch* facilitates the configuration of the optimization problem with PyPSA.
-We currently solve a simplified OPF that optimizes costs with respect towards the following constraints:
+The object :class:`chronix2grid.generation.dispatch.EconomicDispatch:Dispatch` is an abstract class that facilitates the configuration.
+It is agnostic to the technology used for dispatch computation, so some methods have to be implemented in inheriting classes.
+We currently enable to solve a simplified OPF that minimizes costs with respect towards the following constraints:
 
 * Match the net load - i.e. load minus solar and wind prod plus total loss
 * Features of each generator: Pmin, Pmax, Ramps up and down (min et max)
 * Hydro production should not go out of the hydro pattern guide curves
+
+An inheriting class :class:`PypsaDispatchBackend.PypsaEconomicDispatch.PypsaDispatcher` has been implemented to perform OPF thanks to
+`PyPSA package <https://pypsa.readthedocs.io/en/latest/>`_. Don't forget to install pypsa manually to be able to run it.
 
 
 Correction a posterori with simulated loss
