@@ -45,6 +45,14 @@ cd ChroniX2Grid/
 pip install -U .
 ```
 
+### Additional install required for dispatch
+
+A backend for dispatch has been implemented with PyPSA 
+
+ ```commandline
+pip install pypsa==0.17.0
+```
+
 ## Getting Started
 Four notebooks are provided to get you started with this package:
 

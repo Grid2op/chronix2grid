@@ -28,6 +28,14 @@ def modify_hydro_ramps(grid2op_env, hydro_dividing_factor=1., decimals=1):
            grid2op_env.gen_max_ramp_down[i] = np.round(grid2op_env.gen_max_ramp_down[i]/hydro_dividing_factor, decimals)
     return grid2op_env
 
+def modify_slack_characs(grid2op_env, slack_name, p_max_reduction=150, ramp_reduction=6, decimals = 1):
+    for i, generator in enumerate(grid2op_env.name_gen):
+        if generator == slack_name:
+            grid2op_env.gen_pmax[i] = np.round(grid2op_env.gen_pmax[i] - p_max_reduction, decimals)
+            grid2op_env.gen_max_ramp_up[i] = np.round(grid2op_env.gen_max_ramp_up[i] - ramp_reduction, decimals)
+            grid2op_env.gen_max_ramp_down[i] = np.round(grid2op_env.gen_max_ramp_down[i] - ramp_reduction, decimals)
+    return grid2op_env
+
 def add_noise_gen(dispatch, gen_cap, noise_factor):
     """ Add noise to opf dispatch to have more
     realistic real-time data
