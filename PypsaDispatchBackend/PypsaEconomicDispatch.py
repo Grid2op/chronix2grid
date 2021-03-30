@@ -36,6 +36,17 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
 
     @classmethod
     def from_gri2op_env(cls, grid2op_env):
+        """
+        Implements the abstract method of *Dispatcher*
+
+        Parameters
+        ----------
+        grid2op_env
+
+        Returns
+        -------
+        net: :class:`pypsa.Network`
+        """
         net = cls()
         net._env = grid2op_env
 
@@ -67,6 +78,13 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
 
     def run(self, load, params, gen_constraints=None,
             ramp_mode=RampMode.hard, by_carrier=False, **kwargs):
+        """
+        Implements the abstract method of *Dispatcher*
+
+        Returns
+        -------
+        simplified_net: :class:`pypsa.Network`
+        """
         prods_dispatch, terminal_conditions, marginal_prices = main_run_disptach(
             self if not by_carrier else self.simplify_net(),
             load, params, gen_constraints, ramp_mode, **kwargs)
@@ -87,6 +105,9 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
         return DispatchResults(chronix=results, terminal_conditions=terminal_conditions)
 
     def simplify_net(self):
+        """
+        Implements the abstract method of *Dispatcher*
+        """
         carriers = self.generators.carrier.unique()
         simplified_net = PypsaDispatcher()
         for carrier in carriers:
