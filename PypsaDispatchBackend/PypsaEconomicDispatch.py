@@ -19,7 +19,10 @@ DispatchResults = namedtuple('DispatchResults', ['chronix', 'terminal_conditions
 
 
 class PypsaDispatcher(Dispatcher, pypsa.Network):
-    """Wrapper around a Dispatcher and a pypsa.Network to add higher level methods"""
+    """
+    Inheriting from Dispatcher to implement abstract methods thanks to Pypsa API
+    Wrapper around a pypsa.Network to add higher level methods
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
