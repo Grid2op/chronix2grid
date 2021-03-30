@@ -119,7 +119,8 @@ setup(name='Chronix2Grid',
                             "sphinx>=2.4.4",
                             "sphinx-rtd-theme>=0.4.3",
                             "sphinxcontrib-trio>=1.1.0",
-                            "autodocsumm>=0.1.13"
+                            "autodocsumm>=0.1.13",
+                            "pypsa==0.17.0"
                         ]
                     },
       zip_safe=False,
