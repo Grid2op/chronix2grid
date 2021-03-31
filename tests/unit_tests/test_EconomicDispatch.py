@@ -13,6 +13,30 @@ from chronix2grid.generation.dispatch.EconomicDispatch import (
 import grid2op
 from grid2op.Chronics import ChangeNothing
 
+class TestPreprocessing(unittest.TestCase):
+    def setUp(self):
+        # TODO
+        self.grid_path = ''
+        self.input_folder = os.path.join(
+            pathlib.Path(__file__).parent.parent.absolute(),
+            'data', 'input')
+        self.CASE = '1X'
+        self.year = 2012
+        self.scenario_name = 'Scenario_0'
+        self.grid_path = os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME,
+                               self.CASE, 'grid.json')
+        self.dispatcher = init_dispatcher_from_config(
+            self.grid_path,
+            os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME),
+            cst.DISPATCHER,
+            params_opf = {"hydro_ramp_reduction_factor":1.,
+                          "slack_p_max_reduction":0.,
+                           "slack_ramp_max_reduction":0.}
+        )
+        self.hydro_file_path = os.path.join(self.input_folder,
+                                            cst.GENERATION_FOLDER_NAME,
+                                            'patterns',
+                                            'hydro_french.csv')
 
 class TestDispatch(unittest.TestCase):
     def setUp(self):
@@ -28,7 +52,10 @@ class TestDispatch(unittest.TestCase):
         self.dispatcher = init_dispatcher_from_config(
             self.grid_path,
             os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME),
-            cst.DISPATCHER
+            cst.DISPATCHER,
+            params_opf = {"hydro_ramp_reduction_factor":1.,
+                          "slack_p_max_reduction":0.,
+                           "slack_ramp_max_reduction":0.}
         )
         self.hydro_file_path = os.path.join(self.input_folder,
                                             cst.GENERATION_FOLDER_NAME,

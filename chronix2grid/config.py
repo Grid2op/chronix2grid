@@ -379,6 +379,8 @@ class DispatchConfigManager(ConfigManager):
         Optional parameters can be set for grid2op simulation of loss as a final step.
         The production is updated on a slack generator and warnings or errors are returned if this update violates generator constraints
 
+        * *slack_p_max_reduction* - before dispatch, reduce Pmax of slack generator temporary to anticipate loss
+        * *slack_ramp_max_reduction* - before dispatch, reduce ramp max (up and down) of slack generator temporary to anticipate loss
         * *loss_grid2op_simulation* - if True, launches grid2Op simulation for loss
         * *idxSlack*, *nameSlack* - identifies slack generator that will be updated
         * *early_stopping_mode* if True returns errors if generator constraints are violated after updates. If False, only returns warnings
@@ -431,6 +433,13 @@ class DispatchConfigManager(ConfigManager):
             params_opf["hydro_ramp_reduction_factor"] = 1.
         else:
             params_opf["hydro_ramp_reduction_factor"] = float(params_opf["hydro_ramp_reduction_factor"])
+
+        # Slack temporary correction
+        for key in ["slack_p_max_reduction", "slack_ramp_max_reduction"]:
+            if key not in list(params_opf.keys()):
+                params_opf[key] = 0.
+            else:
+                params_opf[key] = float(params_opf[key])
         return params_opf
 
 

@@ -12,23 +12,28 @@ from grid2op.Chronics import ChangeNothing
 import pandas as pd
 import plotly.express as px
 
-from chronix2grid.generation.dispatch.utils import RampMode, add_noise_gen, modify_hydro_ramps
+from chronix2grid.generation.dispatch.utils import RampMode, add_noise_gen, modify_hydro_ramps, modify_slack_characs
 import chronix2grid.constants as cst
 
 DispatchResults = namedtuple('DispatchResults', ['chronix', 'terminal_conditions'])
 
 def init_dispatcher_from_config(grid_path, input_folder, dispatcher_class, params_opf):
-    # Patch: we need to modify slighty Pmax and ramps according to the floating point number precision we have
-    #
-
-    # read Prod Caracts
+    # Read grid and gens characs
     env118_withoutchron = grid2op.make("rte_case118_example",
                                        test=True,
                                        grid_path=grid_path,
                                        chronics_class=ChangeNothing)
 
+    # Generators temporary adjusts
     env118_withoutchron = modify_hydro_ramps(env118_withoutchron, params_opf["hydro_ramp_reduction_factor"])
 
+    if params_opf["slack_p_max_reduction"] != 0. or params_opf['slack_ramp_max_reduction'] != 0.:
+        env118_withoutchron = modify_slack_characs(env118_withoutchron,
+                                                 params_opf["nameSlack"],
+                                                 params_opf["slack_p_max_reduction"],
+                                                 params_opf["slack_ramp_max_reduction"])
+
+    # Dispatcher object init
     dispatcher = dispatcher_class.from_gri2op_env(env118_withoutchron)
 
     dispatcher.read_hydro_guide_curves(
