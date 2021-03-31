@@ -57,7 +57,7 @@ class TestIntegration(unittest.TestCase):
         self.generation_output_folder_noloss = generation_output_folder
         self.kpi_output_folder_noloss = kpi_output_folder
 
-        self.case_loss = 'case118_l2rpn_neurips_1x_modifyHydroRamps'
+        self.case_loss = 'case118_l2rpn_neurips_1x'
         generation_output_folder, kpi_output_folder = main.create_directory_tree(
             self.case_loss, self.start_date, self.output_folder, cst.SCENARIO_FOLDER_BASE_NAME,
             self.n_scenarios, 'LRT', warn_user=False)
@@ -68,7 +68,7 @@ class TestIntegration(unittest.TestCase):
         self.expected_folder_loss = os.path.join(
             pathlib.Path(__file__).parent.parent.absolute(),
             'data', 'output',"generation",
-            "case118_l2rpn_neurips_1x_modifyHydroRamps",
+            "expected_case118_l2rpn_neurips_1x",
             "Scenario_january_0")
         self.expected_folder_noloss = os.path.join(
             pathlib.Path(__file__).parent.parent.absolute(),

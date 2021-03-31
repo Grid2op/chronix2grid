@@ -3,40 +3,66 @@ import os
 import tempfile
 import unittest
 
+import numpy as np
 import pandas as pd
 import pathlib
 
 import chronix2grid.constants as cst
 from chronix2grid.generation.dispatch.EconomicDispatch import (
             ChroniXScenario, init_dispatcher_from_config)
-
+from chronix2grid.generation.dispatch.utils import modify_hydro_ramps, modify_slack_characs
 import grid2op
 from grid2op.Chronics import ChangeNothing
 
 class TestPreprocessing(unittest.TestCase):
     def setUp(self):
-        # TODO
-        self.grid_path = ''
         self.input_folder = os.path.join(
             pathlib.Path(__file__).parent.parent.absolute(),
             'data', 'input')
-        self.CASE = '1X'
-        self.year = 2012
-        self.scenario_name = 'Scenario_0'
+        self.CASE = 'case118_l2rpn_neurips_1x'
         self.grid_path = os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME,
-                               self.CASE, 'grid.json')
-        self.dispatcher = init_dispatcher_from_config(
-            self.grid_path,
-            os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME),
-            cst.DISPATCHER,
-            params_opf = {"hydro_ramp_reduction_factor":1.,
+                                      self.CASE, 'grid.json')
+        self.expected_file = os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME,
+                                          'case118_l2rpn_neurips_1x_modifySlackBeforeChronixGeneration',
+                                          'prods_charac.csv')
+
+        self.params_opf = {"hydro_ramp_reduction_factor":1.,
+                           "nameSlack":"gen_68_37",
                           "slack_p_max_reduction":0.,
                            "slack_ramp_max_reduction":0.}
-        )
-        self.hydro_file_path = os.path.join(self.input_folder,
-                                            cst.GENERATION_FOLDER_NAME,
-                                            'patterns',
-                                            'hydro_french.csv')
+
+    def test_modify_slack_and_hydro(self):
+        env = grid2op.make("rte_case118_example",
+                           test=True,
+                           grid_path=self.grid_path,
+                           chronics_class=ChangeNothing)
+        env = modify_hydro_ramps(env, self.params_opf["hydro_ramp_reduction_factor"])
+        env = modify_slack_characs(env,
+                                   self.params_opf["nameSlack"],
+                                   self.params_opf["slack_p_max_reduction"],
+                                   self.params_opf["slack_ramp_max_reduction"])
+        prods = pd.DataFrame({"name":env.name_gen,
+                              "type":env.gen_type,
+                              "Pmax":env.gen_pmax,
+                              "Pmin":env.gen_pmin,
+                              "max_ramp_up":env.gen_max_ramp_up,
+                              "max_ramp_down":env.gen_max_ramp_down})
+        prods.sort_values(by="name", inplace=True)
+        prods.reset_index(drop=True, inplace=True)
+        expected_prods = pd.read_csv(self.expected_file)[prods.columns].fillna(0)
+        expected_prods.sort_values(by="name", inplace=True)
+        expected_prods.reset_index(drop=True, inplace=True)
+
+        prods = self.round_columns(prods, ["Pmax","Pmin","max_ramp_up","max_ramp_down"], 0)
+        expected_prods = self.round_columns(expected_prods, ["Pmax", "Pmin", "max_ramp_up", "max_ramp_down"], 0)
+
+        self.assertTrue(np.all(prods.values==expected_prods.values))
+
+    def round_columns(self, df, cols, decimals):
+        for col in cols:
+            df[col] = df[col].round(decimals)
+        return df
+
 
 class TestDispatch(unittest.TestCase):
     def setUp(self):
