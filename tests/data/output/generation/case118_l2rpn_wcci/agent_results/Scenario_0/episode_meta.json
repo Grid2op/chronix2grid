@@ -1,4 +1,5 @@
 {
+    "agent_seed": null,
     "backend_type": "PandaPowerBackend_rte_case118_example",
     "chronics_max_timestep": "1",
     "chronics_path": "D:\\RTE\\Chronix2grid\\1 - D\u00e9veloppement\\ChroniX2Grid\\tests\\data\\output\\generation\\case118_l2rpn_wcci\\2012-01-01\\Scenario_0",

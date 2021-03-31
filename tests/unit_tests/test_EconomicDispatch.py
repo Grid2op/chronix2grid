@@ -19,22 +19,23 @@ class TestPreprocessing(unittest.TestCase):
         self.input_folder = os.path.join(
             pathlib.Path(__file__).parent.parent.absolute(),
             'data', 'input')
-        self.CASE = 'case118_l2rpn_neurips_1x'
+        self.CASE = 'case118_l2rpn_neurips_1x_original'
+        # self.grid_path = os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME,
+        #                               self.CASE, 'grid.json')
         self.grid_path = os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME,
-                                      self.CASE, 'grid.json')
+                                      self.CASE)
         self.expected_file = os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME,
                                           'case118_l2rpn_neurips_1x_modifySlackBeforeChronixGeneration',
                                           'prods_charac.csv')
 
-        self.params_opf = {"hydro_ramp_reduction_factor":1.,
+        self.params_opf = {"hydro_ramp_reduction_factor":2.,
                            "nameSlack":"gen_68_37",
-                          "slack_p_max_reduction":0.,
-                           "slack_ramp_max_reduction":0.}
+                          "slack_p_max_reduction":150.,
+                           "slack_ramp_max_reduction":6.}
 
     def test_modify_slack_and_hydro(self):
-        env = grid2op.make("rte_case118_example",
-                           test=True,
-                           grid_path=self.grid_path,
+        env = grid2op.make(self.grid_path,
+                           chronics_path=self.grid_path,
                            chronics_class=ChangeNothing)
         env = modify_hydro_ramps(env, self.params_opf["hydro_ramp_reduction_factor"])
         env = modify_slack_characs(env,
@@ -60,13 +61,12 @@ class TestPreprocessing(unittest.TestCase):
 
     def round_columns(self, df, cols, decimals):
         for col in cols:
-            df[col] = df[col].round(decimals)
+            df[col] = np.round(df[col].values, decimals)
         return df
 
 
 class TestDispatch(unittest.TestCase):
     def setUp(self):
-        self.grid_path = ''
         self.input_folder = os.path.join(
             pathlib.Path(__file__).parent.parent.absolute(),
             'data', 'input')
@@ -83,16 +83,16 @@ class TestDispatch(unittest.TestCase):
                           "slack_p_max_reduction":0.,
                            "slack_ramp_max_reduction":0.}
         )
+        self.grid2op_path = os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME, self.CASE)
         self.hydro_file_path = os.path.join(self.input_folder,
                                             cst.GENERATION_FOLDER_NAME,
                                             'patterns',
                                             'hydro_french.csv')
 
     def test_from_grid2op_env(self):
-        grid2op_env = grid2op.make("rte_case118_example",
-                                   test=True,
-                                   grid_path=self.grid_path,
-                                   chronics_class=ChangeNothing)
+        grid2op_env = grid2op.make(self.grid2op_path,
+                           chronics_path=self.grid2op_path,
+                           chronics_class=ChangeNothing)
         dispatcher = cst.DISPATCHER.from_gri2op_env(grid2op_env)
         self.assertTrue(isinstance(dispatcher, cst.DISPATCHER))
 
@@ -108,15 +108,12 @@ class TestChronixScenario(unittest.TestCase):
             pathlib.Path(__file__).parent.parent.absolute(),
             'data', 'input')
         self.case = 'case118_l2rpn_wcci'
-        self.grid2op_env = grid2op.make(
-            "rte_case118_example",
-            test=True,
-            grid_path=os.path.join(self.input_folder,
+        self.grid2op_path = os.path.join(self.input_folder,
                                    cst.GENERATION_FOLDER_NAME,
-                                   self.case,
-                                   "grid.json"),
-            chronics_class=ChangeNothing,
-        )
+                                   self.case)
+        self.grid2op_env = grid2op.make(self.grid2op_path,
+                                    chronics_path = self.grid2op_path,
+                                    chronics_class=ChangeNothing)
         self.start_date = dt.datetime(2019, 9, 1, 0, 0)
         self.end_date = dt.datetime(2019, 9, 1, 0, 5)
         self.dt = 5
