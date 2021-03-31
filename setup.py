@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 setup(name='Chronix2Grid',
       version='0.1.0rc10',
       description='A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)',
-      long_description='TODO',
+      long_description='Chronix2Grid is a python package, providing a command-line application as well, that allows to generate synthetic but realistic consumption, renewable production, electricity loss (dissipation) and economic dispatched productions chronics given a power grid. Reference data that you provide will serve to calibrate the parameters so that the synthetic data reproduce some realistic criteria (KPIs) from the reference data.',
       classifiers=[
           'Development Status :: 3 - Alpha',
           'Programming Language :: Python :: 3.6',
