@@ -7,6 +7,22 @@ In the workflow illustration below, each class, method and function is designed 
 
 .. image:: ../pictures/workflow.png
 
+Changing a Backend
+============================
+
+Changing a Backend (and the required ConfigManager) can be performed by importing the backend and config class (from chronix2grid or from your sources)
+and then updating Chronix2grid constants
+
+.. code-block:: python
+
+    from chronix2grid.config import ResConfigManagerGan
+    from chronix2grid.generation.renewable.RenewableBackend import RenewableBackendGAN
+    import chronix2grid.constants as cst
+    cst.RENEWABLE_GENERATION_CONFIG = ResConfigManagerGan
+    cst.RENEWABLE_GENERATION_BACKEND = RenewableBackendGAN
+
+
+
 Interface example with Generative Adversarial Networks (GAN)
 ========================================================================
 
@@ -15,8 +31,8 @@ Chronix2grid currently integrates a whole generation model (see :ref:`implemente
 Additionally, an alternative method has been interfaced for solar and wind generation with GAN based
 on a `research paper <https://arxiv.org/abs/1707.09676>`_. It enables to replay a trained neural network with tensorflow designed for generation,
 and then compare it with its training data. See example in
-    * *input_data/generation/case118_l2rpn_neurips_1x_GAN*
-    * *input_data/kpi/case118_l2rpn_neurips_1x_GAN*
+* *input_data/generation/case118_l2rpn_neurips_1x_GAN*
+* *input_data/kpi/case118_l2rpn_neurips_1x_GAN*
 
 GeneratorBackend
 ==================
