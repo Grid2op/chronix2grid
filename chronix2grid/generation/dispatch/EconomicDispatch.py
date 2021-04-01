@@ -23,6 +23,7 @@ def init_dispatcher_from_config(grid_path, input_folder, dispatcher_class, param
                                        test=True,
                                        grid_path=grid_path,
                                        chronics_class=ChangeNothing)
+    # env118_withoutchron = grid2op.make(grid_path)
 
     # Generators temporary adjusts
     env118_withoutchron = modify_hydro_ramps(env118_withoutchron, params_opf["hydro_ramp_reduction_factor"])

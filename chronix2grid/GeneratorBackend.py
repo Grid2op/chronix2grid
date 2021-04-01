@@ -323,6 +323,7 @@ class GeneratorBackend:
         prods = pd.concat([prod_solar, prod_wind], axis=1)
         res_names = dict(wind=prod_wind.columns, solar=prod_solar.columns)
         grid_path = os.path.join(grid_folder, constants.GRID_FILENAME)
+        # grid_path = grid_folder
         dispatcher = EconomicDispatch.init_dispatcher_from_config(grid_path, input_folder,self.dispatcher_class, params_opf)
         dispatcher.chronix_scenario = EconomicDispatch.ChroniXScenario(load, prods, res_names,
                                                                        scenario_name, loss)
