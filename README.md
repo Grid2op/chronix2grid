@@ -163,7 +163,7 @@ Below is an example of **params_load.json** that provides parameters to correlat
 }
 ```
 
-You'll find all the details on the parameters used in these json files in section :ref:`implemented-models`
+You'll find all the details on the parameters used in these json files in the [documentation about implemented models](https://chronix2grid.readthedocs.io/en/latest/DESCRIPTION.html)
 
 ### KPI configuration
 Some general parameters have to be set in *INPUT_FOLDER/kpi/paramsKPI.json*

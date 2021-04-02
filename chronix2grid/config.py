@@ -384,7 +384,6 @@ class DispatchConfigManager(ConfigManager):
         * *loss_grid2op_simulation* - if True, launches grid2Op simulation for loss
         * *idxSlack*, *nameSlack* - identifies slack generator that will be updated
         * *early_stopping_mode* if True returns errors if generator constraints are violated after updates. If False, only returns warnings
-        * *pmin_margin*, *pmax_margin*, *rampdown_margin*, *rampup_margin* - margins to tolerate constraints violations
         * *agent_type* - Grid2op agent type ti use for simulation. Can be "reco" for RecoPowerLines or "do-nothing"
 
         .. warning::

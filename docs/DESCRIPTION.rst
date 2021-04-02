@@ -318,7 +318,6 @@ It is optional and set in *case/params_opf.json*
 * **loss_grid2op_simulation** - boolean to specify if we wan't to compute the simulation. If not provided, the user is warned that we assume it is False.
 * **idxSlack** and **genSlack** - id and name of the slack generator, on which the loss will be deduced from the production by convention
 * **early_stopping_mode** - after the simulation, the modification of the slack generator production can lead to violation of one or several constraints on this generator (Pmax, Pmin, max and min ramp-up, max and min ramp_down). If early_stopping_mode is true, an error is returned and the generation is aborted. If false, a warning that quantifies the violation is returned.
-* **pmin_margin**, **pmax_margin**, **rampup_margin**, **rampdown_margin** - deltas in MW that are allowed for the constraints on slack generator before triggering warning or error for violation
 * **agent_type** - represents the type of `grid2op agent <https://grid2op.readthedocs.io/en/latest/agent.html>`_. Can be reco for RecoPowerLineAgent or do-nothing for DoNothingAgent. Currently, there is only the DoNothingAgent handled
 
 At the end of this step, the files *prod_p.csv.bz2* *prod_p_forecasted.csv.bz2* are edited to modify the slack generator production chronic.
