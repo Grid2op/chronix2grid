@@ -4,9 +4,5 @@
 "idxSlack":37,
 "nameSlack": "gen_68_37",
 "early_stopping_mode": false,
-"pmin_margin": 10,
-"pmax_margin":70,
-"rampup_margin": 2,
-"rampdown_margin": 3,
 "agent_type": "reco"
 }
