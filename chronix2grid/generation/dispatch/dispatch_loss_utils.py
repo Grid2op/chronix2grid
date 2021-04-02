@@ -102,10 +102,10 @@ def correct_scenario_loss(scenario_folder_path, agent_result_path, params_opf, g
 
     # Get gen constraints
     first_obs = data_this_episode.observations[0]
-    pmax = first_obs.gen_pmax[id_slack] + params_opf['pmax_margin']
-    pmin = max(first_obs.gen_pmin[id_slack] - params_opf['pmin_margin'],0)
-    ramp_up = first_obs.gen_max_ramp_up[id_slack] + params_opf['rampup_margin']
-    ramp_down = first_obs.gen_max_ramp_down[id_slack] + params_opf['rampdown_margin']
+    pmax = first_obs.gen_pmax[id_slack] #+ params_opf['pmax_margin']
+    pmin = first_obs.gen_pmin[id_slack] #max(first_obs.gen_pmin[id_slack] - params_opf['pmin_margin'],0)
+    ramp_up = first_obs.gen_max_ramp_up[id_slack] #+ params_opf['rampup_margin']
+    ramp_down = first_obs.gen_max_ramp_down[id_slack] #+ params_opf['rampdown_margin']
 
     # Get corrected dispatch prod
     prods_p = pd.DataFrame(np.array([obs.prod_p for obs in data_this_episode.observations]))

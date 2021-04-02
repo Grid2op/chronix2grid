@@ -120,7 +120,7 @@ Options:
 
 * L - load generation
 * R - wind and solar production generation
-* D - loss generation (depending on L and R)
+* D - loss generation a priori, that will be used for dispatch and potentially corrected afterwards
 * T - thermic a,d hydro production generation thanks to an economic dispatch (simplified optimal power flow simulation)
 * K - KPI generation in order to compare synthetic (generated) chronics to reference (real-life) chronics
 
@@ -132,10 +132,38 @@ Note that D and T submodules can't be launched without previous L and R modules,
 ## Configuration
 
 ### Chronic generation detailed configuration
-More detailed configuration has to be set in the json files in *INPUT_FOLDER/generation/CASE/* such as timestep, noise and
- correlation
- intensity...
+Detailed configuration is made through thematic json files. 
+For instance you will use in the current implementation of Chronix2grid:
 
+* **params.json** for general generation configuration (generation timestep, noise for forecast chronics)
+* **params_load.json** for load generation
+* **params_res.json** for solar and wind generation. You will use paramsGAN.json in case you are using the backend with Generative Adversarial Networks
+* **params_loss.json** for a priori loss generation
+* **params_opf.json** for dispatch and a posteriori loss simulation
+
+Below is an example of **params.json** which will launch a 5 minutes time step generation, 
+applying a gaussian noise to forecast chronics with a standard deviation of 0.01
+```json
+{
+  "dt": 5,
+  "planned_std": "0.01"
+}
+```
+
+Below is an example of **params_load.json** that provides parameters to correlated generation algorithm.
+
+```json
+{
+  "Lx": 1000,
+  "Ly": 1000,
+  "dx_corr": 250,
+  "dy_corr": 250,
+  "temperature_corr": 400,
+  "std_temperature_noise": 0.06
+}
+```
+
+You'll find all the details on the parameters used in these json files in section :ref:`implemented-models`
 
 ### KPI configuration
 Some general parameters have to be set in *INPUT_FOLDER/kpi/paramsKPI.json*
@@ -149,7 +177,7 @@ Some general parameters have to be set in *INPUT_FOLDER/kpi/paramsKPI.json*
 All generation submodules (LRDT) have a modular backend. 
 You can develop your own load, renewable, loss and dispatch model using as input: 
 * Your json parameters
-* Possible pattern files
+* Possible pattern files, or trained neural networks
 * Grid demand and generator characteristics in csv
 
 ## Running the test suite

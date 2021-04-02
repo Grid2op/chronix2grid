@@ -47,7 +47,7 @@ Features
 
 * L - load generation
 * R - wind and solar production generation
-* D - loss generation (depending on L and R)
+* D - loss generation a priori, that will be used for dispatch and potentially corrected afterwards
 * T - thermic production generation thanks to a production dispatch (simplified optimal power flow computation)
 * K - KPI generation in order to compare synthetic (generated) chronics to reference (real-life) chronics
 

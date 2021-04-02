@@ -421,7 +421,7 @@ class DispatchConfigManager(ConfigManager):
             print('Warning: The loss_grid2op_simulation field of params_opf.json is missing. Continuing assuming it is False')
             params_opf["loss_grid2op_simulation"] = False
         if bool:
-            oblig_keys = ["idxSlack","nameSlack","pmin_margin","pmax_margin","rampup_margin","rampdown_margin","agent_type"]
+            oblig_keys = ["idxSlack","nameSlack","agent_type"]
             for key in oblig_keys:
                 try:
                     params_opf[key]
