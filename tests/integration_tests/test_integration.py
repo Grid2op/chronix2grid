@@ -85,7 +85,7 @@ class TestIntegration(unittest.TestCase):
         self.expected_folder_all = os.path.join(
             pathlib.Path(__file__).parent.parent.absolute(),
             'data', 'output',"generation",
-            'case118_l2rpn_neurips_1x_hydro_loss',#"case118_l2rpn_neurips_1x_hyrdo_loss_modifySlackBeforeChronixGeneration",
+            'expected_case118_l2rpn_neurips_1x_hydro_loss',#"case118_l2rpn_neurips_1x_hyrdo_loss_modifySlackBeforeChronixGeneration",
             "Scenario_january_0")
         self.files_tocheck = ['prod_p']
 
@@ -97,14 +97,14 @@ class TestIntegration(unittest.TestCase):
         self.modify_gen_prices(mu, sigma, seed_price_noise, gen_types)
 
     def modify_gen_prices(self, mu, sigma, seed_price_noise, gen_types):
+        noise = np.random.normal(mu, sigma, 32)
         for case in [self.case_loss, self.case_noloss, self.case_all]:
             # Read prods_charac
             prods_orig = pd.read_csv(os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME, case, 'prods_charac_original.csv'))
-            N = len(prods_orig[prods_orig['type'].isin(gen_types)])
 
             # Add noise to price columns
             np.random.seed(seed_price_noise)
-            prods_orig.loc[prods_orig['type'].isin(gen_types), 'marginal_cost'] += np.random.normal(mu, sigma, N)
+            prods_orig.loc[prods_orig['type'].isin(gen_types), 'marginal_cost'] += noise
             prods_orig['marginal_cost'] = prods_orig['marginal_cost'].round(1)
 
             # Write it
