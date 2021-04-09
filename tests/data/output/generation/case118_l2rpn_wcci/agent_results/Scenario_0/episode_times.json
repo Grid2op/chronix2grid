@@ -3,10 +3,10 @@
         "total": 0.0
     },
     "Env": {
-        "apply_act": 0.009082794189453125,
-        "observation_computation": 0.001971721649169922,
-        "powerflow_computation": 0.016965389251708984,
-        "total": 0.02801990509033203
+        "apply_act": 0.01595449447631836,
+        "observation_computation": 0.0019941329956054688,
+        "powerflow_computation": 0.0249330997467041,
+        "total": 0.04288172721862793
     },
-    "total": 0.029017210006713867
+    "total": 0.044547319412231445
 }

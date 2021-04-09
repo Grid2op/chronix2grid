@@ -54,12 +54,14 @@ class TestGrid2OpImport(unittest.TestCase):
 
         nb_episode = 1
         NB_CORE = 1
-        max_iter = 1
+        max_iter = 2
         runner = Runner(**self.env.get_params_for_runner())
         res = runner.run(nb_episode=nb_episode, nb_process=NB_CORE,
-                         path_save=path_data_saved, pbar=tqdm, max_iter=max_iter)
+                         path_save=None, pbar=tqdm, max_iter=max_iter,
+                         add_detailed_output=True)
+        id_chron, name_chron, cum_reward, nb_timestep, max_ts, episode_data = res.pop()
 
-        data_this_episode = EpisodeData.from_disk(path_data_saved, 'Scenario_0')
+        # data_this_episode = EpisodeData.from_disk(path_data_saved, 'Scenario_0')
         prods_p = pd.DataFrame(
-            np.array([obs.prod_p for obs in data_this_episode.observations]))
-        self.assertAlmostEqual(prods_p.sum().mean(), 112.80043, places=5)
+            np.array([obs.prod_p for obs in episode_data.observations if obs is not None]))
+        self.assertAlmostEqual(prods_p.sum().mean(), 112.64725, places=5)

@@ -1,5 +1,0 @@
-{
-  "step_opf_min": 5, "mode_opf": "month", "reactive_comp": 1, "losses_pct": 0.4, "dispatch_by_carrier": false, "ramp_mode": "hard", "grid_path": "/Users/antoinemarot/dev/Chronix2Grid/tests/data/input/generation/case118_l2rpn_neurips_1x_modifySlackBeforeChronixGeneration/grid.json", "pyomo": false, "solver_name": "cbc",
-"early_stopping_mode": false,
-"agent_type": "reco"
-}

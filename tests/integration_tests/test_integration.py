@@ -89,6 +89,26 @@ class TestIntegration(unittest.TestCase):
             "Scenario_january_0")
         self.files_tocheck = ['prod_p']
 
+        # Modification in gen prices to avoid multi solution in OPF
+        seed_price_noise = 1000
+        mu = 0
+        sigma = 0.5
+        gen_types = ['thermal','hydro', 'nuclear']
+        self.modify_gen_prices(mu, sigma, seed_price_noise, gen_types)
+
+    def modify_gen_prices(self, mu, sigma, seed_price_noise, gen_types):
+        for case in [self.case_loss, self.case_noloss, self.case_all]:
+            # Read prods_charac
+            prods_orig = pd.read_csv(os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME, case, 'prods_charac_original.csv'))
+            N = len(prods_orig[prods_orig['type'].isin(gen_types)])
+
+            # Add noise to price columns
+            np.random.seed(seed_price_noise)
+            prods_orig.loc[prods_orig['type'].isin(gen_types), 'marginal_cost'] += np.random.normal(mu, sigma, N)
+            prods_orig['marginal_cost'] = prods_orig['marginal_cost'].round(1)
+
+            # Write it
+            prods_orig.to_csv(os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME, case, 'prods_charac.csv'), index=False)
 
     def tearDown(self) -> None:
         shutil.rmtree(self.output_folder, ignore_errors=False, onerror=None)

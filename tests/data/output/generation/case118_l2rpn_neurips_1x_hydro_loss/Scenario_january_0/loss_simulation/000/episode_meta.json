@@ -1,0 +1,11 @@
+{
+    "agent_seed": null,
+    "backend_type": "LightSimBackend_case118_l2rpn_neurips_1x_hydro_loss_case118_l2rpn_neurips_1x_hydro_loss",
+    "chronics_max_timestep": "8062",
+    "chronics_path": "D:\\RTE\\Chronix2grid\\1 - D\u00e9veloppement\\ChroniX2Grid\\tests\\data\\input\\generation\\case118_l2rpn_neurips_1x_hydro_loss\\chronics\\000",
+    "cumulative_reward": 4613806.5,
+    "env_seed": null,
+    "env_type": "Environment_case118_l2rpn_neurips_1x_hydro_loss",
+    "grid_path": "D:\\RTE\\Chronix2grid\\1 - D\u00e9veloppement\\ChroniX2Grid\\tests\\data\\input\\generation\\case118_l2rpn_neurips_1x_hydro_loss\\grid.json",
+    "nb_timestep_played": 8062
+}
