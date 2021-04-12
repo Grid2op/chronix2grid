@@ -1,5 +1,6 @@
 import os
 import time
+import pathlib
 
 import click
 import multiprocessing
@@ -18,17 +19,17 @@ from chronix2grid import utils as ut
 
 
 @click.command()
-@click.option('--case', default='case118_l2rpn', help='case folder to base generation on')
+@click.option('--case', default='case118_l2rpn_neurips_1x', help='case folder to base generation on')
 @click.option('--start-date', default='2012-01-01', help='Start date to generate chronics')
 @click.option('--weeks', default=4, help='Number of weeks to generate')
 @click.option('--by-n-weeks', default=4, help='Size of the output chunks in weeks')
 @click.option('--n_scenarios', default=1, help='Number of scenarios to generate')
-@click.option('--mode', default='LRDTK', help='Steps to execute : '
+@click.option('--mode', default='LRTK', help='Steps to execute : '
                                               'L(K) for loads only (and KPI);R(K) for renewables (and KPI) only; '
                                               'LRT (K) for load, renewable and thermic generation (and KPI); '
                                               'LRDT(TK) for load, renewable, loss (dissipation) generation (and thermic and KPI)')
 @click.option('--input-folder',
-              default=os.path.join(os.path.normpath(os.getcwd()),
+              default=os.path.join(pathlib.Path(__file__).parent.absolute(),
                                    cst.DEFAULT_INPUT_FOLDER_NAME),
               help='Directory to read input files from.')
 @click.option('--output-folder',
@@ -234,29 +235,30 @@ def create_directory_tree(case, start_date, output_directory, scenario_name,
 
 
 if __name__ == "__main__":
-    # Default arguments for dev mode
-    case = 'case118_l2rpn_wcci' #'case118_l2rpn_wcci' #'case118_l2rpn_neurips_1x' #'case118_l2rpn_neurips_1x_GAN'
-    start_date = '2012-01-01'
-    weeks = 4
-    by_n_weeks = 4
-    n_scenarios = 1
-    mode = 'LRT'
-    input_folder = 'getting_started/example/input' #'getting_started/example/input' #'input_data'
-    output_folder =  'getting_started/example/output' #'getting_started/example/output' #'output' #'output_gan'
-    scenario_name = "" #"year_wind_solar" "january_wind_solar_dispatch"
-    seed_for_loads = 912206665
-    seed_for_res = 912206665
-    seed_for_dispatch = 912206665
-    nb_core = 1
-    ignore_warnings = True
-
-    # Run main function (only works with absolute path)
-    cwd = os.getcwd()
-    input_folder = os.path.join(cwd,input_folder)
-    output_folder = os.path.join(cwd, output_folder)
-    generate_mp_core(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
-                     input_folder, output_folder, scenario_name,
-                     seed_for_loads, seed_for_res, seed_for_dispatch, nb_core, ignore_warnings)
+    # # Default arguments for dev mode
+    # case = 'case118_l2rpn_wcci' #'case118_l2rpn_wcci' #'case118_l2rpn_neurips_1x' #'case118_l2rpn_neurips_1x_GAN'
+    # start_date = '2012-01-01'
+    # weeks = 4
+    # by_n_weeks = 4
+    # n_scenarios = 1
+    # mode = 'LRT'
+    # input_folder = 'getting_started/example/input' #'getting_started/example/input' #'input_data'
+    # output_folder =  'getting_started/example/output' #'getting_started/example/output' #'output' #'output_gan'
+    # scenario_name = "" #"year_wind_solar" "january_wind_solar_dispatch"
+    # seed_for_loads = 912206665
+    # seed_for_res = 912206665
+    # seed_for_dispatch = 912206665
+    # nb_core = 1
+    # ignore_warnings = True
+    #
+    # # Run main function (only works with absolute path)
+    # cwd = os.getcwd()
+    # input_folder = os.path.join(cwd,input_folder)
+    # output_folder = os.path.join(cwd, output_folder)
+    # generate_mp_core(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
+    #                  input_folder, output_folder, scenario_name,
+    #                  seed_for_loads, seed_for_res, seed_for_dispatch, nb_core, ignore_warnings)
+    generate_mp()
 
 
 

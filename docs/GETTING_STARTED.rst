@@ -8,7 +8,7 @@ Launch Chronix2Grid
 ``chronix2grid [OPTIONS]``
 
 --case string
-                            Case folder to base generation on
+                            Case folder to base generation on. By default it will use case case118_l2rpn_neurips_1x within package data
 --start-date string
                             Start date to generate chronics
 --weeks int           Number of weeks to generate
@@ -22,9 +22,9 @@ Launch Chronix2Grid
                             (and thermic and KPI)
 
 --input-folder string
-                            Directory to read input files from.
+                            Directory to read input files from. Please provide an absolute path. By default it will use a data folder within package
 --output-folder string
-                            Directory to store output files.
+                            Directory to store output files. Please provide an absolute path. By default chronix2grid will write in a folder output/ within the working directory
 --seed-for-loads string
                             Input seed to ensure reproducibility of load generation
 --seed-for-res string
@@ -83,9 +83,10 @@ Additionally, a data starting kit is provided to run an example in the folder ``
 
 The output folder corresponds to the following run of chronix2grid :
 
-``chronix2grid --mode RLTK --output-folder ChroniX2Grid/getting_started/example/output --input-folder /ChroniX2Grid/getting_started/example/input --ignore-warnings --weeks 8 --case case118_l2rpn_wcci --n_scenarios 1 --start-date 2012-01-01 --by-n-weeks 4``
+``chronix2grid --mode LRTK  --weeks 4 --n_scenarios 1 --start-date 2012-01-01 --by-n-weeks 4``
 
 The generated production chronics by carrier on 4 weeks of january 2012 can be represented as below.
+Default input data from package will be used if no --input-data and --case is provided. It will be written in an *output/* folder
 This visualization is available in interactive HTML format in *output/kpi/case/scenario/images/dispatch_view/*
 
 .. image:: ../pictures/Dispatch_view_example.PNG

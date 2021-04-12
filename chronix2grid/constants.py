@@ -19,7 +19,7 @@ KPI_FOLDER_NAME = 'kpi'
 KPI_IMAGES_FOLDER_NAME = 'images'
 
 DEFAULT_OUTPUT_FOLDER_NAME = 'output'
-DEFAULT_INPUT_FOLDER_NAME = 'input'
+DEFAULT_INPUT_FOLDER_NAME = 'getting_started/example/input'
 
 SCENARIO_FOLDER_BASE_NAME = 'Scenario'
 

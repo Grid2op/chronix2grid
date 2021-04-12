@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 
 setup(name='Chronix2Grid',
-      version='1.0',
+      version='1.0.1.dev4',
       description='A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)',
       long_description='Chronix2Grid is a python package, providing a command-line application as well, that allows to generate synthetic but realistic consumption, renewable production, electricity loss (dissipation) and economic dispatched productions chronics given a power grid. Reference data that you provide will serve to calibrate the parameters so that the synthetic data reproduce some realistic criteria (KPIs) from the reference data.',
       classifiers=[
@@ -18,7 +18,7 @@ setup(name='Chronix2Grid',
       keywords='ML powergrid optmization RL power-systems chronics generation production load network',
       author='Mario Jothy, Nicolas Megel, Vincent Renault',
       author_email=' mario.jothy@artelys.com',
-      url="https://github.com/mjothy/chronix2grid",
+      url="https://github.com/BDonnot/ChroniX2Grid",
       license='Mozilla Public License 2.0 (MPL 2.0)',
       packages=find_packages(),
       include_package_data=True,
@@ -128,5 +128,10 @@ setup(name='Chronix2Grid',
                         ]
                     },
       zip_safe=False,
+      package_data={'chronix2grid':['getting_started/example/input/generation/case118_l2rpn_neurips_1x/*',
+                                    'getting_started/example/input/generation/patterns/*',
+                                    'getting_started/example/input/kpi/case118_l2rpn_neurips_1x/paramsKPI.json',
+                                    'getting_started/example/input/kpi/case118_l2rpn_neurips_1x/France/eco2mix/*.csv',
+                                    'getting_started/example/input/kpi/case118_l2rpn_neurips_1x/France/renewable_ninja/*.csv']},
       entry_points={'console_scripts': ['chronix2grid=chronix2grid.main:generate_mp']}
 )

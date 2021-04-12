@@ -70,8 +70,12 @@ getting_started/example
 ```
  The output folder corresponds to the following run of chronix2grid : 
  ```commandline
-chronix2grid --mode RLTK --output-folder ChroniX2Grid/getting_started/example/output --input-folder /ChroniX2Grid/getting_started/example/input --ignore-warnings --weeks 8 --case case118_l2rpn_wcci --n_scenarios 1 --start-date 2012-01-01 --by-n-weeks 4
+chronix2grid --mode LRTK --ignore-warnings --weeks 8 --n_scenarios 1 --start-date 2012-01-01 --by-n-weeks 4
 ```
+
+NB:
+* Default input data from package will be used if no --input-data and --case is provided
+* Output will be written in the working directory in a folder output/
 
 ### WARNING
 In order to limit the size of the output and the running time for this example, chronics are only generated for 8 weeks.
@@ -121,7 +125,7 @@ Options:
 * L - load generation
 * R - wind and solar production generation
 * D - loss generation a priori, that will be used for dispatch and potentially corrected afterwards
-* T - thermic a,d hydro production generation thanks to an economic dispatch (simplified optimal power flow simulation)
+* T - thermic and hydro production generation thanks to an economic dispatch (simplified optimal power flow simulation)
 * K - KPI generation in order to compare synthetic (generated) chronics to reference (real-life) chronics
 
 The figure below shows how these submodules can be launched together with --mode/-m argument. 
