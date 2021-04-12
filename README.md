@@ -77,6 +77,11 @@ NB:
 * Default input data from package will be used if no --input-data and --case is provided
 * Output will be written in the working directory in a folder output/
 
+To provide --input-data and --output-folder folders and specify --case grid case, you would run this kind of command (make sure to change ChroniX2Grid_path with you own path) : 
+ ```commandline
+chronix2grid --mode RLTK --output-folder ChroniX2Grid_path/getting_started/example/output --input-folder ChroniX2Grid_path/getting_started/example/input --ignore-warnings --weeks 8 --case case118_l2rpn_wcci --n_scenarios 1 --start-date 2012-01-01 --by-n-weeks 4
+```
+
 ### WARNING
 In order to limit the size of the output and the running time for this example, chronics are only generated for 8 weeks.
 This implicates that some kpis that defined on a whole year will not be exploitable for this example.
