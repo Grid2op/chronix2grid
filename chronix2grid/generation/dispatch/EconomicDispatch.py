@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from copy import deepcopy
 import datetime as dt
 from collections import namedtuple
+import pathlib
 
 import grid2op
 from grid2op.Chronics import ChangeNothing
@@ -23,6 +24,10 @@ def init_dispatcher_from_config(grid_path, input_folder, dispatcher_class, param
                                        test=True,
                                        grid_path=grid_path,
                                        chronics_class=ChangeNothing)
+    # grid_path_parent = pathlib.Path(grid_path).parent.absolute()
+    # env118_withoutchron = grid2op.make(str(grid_path_parent),
+    #                                 chronics_path=str(grid_path_parent),
+    #                                 chronics_class=ChangeNothing)
     # env118_withoutchron = grid2op.make(grid_path)
 
     # Generators temporary adjusts

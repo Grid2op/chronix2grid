@@ -3,6 +3,7 @@ import warnings
 import shutil
 import numpy as np
 import pandas as pd
+import pathlib
 
 import grid2op
 from grid2op.Chronics import Multifolder, GridStateFromFileWithForecasts
@@ -16,12 +17,15 @@ from grid2op.Agent import DoNothingAgent
 import chronix2grid.constants as cst
 
 def move_chronics_temporarily(scenario_output_folder, grid_path):
-    chronics_temporary_path = os.path.join(grid_path,'chronics')
+
+    scenario_name = pathlib.Path(scenario_output_folder).name
+    chronics_temporary_path = os.path.join(grid_path, 'chronics')
+
+    os.makedirs(chronics_temporary_path, exist_ok=True)
+    chronics_temporary_path = os.path.join(chronics_temporary_path, scenario_name)
     if os.path.exists(chronics_temporary_path):
         warnings.warn("Had to delete a previous chronic temporary path in input data", UserWarning)
         shutil.rmtree(chronics_temporary_path)
-    os.makedirs(chronics_temporary_path, exist_ok=True)
-    chronics_temporary_path = os.path.join(chronics_temporary_path, '000')
     print("temporary copy of chronics in "+str(chronics_temporary_path))
     shutil.copytree(scenario_output_folder, chronics_temporary_path)
 
@@ -39,6 +43,15 @@ def create_or_replace_simulation_data_folder(scenario_folder_path):
         shutil.rmtree(simulation_data_folder)
     os.makedirs(simulation_data_folder, exist_ok=False)
     return simulation_data_folder
+
+def search_chronic_num_from_name(scenario_name, env):
+    found_id = None
+    # Search scenario with provided name
+    for id, sp in enumerate(env.chronics_handler.real_data.subpaths):
+        sp_end = os.path.basename(sp)
+        if sp_end == scenario_name:
+            found_id = id
+    return found_id
 
 def run_grid2op_simulation_donothing(grid_path, agent_result_path, agent_type = 'do-nothing', nb_core = 1):
     """
@@ -72,8 +85,14 @@ def run_grid2op_simulation_donothing(grid_path, agent_result_path, agent_type = 
     param = Parameters()
     param.init_from_dict({"NO_OVERFLOW_DISCONNECTION": True})
 
+    # Load env and apropriate chronix scenario
     env = grid2op.make(grid_path,
                        param=param, backend=backend, test=True)
+    scenario_name = pathlib.Path(agent_result_path).name
+    scen_id = search_chronic_num_from_name(scenario_name, env)
+    env.set_id(scen_id)
+    env.reset()
+
     #env = grid2op.make(grid_path = grid_path, chronics_path = scenario_output_folder,
      #                  param=param, backend=backend, test=True)
     # If you remove the "GridStateFromFileWithForecasts", from above, chronics will NOT be loaded properly.
@@ -96,7 +115,7 @@ def correct_scenario_loss(scenario_folder_path, agent_result_path, params_opf, g
     print('Start realistic loss correction from simulation results')
 
     # Load simulation data
-    data_this_episode = EpisodeData.from_disk(os.path.join(agent_result_path, 'loss_simulation'), '000')
+    data_this_episode = EpisodeData.from_disk(os.path.join(agent_result_path, 'loss_simulation'), 'Scenario_0')
     slack_name = params_opf["nameSlack"]
     id_slack = params_opf["idxSlack"]
 
