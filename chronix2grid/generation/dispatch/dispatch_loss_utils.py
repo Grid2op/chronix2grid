@@ -67,13 +67,10 @@ def run_grid2op_simulation_donothing(grid_path, agent_result_path, agent_type = 
     # Récupération des paramètres
     NB_CORE = nb_core # TOUJOURS 1 car la parallélisation se fait sur les scénarii dans le main
     nb_episode = 1
-    simulation_data_folder = create_or_replace_simulation_data_folder(agent_result_path)
+    #simulation_data_folder = create_or_replace_simulation_data_folder(agent_result_path)
 
     print('Grid2op simulation for loss')
-    print('the case folder is: ' + grid_path)
-    print('the output folder will be: ' + simulation_data_folder)
-    print('the number of cores used is: ' + str(NB_CORE))
-    print('the number of scenarios we consider is: ' + str(nb_episode))
+
     try:
         from lightsim2grid.LightSimBackend import LightSimBackend
         backend = LightSimBackend()
@@ -108,26 +105,33 @@ def run_grid2op_simulation_donothing(grid_path, agent_result_path, agent_type = 
     else:
         runner = Runner(**env.get_params_for_runner())
     # do regular computation as you would with grid2op
-    res = runner.run(nb_episode=nb_episode, nb_process=NB_CORE, path_save=simulation_data_folder, pbar=True)
+    res = runner.run(nb_episode=nb_episode, nb_process=NB_CORE, pbar=True, add_detailed_output=True)
+                     #path_save=simulation_data_folder
+    id_chron, name_chron, cum_reward, nb_timestep, max_ts, episode_data = res.pop()
     print('---- end of simulation')
 
-def correct_scenario_loss(scenario_folder_path, agent_result_path, params_opf, grid_path):
+    return episode_data
+
+def correct_scenario_loss(scenario_folder_path, params_opf, grid_path, data_this_episode):
     print('Start realistic loss correction from simulation results')
 
     # Load simulation data
-    data_this_episode = EpisodeData.from_disk(os.path.join(agent_result_path, 'loss_simulation'), 'Scenario_0')
+    #data_this_episode = EpisodeData.from_disk(os.path.join(agent_result_path, 'loss_simulation'), 'Scenario_0')
     slack_name = params_opf["nameSlack"]
     id_slack = params_opf["idxSlack"]
 
     # Get gen constraints
-    first_obs = data_this_episode.observations[0]
+    observations = [obs for obs in data_this_episode.observations]
+    if observations[0] is None:
+        observations[0] = observations[1]
+    first_obs = observations[0]
     pmax = first_obs.gen_pmax[id_slack] #+ params_opf['pmax_margin']
     pmin = first_obs.gen_pmin[id_slack] #max(first_obs.gen_pmin[id_slack] - params_opf['pmin_margin'],0)
     ramp_up = first_obs.gen_max_ramp_up[id_slack] #+ params_opf['rampup_margin']
     ramp_down = first_obs.gen_max_ramp_down[id_slack] #+ params_opf['rampdown_margin']
 
     # Get corrected dispatch prod
-    prods_p = pd.DataFrame(np.array([obs.prod_p for obs in data_this_episode.observations]))
+    prods_p = pd.DataFrame(np.array([obs.prod_p for obs in observations]))
     prodSlack = prods_p[id_slack]
 
     # Get dispatch prods before runner in chronix
