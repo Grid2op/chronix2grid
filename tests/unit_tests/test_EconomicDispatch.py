@@ -37,17 +37,18 @@ class TestPreprocessing(unittest.TestCase):
         env = grid2op.make(self.grid_path,
                            chronics_path=self.grid_path,
                            chronics_class=ChangeNothing)
-        env = modify_hydro_ramps(env, self.params_opf["hydro_ramp_reduction_factor"])
-        env = modify_slack_characs(env,
+        env_df = pd.DataFrame({'name': env.name_gen,
+                               'type': env.gen_type,
+                               'pmax': env.gen_pmax,
+                               "pmin":env.gen_pmin,
+                               'max_ramp_up': env.gen_max_ramp_up,
+                               'max_ramp_down': env.gen_max_ramp_down})
+        env_df = modify_hydro_ramps(env_df, self.params_opf["hydro_ramp_reduction_factor"])
+        env_df = modify_slack_characs(env_df,
                                    self.params_opf["nameSlack"],
                                    self.params_opf["slack_p_max_reduction"],
                                    self.params_opf["slack_ramp_max_reduction"])
-        prods = pd.DataFrame({"name":env.name_gen,
-                              "type":env.gen_type,
-                              "Pmax":env.gen_pmax,
-                              "Pmin":env.gen_pmin,
-                              "max_ramp_up":env.gen_max_ramp_up,
-                              "max_ramp_down":env.gen_max_ramp_down})
+        prods = env_df.rename(columns = {"pmax":"Pmax","pmin":"Pmin"})
         prods.sort_values(by="name", inplace=True)
         prods.reset_index(drop=True, inplace=True)
         expected_prods = pd.read_csv(self.expected_file)[prods.columns].fillna(0)

@@ -20,21 +20,25 @@ def make_scenario_input_output_directories(input_folder, output_folder, scenario
     os.makedirs(os.path.join(output_folder, scenario_name), exist_ok=True)
     return os.path.join(input_folder, scenario_name), os.path.join(output_folder, scenario_name)
 
-def modify_hydro_ramps(grid2op_env, hydro_dividing_factor=1., decimals=1):
-    for i, generator in enumerate(grid2op_env.name_gen):
-        gen_type = grid2op_env.gen_type[i]
-        if gen_type == "hydro":
-           grid2op_env.gen_max_ramp_up[i] = np.round(grid2op_env.gen_max_ramp_up[i]/hydro_dividing_factor, decimals)
-           grid2op_env.gen_max_ramp_down[i] = np.round(grid2op_env.gen_max_ramp_down[i]/hydro_dividing_factor, decimals)
-    return grid2op_env
+def modify_hydro_ramps(env_df, hydro_dividing_factor=1., decimals=1):
+    rampup_hydro = env_df.loc[env_df['type']=='hydro','max_ramp_up'].values
+    rampdown_hydro = env_df.loc[env_df['type'] == 'hydro', 'max_ramp_up'].values
 
-def modify_slack_characs(grid2op_env, slack_name, p_max_reduction=0, ramp_reduction=0, decimals = 1):
-    for i, generator in enumerate(grid2op_env.name_gen):
-        if generator == slack_name:
-            grid2op_env.gen_pmax[i] = np.round(grid2op_env.gen_pmax[i] - p_max_reduction, decimals)
-            grid2op_env.gen_max_ramp_up[i] = np.round(grid2op_env.gen_max_ramp_up[i] - ramp_reduction, decimals)
-            grid2op_env.gen_max_ramp_down[i] = np.round(grid2op_env.gen_max_ramp_down[i] - ramp_reduction, decimals)
-    return grid2op_env
+    env_df.loc[env_df['type'] == 'hydro', 'max_ramp_up'] = np.round(rampup_hydro/hydro_dividing_factor, decimals)
+    env_df.loc[env_df['type'] == 'hydro', 'max_ramp_down'] = np.round(rampdown_hydro / hydro_dividing_factor, decimals)
+
+    return env_df
+
+def modify_slack_characs(env_df, slack_name, p_max_reduction=0, ramp_reduction=0, decimals = 1):
+    slack_pmax = env_df.loc[env_df['name'] == slack_name, 'pmax'].values[0]
+    slack_rampup_max = env_df.loc[env_df['name'] == slack_name, 'max_ramp_up'].values[0]
+    slack_rampdown_max = env_df.loc[env_df['name'] == slack_name, 'max_ramp_down'].values[0]
+
+    env_df.loc[env_df['name'] == slack_name, 'pmax'] =  np.round(slack_pmax - p_max_reduction, decimals)
+    env_df.loc[env_df['name'] == slack_name, 'max_ramp_up'] = np.round(slack_rampup_max - ramp_reduction, decimals)
+    env_df.loc[env_df['name'] == slack_name, 'max_ramp_down'] = np.round(slack_rampdown_max - ramp_reduction,
+                                                                                 decimals)
+    return env_df
 
 def add_noise_gen(dispatch, gen_cap, noise_factor):
     """ Add noise to opf dispatch to have more

@@ -30,17 +30,39 @@ def init_dispatcher_from_config(grid_path, input_folder, dispatcher_class, param
     #                                 chronics_class=ChangeNothing)
     # env118_withoutchron = grid2op.make(grid_path)
 
+    # Dispatcher object init
+    dispatcher = dispatcher_class.from_gri2op_env(env118_withoutchron)
+
+    dispatcher.read_hydro_guide_curves(
+        os.path.join(input_folder, 'patterns', 'hydro_french.csv'))
+    return dispatcher
+
+def init_dispatcher_from_config_dataframe(grid_path, input_folder, dispatcher_class, params_opf):
+    # Read grid and gens characs
+    env118_withoutchron = grid2op.make("rte_case118_example",
+                                       test=True,
+                                       grid_path=grid_path,
+                                       chronics_class=ChangeNothing)
+
+    # Put infos in dataframe
+    env_df = pd.DataFrame({'name':env118_withoutchron.name_gen,
+                           'type':env118_withoutchron.gen_type,
+                           'pmax':env118_withoutchron.gen_pmax,
+                           'max_ramp_up':env118_withoutchron.gen_max_ramp_up,
+                           'max_ramp_down':env118_withoutchron.gen_max_ramp_down,
+                           'cost_per_mw':env118_withoutchron.gen_cost_per_MW})
+
     # Generators temporary adjusts
-    env118_withoutchron = modify_hydro_ramps(env118_withoutchron, params_opf["hydro_ramp_reduction_factor"])
+    env_df = modify_hydro_ramps(env_df, params_opf["hydro_ramp_reduction_factor"])
 
     if params_opf["slack_p_max_reduction"] != 0. or params_opf['slack_ramp_max_reduction'] != 0.:
-        env118_withoutchron = modify_slack_characs(env118_withoutchron,
+        env_df = modify_slack_characs(env_df,
                                                  params_opf["nameSlack"],
                                                  params_opf["slack_p_max_reduction"],
                                                  params_opf["slack_ramp_max_reduction"])
 
     # Dispatcher object init
-    dispatcher = dispatcher_class.from_gri2op_env(env118_withoutchron)
+    dispatcher = dispatcher_class.from_dataframe(env_df)
 
     dispatcher.read_hydro_guide_curves(
         os.path.join(input_folder, 'patterns', 'hydro_french.csv'))
@@ -68,6 +90,12 @@ class Dispatcher(ABC):
     @abstractmethod
     def from_gri2op_env(cls, grid2op_env):
         """Reads grid features from a grid2op environment into a specific object.
+        Have to be implemented in inheriting classes according to the type of model"""
+
+    @classmethod
+    @abstractmethod
+    def from_dataframe(cls, env_df):
+        """Reads grid features from a pandas DataFrame into a specific object.
         Have to be implemented in inheriting classes according to the type of model"""
 
     @property
@@ -126,6 +154,20 @@ class Dispatcher(ABC):
                 self.generators.loc[generator, 'ramp_limit_down'] = \
                     self._env.gen_max_ramp_down[i] / self._env.gen_pmax[i]
 
+    def reset_ramps_from_dataframe(self):
+        if self._df is None:
+            raise Exception('This method can only be applied when Dispatch has been'
+                            'instantiated from a pandas DataFrame.')
+        for i, (generator,pmax, rampup, rampdown) in enumerate(zip(self._df['name'],
+                                                                   self._df['pmax'],
+                                                                   self._df['max_ramp_up'],
+                                                                   self._df['max_ramp_down'])):
+            if generator in self.generators.index:
+                self.generators.loc[generator, 'ramp_limit_up'] = \
+                    rampup / pmax
+                self.generators.loc[generator, 'ramp_limit_down'] = \
+                    rampdown / pmax
+
     def read_hydro_guide_curves(self, hydro_file_path):
         """
         Reads realistic hydro pattern that provides seasonal boundaries to the hydro production.
@@ -167,6 +209,7 @@ class Dispatcher(ABC):
             res_names, scenario_name=scenario_name,
             start_date=start_date, end_date=end_date, dt=dt
         )
+
 
     def make_hydro_constraints_from_res_load_scenario(self):
         if self._chronix_scenario is None or self._hydro_file_path is None:
@@ -227,14 +270,20 @@ class Dispatcher(ABC):
             axis=1
         )
         try:
-            full_opf_dispatch = full_opf_dispatch[self._env.name_gen].round(2)
+            if self._env is not None:
+                full_opf_dispatch = full_opf_dispatch[self._env.name_gen].round(2)
+            else:
+                full_opf_dispatch = full_opf_dispatch[self._df['name'].values].round(2)
         except KeyError:
             # Either we're trying to save results from a simplified dispatch or
             # using the save function before instanciating an env.
             pass
-
-        gen_cap = pd.Series({gen_name: gen_pmax for gen_name, gen_pmax in
-                             zip(self._env.name_gen, self._env.gen_pmax)})
+        if self._env is not None:
+            gen_cap = pd.Series({gen_name: gen_pmax for gen_name, gen_pmax in
+                                 zip(self._env.name_gen, self._env.gen_pmax)})
+        else:
+            gen_cap = pd.Series({gen_name: gen_pmax for gen_name, gen_pmax in
+                                 zip(self._df['name'], self._df['pmax'])})
 
         prod_p_forecasted_with_noise = add_noise_gen(full_opf_dispatch, gen_cap, noise_factor=params['planned_std'])
 
