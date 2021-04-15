@@ -122,7 +122,7 @@ def correct_scenario_loss(scenario_folder_path, params_opf, grid_path, data_this
 
     # Get gen constraints
     observations = [obs for obs in data_this_episode.observations]
-    if observations[0] is None:
+    if observations[0] is None: # Quick hack because a None appears in observations with grid2op 1.5.0 - don't have time to handle it
         observations[0] = observations[1]
     first_obs = observations[0]
     pmax = first_obs.gen_pmax[id_slack] #+ params_opf['pmax_margin']
@@ -150,6 +150,9 @@ def correct_scenario_loss(scenario_folder_path, params_opf, grid_path, data_this
     # apply correction on slack bus generator
     newProdsDf[slack_name] = OldProdsDf[slack_name] + CorrectionLosses
     newProdsForecastDf[slack_name] = OldProdsForecastDf[slack_name] + CorrectionLosses
+
+    # Log the correction
+    CorrectionLosses.to_csv(os.path.join(scenario_folder_path, 'adjusted_loss.csv'), sep=';')
 
     # Check constraints
     violations_message, bool = check_slack_constraints(newProdsDf[slack_name], pmax, pmin, ramp_up, ramp_down)
