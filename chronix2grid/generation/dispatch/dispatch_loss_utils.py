@@ -152,7 +152,8 @@ def correct_scenario_loss(scenario_folder_path, params_opf, grid_path, data_this
     newProdsForecastDf[slack_name] = OldProdsForecastDf[slack_name] + CorrectionLosses
 
     # Log the correction
-    CorrectionLosses.to_csv(os.path.join(scenario_folder_path, 'adjusted_loss.csv'), sep=';')
+    CorrectionLosses_df = pd.DataFrame({'adjusted_loss_p':CorrectionLosses})
+    CorrectionLosses_df.to_csv(os.path.join(scenario_folder_path, 'adjusted_loss.csv'), sep=';', index = False)
 
     # Check constraints
     violations_message, bool = check_slack_constraints(newProdsDf[slack_name], pmax, pmin, ramp_up, ramp_down)
