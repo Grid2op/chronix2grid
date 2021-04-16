@@ -66,9 +66,9 @@ class TestIntegration(unittest.TestCase):
 
         self.case_all = 'case118_l2rpn_neurips_1x_hydro_loss'
         generation_output_folder, kpi_output_folder = main.create_directory_tree(
-            self.case_loss, self.start_date, self.output_folder, cst.SCENARIO_FOLDER_BASE_NAME,
+            self.case_all, self.start_date, self.output_folder, cst.SCENARIO_FOLDER_BASE_NAME,
             self.n_scenarios, 'LRT', warn_user=False)
-        self.generation_output_folder_loss = generation_output_folder
+        self.generation_output_folder_all = generation_output_folder
         self.kpi_output_folder_loss = kpi_output_folder
 
         # Expected outputs
@@ -90,30 +90,32 @@ class TestIntegration(unittest.TestCase):
         self.files_tocheck = ['prod_p']
 
         # Modification in gen prices to avoid multi solution in OPF
-        seed_price_noise = 1000
-        mu = 0
-        sigma = 0.5
-        gen_types = ['thermal','hydro', 'nuclear']
-        self.modify_gen_prices(mu, sigma, seed_price_noise, gen_types)
+        self.seed_price_noise_noloss = 1000
+        self.seed_price_noise_loss = 2000
+        self.seed_price_noise_all = 3000
+        self.mu = 0
+        self.sigma = 0.5
+        self.gen_types = ['thermal','hydro', 'nuclear']
 
-    def modify_gen_prices(self, mu, sigma, seed_price_noise, gen_types):
+
+    def modify_gen_prices(self, mu, sigma, seed_price_noise, gen_types, case):
+        np.random.seed(seed_price_noise)
         noise = np.random.normal(mu, sigma, 32)
-        for case in [self.case_loss, self.case_noloss, self.case_all]:
-            # Read prods_charac
-            prods_orig = pd.read_csv(os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME, case, 'prods_charac_original.csv'))
+        # Read prods_charac
+        prods_orig = pd.read_csv(os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME, case, 'prods_charac_original.csv'))
 
-            # Add noise to price columns
-            np.random.seed(seed_price_noise)
-            prods_orig.loc[prods_orig['type'].isin(gen_types), 'marginal_cost'] += noise
-            prods_orig['marginal_cost'] = prods_orig['marginal_cost'].round(1)
+        # Add noise to price columns
+        prods_orig.loc[prods_orig['type'].isin(gen_types), 'marginal_cost'] += noise
+        prods_orig['marginal_cost'] = prods_orig['marginal_cost'].round(1)
 
-            # Write it
-            prods_orig.to_csv(os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME, case, 'prods_charac.csv'), index=False)
+        # Write it
+        prods_orig.to_csv(os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME, case, 'prods_charac.csv'), index=False)
 
     def tearDown(self) -> None:
         shutil.rmtree(self.output_folder, ignore_errors=False, onerror=None)
 
     def test_integration_lrt_nolosscorrection(self):
+        self.modify_gen_prices(self.mu, self.sigma, self.seed_price_noise_noloss, self.gen_types, self.case_noloss)
 
         # Launch module
         main.generate_per_scenario(
@@ -134,6 +136,7 @@ class TestIntegration(unittest.TestCase):
         self.assertTrue(bool)
 
     def test_integration_lrt_withlosscorrection(self):
+        self.modify_gen_prices(self.mu, self.sigma, self.seed_price_noise_loss, self.gen_types, self.case_loss)
         with warnings.catch_warnings(record=True) as w:
             main.generate_per_scenario(
                 case=self.case_loss, start_date=self.start_date, weeks=self.nweeks, by_n_weeks=4,
@@ -158,19 +161,21 @@ class TestIntegration(unittest.TestCase):
             self.assertTrue(np.any(boolvec_msg))
 
     def test_integration_all(self):
+        self.modify_gen_prices(self.mu, self.sigma, self.seed_price_noise_all, self.gen_types, self.case_all)
+
         with warnings.catch_warnings(record=True) as w:
             main.generate_per_scenario(
                 case=self.case_all, start_date=self.start_date, weeks=self.nweeks, by_n_weeks=4,
                 mode='LRT', input_folder=self.input_folder,
                 kpi_output_folder=self.kpi_output_folder_loss,
-                generation_output_folder=self.generation_output_folder_loss,
+                generation_output_folder=self.generation_output_folder_all,
                 scen_names=self.scenario_names,
                 seeds_for_loads=self.seed_for_load,
                 seeds_for_res=self.seed_for_res,
                 seeds_for_dispatch=self.seed_for_disp,
                 ignore_warnings=self.ignore_warnings,
                 scenario_id=0)
-            path_out = os.path.join(self.generation_output_folder_loss, "Scenario_0")
+            path_out = os.path.join(self.generation_output_folder_all, "Scenario_0")
             path_ref = self.expected_folder_all
             bool = self.check_frames_equal(path_out, path_ref, self.files_tocheck)
             # Check that we obtain the right result dataframe
