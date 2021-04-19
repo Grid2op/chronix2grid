@@ -90,9 +90,9 @@ class TestIntegration(unittest.TestCase):
         self.files_tocheck = ['prod_p']
 
         # Modification in gen prices to avoid multi solution in OPF
-        self.seed_price_noise_noloss = 1000
-        self.seed_price_noise_loss = 2000
-        self.seed_price_noise_all = 3000
+        self.seed_price_noise_noloss = 5
+        self.seed_price_noise_loss = 5
+        self.seed_price_noise_all = 5
         self.mu = 0
         self.sigma = 0.5
         self.gen_types = ['thermal','hydro', 'nuclear']
@@ -108,11 +108,16 @@ class TestIntegration(unittest.TestCase):
         prods_orig.loc[prods_orig['type'].isin(gen_types), 'marginal_cost'] += noise
         prods_orig['marginal_cost'] = prods_orig['marginal_cost'].round(1)
 
+        # Check if all prices are unique
+        prices = prods_orig[prods_orig['type'].isin(gen_types)]['marginal_cost']
+        if prices.nunique() < len(prices):
+            raise ValueError("Prices must be unique - set another seed in test")
+
         # Write it
         prods_orig.to_csv(os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME, case, 'prods_charac.csv'), index=False)
 
-    def tearDown(self) -> None:
-        shutil.rmtree(self.output_folder, ignore_errors=False, onerror=None)
+    # def tearDown(self) -> None:
+    #     shutil.rmtree(self.output_folder, ignore_errors=False, onerror=None)
 
     def test_integration_lrt_nolosscorrection(self):
         self.modify_gen_prices(self.mu, self.sigma, self.seed_price_noise_noloss, self.gen_types, self.case_noloss)
