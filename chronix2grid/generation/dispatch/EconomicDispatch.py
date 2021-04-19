@@ -39,18 +39,24 @@ def init_dispatcher_from_config(grid_path, input_folder, dispatcher_class, param
 
 def init_dispatcher_from_config_dataframe(grid_path, input_folder, dispatcher_class, params_opf):
     # Read grid and gens characs
-    env118_withoutchron = grid2op.make("rte_case118_example",
-                                       test=True,
-                                       grid_path=grid_path,
-                                       chronics_class=ChangeNothing)
+    # env118_withoutchron = grid2op.make("rte_case118_example",
+    #                                    test=True,
+    #                                    grid_path=grid_path,
+    #                                    chronics_class=ChangeNothing)
 
     # Put infos in dataframe
-    env_df = pd.DataFrame({'name':env118_withoutchron.name_gen,
-                           'type':env118_withoutchron.gen_type,
-                           'pmax':env118_withoutchron.gen_pmax,
-                           'max_ramp_up':env118_withoutchron.gen_max_ramp_up,
-                           'max_ramp_down':env118_withoutchron.gen_max_ramp_down,
-                           'cost_per_mw':env118_withoutchron.gen_cost_per_MW})
+    # env_df = pd.DataFrame({'name':env118_withoutchron.name_gen,
+    #                        'type':env118_withoutchron.gen_type,
+    #                        'pmax':env118_withoutchron.gen_pmax,
+    #                        'max_ramp_up':env118_withoutchron.gen_max_ramp_up,
+    #                        'max_ramp_down':env118_withoutchron.gen_max_ramp_down,
+    #                        'cost_per_mw':env118_withoutchron.gen_cost_per_MW})
+
+    # Reading characs from file directly avoids some strange problem with grid2op when launching Chronix2grid several times in the same session
+    prods_charac = pd.read_csv(os.path.join(pathlib.Path(grid_path).parent.absolute(),"prods_charac.csv"), decimal = '.')
+    env_df = prods_charac.rename(columns = {"Pmax":'pmax',
+                                            "marginal_cost":"cost_per_mw"})[["name","type","pmax","max_ramp_up",
+                                                                             "max_ramp_down","cost_per_mw"]]
 
     # Generators temporary adjusts
     env_df = modify_hydro_ramps(env_df, params_opf["hydro_ramp_reduction_factor"])
