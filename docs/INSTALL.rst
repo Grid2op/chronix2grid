@@ -15,11 +15,11 @@ Python >= 3.6
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ``source venv_chronix2grid/bin/activate``
 
-``pip install Chronix2Grid==1.0.1``
+``pip install Chronix2Grid==1.0.2``
 
 or if you want to install optional dependencies (e.g. tensorflow if you want to use GAN generation for solar and wind)
 
-``pip install Chronix2Grid[optional]==1.0.1``
+``pip install Chronix2Grid[optional]==1.0.2``
 
 
 [Second Option] Step 2 - Install from source
