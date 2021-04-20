@@ -97,6 +97,10 @@ class TestIntegration(unittest.TestCase):
         self.sigma = 0.5
         self.gen_types = ['thermal','hydro', 'nuclear']
 
+        # Truncates dataframe before comparison
+        self.id_min = 0
+        self.id_max = 5000
+
 
     def modify_gen_prices(self, mu, sigma, seed_price_noise, gen_types, case):
         np.random.seed(seed_price_noise)
@@ -197,6 +201,6 @@ class TestIntegration(unittest.TestCase):
         for fil in files:
             df_out = pd.read_csv(os.path.join(path_out, f'{fil}.csv.bz2'), sep=';')
             df_ref = pd.read_csv(os.path.join(path_ref, f'{fil}.csv.bz2'), sep=';')
-            bool_ = df_out.equals(df_ref)
+            bool_ = df_out[self.id_min:self.id_max].equals(df_ref[self.id_min:self.id_max])
             bool = bool_ and bool
         return bool
