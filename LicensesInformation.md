@@ -23,15 +23,10 @@ In this file, we try to recap the licenses of the project on which grid2op depen
 |bleach       |  Apache Software License |
 |click       |  BSD License |
 |colorama    |  BSD License |
-|cufflinks    |  MIT |
-|dash        | MIT License  |
-|dash-bootstrap-components | MIT |  
-|dash-antd-components |Apache Software License |
-|dill        | BSD License |        
+|cufflinks    |  MIT |       
 |Grid2Op     | MPL 2.0 |
 |imageio     | BSD License |
 |jedi     | MIT License |
-|jupyter-dash| MIT |
 |Jinja2      | BSD License |
 |Pyomo      | BSD License |
 |pandapower  | BSD License |
