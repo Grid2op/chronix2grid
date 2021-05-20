@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath('../'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'Oracle4Grid'
+project = 'ChroniX2Grid'
 copyright = '2020, Antoine Marot, Mario Jothy, Nicolas Megel'
 author = 'Antoine Marot, Mario Jothy, Nicolas Megel'
 
