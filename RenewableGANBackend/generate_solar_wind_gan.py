@@ -7,14 +7,13 @@ import pandas as pd
 import numpy as np
 
 # Libraries developed for this module
-from . import solar_wind_utils as swutils
+from chronix2grid.generation.renewable import solar_wind_utils as swutils
 import chronix2grid.constants as cst
-from chronix2grid.generation.renewable.gan_utils import ReplayedGAN, generate_gaussian_inputs, post_process_sample, load_model
-
+from RenewableGANBackend.gan_utils import ReplayedGAN, generate_gaussian_inputs, post_process_sample, load_model
 import tensorflow as tf
 
-def main_gan(scenario_destination_path, seed, params, prods_charac, write_results = True):
 
+def main_gan(scenario_destination_path, seed, params, prods_charac, write_results=True):
 
     np.random.seed(seed)
 
@@ -52,7 +51,7 @@ def main_gan(scenario_destination_path, seed, params, prods_charac, write_result
     if not os.path.exists(scenario_destination_path):
         os.makedirs(scenario_destination_path)
 
-    prod_solar_forecasted =  swutils.create_csv(
+    prod_solar_forecasted = swutils.create_csv(
         solar_series,
         os.path.join(scenario_destination_path, 'solar_p_forecasted.csv.bz2'),
         reordering=True,
@@ -106,6 +105,7 @@ def main_gan(scenario_destination_path, seed, params, prods_charac, write_result
     )
 
     return prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted
+
 
 def run_model(sess, dcgan_model, params, prods_charac, datetime_index, carrier):
     # Generate random inputs
