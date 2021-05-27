@@ -1,7 +1,7 @@
 from PypsaDispatchBackend.EDispatch_L2RPN2020 import run_economic_dispatch # TODO: Supprimer cette dépendance car pas utile (utiliser utils dans chronix2grid)
 from .dispatch_loss_utils import run_grid2op_simulation_donothing, correct_scenario_loss, move_chronics_temporarily, \
-    remove_temporary_chronics, remove_simulation_data
-
+    remove_temporary_chronics, remove_simulation_data, move_env_temporarily
+import shutil
 
 
 def main(dispatcher, input_folder, output_folder, grid_folder, seed, params, params_opf):
@@ -57,15 +57,23 @@ def update_results_loss(dispatch_results, new_prod_p, params_opf):
 def simulate_loss(input_folder, output_folder, params_opf, write_results = True):
     scenario_folder_path = output_folder
     grid_folder_g2op = input_folder
-    move_chronics_temporarily(scenario_folder_path, grid_folder_g2op)
+
+    #because of possible multiprocessing, me need to create a new grid2op grid folder for each scenario
+    #to avoid interferences
+    grid_temporary_path=move_env_temporarily(scenario_folder_path, grid_folder_g2op)
+
+    move_chronics_temporarily(scenario_folder_path, grid_temporary_path)
     # try:
-    episode_data = run_grid2op_simulation_donothing(grid_folder_g2op, scenario_folder_path,
+    episode_data = run_grid2op_simulation_donothing(grid_temporary_path, scenario_folder_path,
                                  agent_type=params_opf['agent_type'])
     # except RuntimeError:
     #     remove_temporary_chronics(grid_folder_g2op)
     #     raise RuntimeError("Error in Grid2op simulation, temporary folder deleted")
     dispatch_results_corrected = correct_scenario_loss(scenario_folder_path, params_opf, grid_folder_g2op, episode_data)
-    #remove_temporary_chronics(grid_folder_g2op)
+
+    #remove temporary env folder
+    shutil.rmtree(grid_temporary_path)
+
     # remove_simulation_data(scenario_folder_path)
     return dispatch_results_corrected
 

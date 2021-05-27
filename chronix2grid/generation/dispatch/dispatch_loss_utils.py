@@ -11,10 +11,24 @@ from grid2op.Parameters import Parameters
 from grid2op.Runner import Runner
 from grid2op.Episode import EpisodeData
 
-#from grid2op.Agent import RecoPowerlineAgent
+from grid2op.Agent import RecoPowerlineAgent
 from grid2op.Agent import DoNothingAgent
 
 import chronix2grid.constants as cst
+
+def move_env_temporarily(scenario_output_folder, grid_path):
+
+    scenario_name = pathlib.Path(scenario_output_folder).name
+    grid_temporary_path = grid_path+'_'+scenario_name
+
+    if os.path.exists(grid_temporary_path):
+        warnings.warn("Had to delete a previous scenario grid temporary path in input data", UserWarning)
+        shutil.rmtree(grid_temporary_path)
+    #os.makedirs(grid_temporary_path, exist_ok=True)
+    print("temporary copy of grid in "+str(grid_temporary_path))
+    shutil.copytree(grid_path, grid_temporary_path)
+    return grid_temporary_path
+
 
 def move_chronics_temporarily(scenario_output_folder, grid_path):
 
@@ -88,7 +102,7 @@ def run_grid2op_simulation_donothing(grid_path, agent_result_path, agent_type = 
     scenario_name = pathlib.Path(agent_result_path).name
     scen_id = search_chronic_num_from_name(scenario_name, env)
     env.set_id(scen_id)
-    env.reset()
+    #env.reset()
 
     #env = grid2op.make(grid_path = grid_path, chronics_path = scenario_output_folder,
      #                  param=param, backend=backend, test=True)
@@ -99,15 +113,21 @@ def run_grid2op_simulation_donothing(grid_path, agent_result_path, agent_type = 
     # Beside the environment should be able to load all data generated, and not one episode.
     # so please look in grid2op for compatible formats. This is not a valid format.
 
-    if (agent_type == 'reco'):
-        runner = Runner(**env.get_params_for_runner(), agentClass=DoNothingAgent)
-        #runner = Runner(**env.get_params_for_runner(), agentClass=RecoPowerlineAgent)
-    else:
-        runner = Runner(**env.get_params_for_runner())
+    ##########
+    #MAKE SURE THAT no maintenance and no attacks will run here. Check the config.py in your grid2op env folder
+    #if (agent_type == 'reco'):
+    #    #runner = Runner(**env.get_params_for_runner(), agentClass=DoNothingAgent)
+    #    runner = Runner(**env.get_params_for_runner(), agentClass=RecoPowerlineAgent)
+    #else:
+    runner = Runner(**env.get_params_for_runner())
     # do regular computation as you would with grid2op
-    res = runner.run(nb_episode=nb_episode, nb_process=NB_CORE, pbar=True, add_detailed_output=True)
-                     #path_save=simulation_data_folder
-    id_chron, name_chron, cum_reward, nb_timestep, max_ts, episode_data = res.pop()
+    name_chron, cum_reward, nb_time_step, episode_data =runner.run_one_episode(path_save=None,
+                             indx=scen_id,
+                             pbar=True,
+                             detailed_output=True)
+    #res = runner.run(nb_episode=nb_episode, nb_process=NB_CORE, pbar=True, add_detailed_output=True)
+    #                 #path_save=simulation_data_folder
+    #id_chron, name_chron, cum_reward, nb_timestep, max_ts, episode_data = res.pop()
     print('---- end of simulation')
 
     return episode_data
