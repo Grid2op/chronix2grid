@@ -107,6 +107,11 @@ def main(kpi_input_folder, generation_output_folder, scenario_names,
         dispatch_validator.plot_carriers_pw(curve='synthetic', stacked=True, max_col_splot=max_col, save_html=True,
                                             wind_solar_only=wind_solar_only)
 
+        dispatch_validator.plot_carriers_pw(curve='reference', stacked=False, max_col_splot=max_col, save_html=True,
+                                            wind_solar_only=wind_solar_only)
+        dispatch_validator.plot_carriers_pw(curve='synthetic', stacked=False, max_col_splot=max_col, save_html=True,
+                                            wind_solar_only=wind_solar_only)
+
         # Get Load KPI
         dispatch_validator.load_kpi()
 

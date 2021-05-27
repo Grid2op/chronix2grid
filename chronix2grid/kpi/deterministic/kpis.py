@@ -269,7 +269,10 @@ class EconomicDispatchValidator:
         df_mw.columns = unique_carriers
 
         if save_html:
-            fig.write_html(os.path.join(self.image_repo,'dispatch_view',str(curve)+'_prod_per_carrier.html'))
+            if(stacked):
+                fig.write_html(os.path.join(self.image_repo,'dispatch_view',str(curve)+'_stacked_prod_per_carrier.html'))
+            else:
+                fig.write_html(os.path.join(self.image_repo, 'dispatch_view', str(curve) + '_timeseries_prod_per_carrier.html'))
         return fig, df_mw
 
     def plot_load_pw(self ,stacked=True, max_col_splot=1, save_html = True):
