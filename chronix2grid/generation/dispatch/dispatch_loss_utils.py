@@ -67,7 +67,7 @@ def search_chronic_num_from_name(scenario_name, env):
             found_id = id
     return found_id
 
-def run_grid2op_simulation_donothing(grid_path, agent_result_path, agent_type = 'do-nothing', nb_core = 1):
+def run_grid2op_simulation_donothing(grid_path, agent_result_path,  nb_core = 1,write_results=False,agent_results_path=None):
     """
 
     :param grid_path (str): path to folder where grid.json and other information on grid are stored
@@ -121,7 +121,12 @@ def run_grid2op_simulation_donothing(grid_path, agent_result_path, agent_type = 
     #else:
     runner = Runner(**env.get_params_for_runner())
     # do regular computation as you would with grid2op
-    name_chron, cum_reward, nb_time_step, episode_data =runner.run_one_episode(path_save=None,
+    path_save = None
+    if(write_results):
+        path_save=os.path.join(agent_results_path,'agent_results')
+        os.makedirs(path_save, exist_ok=True)
+
+    name_chron, cum_reward, nb_time_step, episode_data =runner.run_one_episode(path_save=path_save,
                              indx=scen_id,
                              pbar=True,
                              detailed_output=True)
