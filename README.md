@@ -52,6 +52,7 @@ A backend for dispatch has been implemented with PyPSA
  ```commandline
 pip install pypsa==0.17.0
 ```
+You might need to install cbc solver as well that pypsa will call: https://projects.coin-or.org/Cbc
 
 ## Getting Started
 Four notebooks are provided to get you started with this package:
