@@ -10,9 +10,10 @@ import traceback
 import logging
 import shutil
 from shutil import copyfile
-import grid2op
+
+import pandapower as pp
 from grid2op.Episode import EpisodeData
-from grid2op.Chronics import ChangeNothing
+
 
 SUBNET_PATH = 'grid_design/subgrid/grid.json'
 
@@ -187,6 +188,32 @@ def generate_subnet_chronics(AGENT_RESULT_PATH,FULL_DISPATCH_DIR,SUBNET_OUTPUT_D
         shutil.rmtree(os.path.join(SUBNET_OUTPUT_DIR, scenario))  
     return None
 
+# Load the subnet env
+def get_Name_Mappings(SUBNET_PATH):
+    grid_path=os.path.join(SUBNET_PATH,'grid.json')
+
+    env_subnet = pp.from_json(grid_path)
+
+    # Get gen and load names and lines
+    subnet_original_gen_names = env_subnet.gen.old_name.tolist()
+    subnet_original_load_names = list(filter(lambda x: re.match('load_', x), env_subnet.load.old_name))
+    subnet_original_line_names = env_subnet.line.old_name.tolist() + env_subnet.trafo.old_name.tolist() 
+    # subnet_line_names = env.name_line
+    # Fix line names
+    for k, v in fix_line_names.items():
+        if k in subnet_original_line_names:
+            subnet_original_line_names[subnet_original_line_names.index(k)] = v
+
+    # Get map to match old name with new one
+    gen_map_names = {k:v for k, v in zip(subnet_original_gen_names, env_subnet.gen.name)}
+    load_map_names = {k:v for k, v in env_subnet.load.loc[~env_subnet.load.old_name.str.startswith('interco'), ['old_name', 'name']].values}
+    env_name_lines=env_subnet.line.name#env.name_line
+    env_name_loads=env_subnet.load.name#env.name_load
+    env_name_gens=env_subnet.gen.name#env.name_gen
+    
+    return(subnet_original_gen_names,subnet_original_load_names,subnet_original_line_names,gen_map_names,load_map_names,env_name_lines,env_name_loads,env_name_gens)
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Create chronics for subnet given full IEEE 118 disptach')
@@ -217,40 +244,23 @@ if __name__ == "__main__":
     #interco_ex_idx = [int(l.split('_')[-1]) for l in interco_ex_names]
 
     # Load the subnet env
-    grid_path=os.path.join(SUBNET_PATH,'grid.json')
-    env = grid2op.make('blank', 
-                    grid_path=grid_path, 
-                    test=True
-                    #chronics_class=ChangeNothing,
-                    )
-    env_subnet = env.backend._grid
+    subnet_original_gen_names,subnet_original_load_names,subnet_original_line_names,gen_map_names,load_map_names,env_name_lines,env_name_loads,env_name_gens=get_Name_Mappings(SUBNET_PATH)
 
-    # Get gen and load names and lines
-    subnet_original_gen_names = env_subnet.gen.old_name.tolist()
-    subnet_original_load_names = list(filter(lambda x: re.match('load_', x), env_subnet.load.old_name))
-    subnet_original_line_names = env_subnet.line.old_name.tolist() + env_subnet.trafo.old_name.tolist() 
-    # subnet_line_names = env.name_line
-    # Fix line names
-    for k, v in fix_line_names.items():
-        if k in subnet_original_line_names:
-            subnet_original_line_names[subnet_original_line_names.index(k)] = v
-
-    # Get map to match old name with new one
-    gen_map_names = {k:v for k, v in zip(subnet_original_gen_names, env.name_gen)}
-    load_map_names = {k:v for k, v in env_subnet.load.loc[~env_subnet.load.old_name.str.startswith('interco'), ['old_name', 'name']].values}
-    env_name_lines=env.name_line
-    env_name_loads=env.name_load
-    env_name_gens=env.name_gen
 
     t0 = time.time()
     # Start multiprocessing computation
     multiprocessing_func = partial(generate_subnet_chronics,AGENT_RESULT_PATH,FULL_DISPATCH_DIR,SUBNET_OUTPUT_DIR,DECIMALS,match_names[REGION],subnet_original_gen_names,subnet_original_load_names,subnet_original_line_names,gen_map_names,load_map_names,env_name_lines,env_name_loads,env_name_gens)
     
-    pool = multiprocessing.Pool(ncores)
-
     scenarios = next(os.walk(FULL_DISPATCH_DIR))[1]
-    pool.map(multiprocessing_func, scenarios)
-    pool.close()
+    if(ncores==1):
+        for scenario in scenarios:
+            generate_subnet_chronics(AGENT_RESULT_PATH,FULL_DISPATCH_DIR,SUBNET_OUTPUT_DIR,DECIMALS,match_names[REGION],subnet_original_gen_names,subnet_original_load_names,subnet_original_line_names,gen_map_names,load_map_names,env_name_lines,env_name_loads,env_name_gens,scenario)
+    else:
+        pool = multiprocessing.Pool(ncores)
+
+        
+        pool.map(multiprocessing_func, scenarios)
+        pool.close()
     t1 = time.time()
     print ('Computation done!!!')
     delta_t = round(t1 - t0, 2) / 60
