@@ -69,123 +69,127 @@ def generate_subnet_chronics(AGENT_RESULT_PATH,FULL_DISPATCH_DIR,SUBNET_OUTPUT_D
     # Flag to track errors
     flag_error = False
     # Read agent do nothing results
-    data_episode = EpisodeData.from_disk(AGENT_RESULT_PATH, scenario)
-    
-    # Get interconnection names
-    interco_or_names = [l for _, l in match_names_region['from_or']]
-    interco_ex_names = [l for _, l in match_names_region['from_ex']]
-    interco_or_idx = [int(l.split('_')[-1]) for l in interco_or_names]
-    interco_ex_idx = [int(l.split('_')[-1]) for l in interco_ex_names]
-    
-    # Read flow in lines from agent
-    l_p_or = pd.DataFrame(np.array([obs.p_or[interco_or_idx] for obs in data_episode.observations]), 
-                                    columns=interco_or_names)
-    l_q_or = pd.DataFrame(np.array([obs.q_or[interco_or_idx] for obs in data_episode.observations]), 
-                                    columns=interco_or_names)
-    l_p_ex = pd.DataFrame(np.array([obs.p_ex[interco_ex_idx] for obs in data_episode.observations]), 
-                                    columns=interco_ex_names)
-    l_q_ex = pd.DataFrame(np.array([obs.q_ex[interco_ex_idx] for obs in data_episode.observations]), 
-                                    columns=interco_ex_names)
+    if(os.path.exists(os.path.join(AGENT_RESULT_PATH, scenario))):
+        
+        data_episode = EpisodeData.from_disk(AGENT_RESULT_PATH, scenario)
 
-    # Dictionary to map full path names
-    path_files = {'gen': [os.path.join(FULL_DISPATCH_DIR, scenario, basename) for basename in gen_basenames],
-                  'load': [os.path.join(FULL_DISPATCH_DIR, scenario, basename) for basename in load_basenames],
-                  'line': [os.path.join(FULL_DISPATCH_DIR, scenario, basename) for basename in line_basenames],
-                  }
-    # Create output folder if it doesn't exists
-    if not os.path.exists(os.path.join(SUBNET_OUTPUT_DIR, scenario)):
-        os.makedirs(os.path.join(SUBNET_OUTPUT_DIR, scenario))
-    '''
-    Process gen csvs
-    '''
-    for gen_path_file in path_files['gen']:
-        # print (f'{scenario} - {os.path.split(gen_path_file)[-1]}')
-        if os.path.exists(gen_path_file):
-            try:
-                # Read full csv from chronix2grid generation using full grid
-                gen_full_df = pd.read_csv(gen_path_file, sep=';')
-                # Select subnet gen elements
-                gen_subnet_df = gen_full_df[subnet_original_gen_names].rename(columns=gen_map_names)
-                # Sort cols chronic elemement to match same subnet order
-                gen_subnet_df = gen_subnet_df[env_name_gens]
-                # Write output
-                gen_subnet_df.to_csv(os.path.join(SUBNET_OUTPUT_DIR, scenario, os.path.split(gen_path_file)[-1]), sep=';', index=False)
-            except Exception as e:
-                flag_error = True
-                logging.error(f'ERROR IN: {scenario} - file {os.path.split(gen_path_file)[-1] } \n\n {traceback.format_exc()}')
-        else:
-            continue
-    '''
-    Process line csvs
-    '''
-    for line_path_file in path_files['line']:
-        if os.path.exists(line_path_file):
-            try:
-                # Read full csv from chronix2grid generation using full grid
-                line_full_df = pd.read_csv(line_path_file, sep=';')
-                # Select cols subnet line elements adn rename according to subnet env
-                line_subnet_df = line_full_df[subnet_original_line_names]
-                line_subnet_df.columns = env_name_lines
-                # Write output
-                line_subnet_df.to_csv(os.path.join(SUBNET_OUTPUT_DIR, scenario, os.path.split(line_path_file)[-1]), sep=';', index=False)
-            except Exception as e:
-                flag_error = True
-                logging.error(f'ERROR IN: {scenario} - file {os.path.split(line_path_file)[-1] } \n\n {traceback.format_exc()}')
-        else:
-            continue
-    '''
-    Process load csvs
-    '''
-    for load_path_file in path_files['load']:
-        # print (f'{scenario} - {os.path.split(load_path_file)[-1]}')
-        if os.path.exists(load_path_file):
-            try:
-                # Read full csv from chronix2grid generation using full grid
-                load_full_df = pd.read_csv(load_path_file, sep=';')
-                # Select subnet line elements
-                load_subnet_df = load_full_df[subnet_original_load_names].rename(columns=load_map_names)
-                # Get csv file name for add interconnection lines
-                csv_name = os.path.split(load_path_file)[-1].split('.')[0]
-                for ld, ln in match_names_region['from_or']:
-                    if csv_name == 'load_p':
-                        load_subnet_df[ld] = l_p_or[ln].round(DECIMALS).values
-                    if csv_name == 'load_q':
-                        load_subnet_df[ld] = l_q_or[ln].round(DECIMALS).values
-                    if csv_name == 'load_p_forecasted':
-                        load_subnet_df[ld] = np.roll(l_p_or[ln].round(DECIMALS).values, -1, axis=0)
-                    if csv_name == 'load_q_forecasted':
-                        load_subnet_df[ld] = np.roll(l_q_or[ln].round(DECIMALS).values, -1, axis=0)
-                for ld, ln in match_names_region['from_ex']:
-                    if csv_name == 'load_p':
-                        load_subnet_df[ld] = l_p_ex[ln].round(DECIMALS).values
-                    if csv_name == 'load_q':
-                        load_subnet_df[ld] = l_q_ex[ln].round(DECIMALS).values
-                    if csv_name == 'load_p_forecasted':
-                        load_subnet_df[ld] = np.roll(l_p_ex[ln].round(DECIMALS).values, -1, axis=0)
-                    if csv_name == 'load_q_forecasted':
-                        load_subnet_df[ld] = np.roll(l_q_ex[ln].round(DECIMALS).values, -1, axis=0)
-                # Sort cols chronic elemement to match same subnet order
-                load_subnet_df = load_subnet_df[env_name_loads]
-                # Write output
-                load_subnet_df.to_csv(os.path.join(SUBNET_OUTPUT_DIR, scenario, os.path.split(load_path_file)[-1]), sep=';', index=False)
-            except Exception as e:
-                flag_error = True
-                logging.error(f'ERROR IN: {scenario} - file {os.path.split(load_path_file)[-1] } \n\n {traceback.format_exc()}')
+        # Get interconnection names
+        interco_or_names = [l for _, l in match_names_region['from_or']]
+        interco_ex_names = [l for _, l in match_names_region['from_ex']]
+        interco_or_idx = [int(l.split('_')[-1]) for l in interco_or_names]
+        interco_ex_idx = [int(l.split('_')[-1]) for l in interco_ex_names]
+
+        # Read flow in lines from agent
+        l_p_or = pd.DataFrame(np.array([obs.p_or[interco_or_idx] for obs in data_episode.observations]), 
+                                        columns=interco_or_names)
+        l_q_or = pd.DataFrame(np.array([obs.q_or[interco_or_idx] for obs in data_episode.observations]), 
+                                        columns=interco_or_names)
+        l_p_ex = pd.DataFrame(np.array([obs.p_ex[interco_ex_idx] for obs in data_episode.observations]), 
+                                        columns=interco_ex_names)
+        l_q_ex = pd.DataFrame(np.array([obs.q_ex[interco_ex_idx] for obs in data_episode.observations]), 
+                                        columns=interco_ex_names)
+
+        # Dictionary to map full path names
+        path_files = {'gen': [os.path.join(FULL_DISPATCH_DIR, scenario, basename) for basename in gen_basenames],
+                      'load': [os.path.join(FULL_DISPATCH_DIR, scenario, basename) for basename in load_basenames],
+                      'line': [os.path.join(FULL_DISPATCH_DIR, scenario, basename) for basename in line_basenames],
+                      }
+        # Create output folder if it doesn't exists
+        if not os.path.exists(os.path.join(SUBNET_OUTPUT_DIR, scenario)):
+            os.makedirs(os.path.join(SUBNET_OUTPUT_DIR, scenario))
+        '''
+        Process gen csvs
+        '''
+        for gen_path_file in path_files['gen']:
+            # print (f'{scenario} - {os.path.split(gen_path_file)[-1]}')
+            if os.path.exists(gen_path_file):
+                try:
+                    # Read full csv from chronix2grid generation using full grid
+                    gen_full_df = pd.read_csv(gen_path_file, sep=';')
+                    # Select subnet gen elements
+                    gen_subnet_df = gen_full_df[subnet_original_gen_names].rename(columns=gen_map_names)
+                    # Sort cols chronic elemement to match same subnet order
+                    gen_subnet_df = gen_subnet_df[env_name_gens]
+                    # Write output
+                    gen_subnet_df.to_csv(os.path.join(SUBNET_OUTPUT_DIR, scenario, os.path.split(gen_path_file)[-1]), sep=';', index=False)
+                except Exception as e:
+                    flag_error = True
+                    logging.error(f'ERROR IN: {scenario} - file {os.path.split(gen_path_file)[-1] } \n\n {traceback.format_exc()}')
+            else:
+                continue
+        '''
+        Process line csvs
+        '''
+        for line_path_file in path_files['line']:
+            if os.path.exists(line_path_file):
+                try:
+                    # Read full csv from chronix2grid generation using full grid
+                    line_full_df = pd.read_csv(line_path_file, sep=';')
+                    # Select cols subnet line elements adn rename according to subnet env
+                    line_subnet_df = line_full_df[subnet_original_line_names]
+                    line_subnet_df.columns = env_name_lines
+                    # Write output
+                    line_subnet_df.to_csv(os.path.join(SUBNET_OUTPUT_DIR, scenario, os.path.split(line_path_file)[-1]), sep=';', index=False)
+                except Exception as e:
+                    flag_error = True
+                    logging.error(f'ERROR IN: {scenario} - file {os.path.split(line_path_file)[-1] } \n\n {traceback.format_exc()}')
+            else:
+                continue
+        '''
+        Process load csvs
+        '''
+        for load_path_file in path_files['load']:
+            # print (f'{scenario} - {os.path.split(load_path_file)[-1]}')
+            if os.path.exists(load_path_file):
+                try:
+                    # Read full csv from chronix2grid generation using full grid
+                    load_full_df = pd.read_csv(load_path_file, sep=';')
+                    # Select subnet line elements
+                    load_subnet_df = load_full_df[subnet_original_load_names].rename(columns=load_map_names)
+                    # Get csv file name for add interconnection lines
+                    csv_name = os.path.split(load_path_file)[-1].split('.')[0]
+                    for ld, ln in match_names_region['from_or']:
+                        if csv_name == 'load_p':
+                            load_subnet_df[ld] = l_p_or[ln].round(DECIMALS).values
+                        if csv_name == 'load_q':
+                            load_subnet_df[ld] = l_q_or[ln].round(DECIMALS).values
+                        if csv_name == 'load_p_forecasted':
+                            load_subnet_df[ld] = np.roll(l_p_or[ln].round(DECIMALS).values, -1, axis=0)
+                        if csv_name == 'load_q_forecasted':
+                            load_subnet_df[ld] = np.roll(l_q_or[ln].round(DECIMALS).values, -1, axis=0)
+                    for ld, ln in match_names_region['from_ex']:
+                        if csv_name == 'load_p':
+                            load_subnet_df[ld] = l_p_ex[ln].round(DECIMALS).values
+                        if csv_name == 'load_q':
+                            load_subnet_df[ld] = l_q_ex[ln].round(DECIMALS).values
+                        if csv_name == 'load_p_forecasted':
+                            load_subnet_df[ld] = np.roll(l_p_ex[ln].round(DECIMALS).values, -1, axis=0)
+                        if csv_name == 'load_q_forecasted':
+                            load_subnet_df[ld] = np.roll(l_q_ex[ln].round(DECIMALS).values, -1, axis=0)
+                    # Sort cols chronic elemement to match same subnet order
+                    load_subnet_df = load_subnet_df[env_name_loads]
+                    # Write output
+                    load_subnet_df.to_csv(os.path.join(SUBNET_OUTPUT_DIR, scenario, os.path.split(load_path_file)[-1]), sep=';', index=False)
+                except Exception as e:
+                    flag_error = True
+                    logging.error(f'ERROR IN: {scenario} - file {os.path.split(load_path_file)[-1] } \n\n {traceback.format_exc()}')
+
+        #copy start_datetime.info
+        start_dateTime_file=os.path.join(FULL_DISPATCH_DIR, scenario,'start_datetime.info')
+        if (os.path.exists(start_dateTime_file)):
+            copyfile(start_dateTime_file,os.path.join(SUBNET_OUTPUT_DIR, scenario,'start_datetime.info'))
+
+        #copy time_interval.info
+        time_interval_file=os.path.join(FULL_DISPATCH_DIR, scenario,'time_interval.info')
+        if (os.path.exists(time_interval_file)):
+            copyfile(time_interval_file,os.path.join(SUBNET_OUTPUT_DIR, scenario,'time_interval.info'))
+
+        if flag_error:
+            logging.warning(f'===> {scenario} not saved')
+            # Remove scenario in case of errors
+            shutil.rmtree(os.path.join(SUBNET_OUTPUT_DIR, scenario))  
+        return None
     
-    #copy start_datetime.info
-    start_dateTime_file=os.path.join(FULL_DISPATCH_DIR, scenario,'start_datetime.info')
-    if (os.path.exists(start_dateTime_file)):
-        copyfile(start_dateTime_file,os.path.join(SUBNET_OUTPUT_DIR, scenario,'start_datetime.info'))
-    
-    #copy time_interval.info
-    time_interval_file=os.path.join(FULL_DISPATCH_DIR, scenario,'time_interval.info')
-    if (os.path.exists(time_interval_file)):
-        copyfile(time_interval_file,os.path.join(SUBNET_OUTPUT_DIR, scenario,'time_interval.info'))
-    
-    if flag_error:
-        logging.warning(f'===> {scenario} not saved')
-        # Remove scenario in case of errors
-        shutil.rmtree(os.path.join(SUBNET_OUTPUT_DIR, scenario))  
     return None
 
 # Load the subnet env
