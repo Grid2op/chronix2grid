@@ -5,6 +5,7 @@ from grid2op.Runner import Runner
 from grid2op.Episode import EpisodeData
 import pandas as pd
 import numpy as np
+import shutil
 import os
 
 try:
@@ -27,13 +28,16 @@ def check_loss_adjustement(existing_output_case_folder,scenario,scen_id,max_iter
     # don't disconnect powerline on overflow, the thermal limit are not set for now, it would not make sens
     param = Parameters()
     param.init_from_dict({"NO_OVERFLOW_DISCONNECTION": True})
-    env=grid2op.make(existing_output_case_folder,param=param,backend=backend,test=True)
+    env=grid2op.make(existing_output_case_folder,param=param)#,backend=backend)
 
     runner = Runner(**env.get_params_for_runner(),agentClass=RecoPowerlineAgent)
     
     
     #run env
     Ouput_folder_runner_case=os.path.join(Ouput_folder,'runner',grid_case)
+    if(os.path.exists(Ouput_folder_runner_case)):
+        print('delete folder before creating:'+Ouput_folder_runner_case)
+        shutil.rmtree(Ouput_folder_runner_case)
     os.makedirs(Ouput_folder_runner_case, exist_ok=True)
     name_chron, cum_reward, nb_time_step, episode_data =runner.run_one_episode(path_save=Ouput_folder_runner_case,
                          indx=scen_id,
@@ -69,32 +73,3 @@ def check_loss_adjustement(existing_output_case_folder,scenario,scen_id,max_iter
     else:
         print('all losses adjustements are good with precision of less than 1MW')
 
-if __name__ == "__main__":
-    Ouput_folder = ''
-
-    ouput_folder_subgrid_path = os.path.join(Ouput_folder, 'generation')
-    case_subgrid='ieee118_R2subgrid_icaps_2x'
-    scenario='Scenario_february_1'
-    scen_id=1
-    max_iter=1000
-
-    params_json_subgrid={'step_opf_min': 5,
-                         'mode_opf': 'month',
-                         'reactive_comp': 1,
-                         'losses_pct': 0.4,
-                         'dispatch_by_carrier': False,
-                         'ramp_mode': 'hard',
-                         'pyomo': False,
-                         'solver_name': 'cbc',
-                         'idxSlack': 21,
-                         'nameSlack': 'gen_35_21',
-                         'hydro_ramp_reduction_factor': 1,
-                         'slack_p_max_reduction': 150,
-                         'slack_ramp_max_reduction': 6,
-                         'loss_grid2op_simulation': True,
-                         'agent_type': 'reco',
-                         'early_stopping_mode': False}
-
-    check_loss_adjustement(os.path.join(ouput_folder_subgrid_path,case_subgrid),scenario,scen_id,
-                       max_iter,Ouput_folder,case_subgrid,params_json_subgrid)
-    
