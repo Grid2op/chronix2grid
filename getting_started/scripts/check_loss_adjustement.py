@@ -3,6 +3,7 @@ from grid2op.Parameters import Parameters
 from grid2op.Agent import RecoPowerlineAgent
 from grid2op.Runner import Runner
 from grid2op.Episode import EpisodeData
+from grid2op.Chronics import GridStateFromFile
 import pandas as pd
 import numpy as np
 import shutil
@@ -28,7 +29,7 @@ def check_loss_adjustement(existing_output_case_folder,scenario,scen_id,max_iter
     # don't disconnect powerline on overflow, the thermal limit are not set for now, it would not make sens
     param = Parameters()
     param.init_from_dict({"NO_OVERFLOW_DISCONNECTION": True})
-    env=grid2op.make(existing_output_case_folder,param=param)#,backend=backend)
+    env=grid2op.make(existing_output_case_folder,param=param,data_feeding_kwargs={"gridvalueClass": GridStateFromFile})#,backend=backend)
 
     runner = Runner(**env.get_params_for_runner(),agentClass=RecoPowerlineAgent)
     

@@ -9,10 +9,7 @@ import grid2op
 from grid2op.Chronics import Multifolder, GridStateFromFileWithForecasts
 from grid2op.Parameters import Parameters
 from grid2op.Runner import Runner
-from grid2op.Episode import EpisodeData
-
-from grid2op.Agent import RecoPowerlineAgent
-from grid2op.Agent import DoNothingAgent
+from grid2op.Chronics import GridStateFromFile
 
 import chronix2grid.constants as cst
 
@@ -98,7 +95,7 @@ def run_grid2op_simulation_donothing(grid_path, agent_result_path,  nb_core = 1,
 
     # Load env and apropriate chronix scenario
     env = grid2op.make(grid_path,
-                       param=param, backend=backend, test=True)
+                       param=param, backend=backend, test=True,data_feeding_kwargs={"gridvalueClass": GridStateFromFile})
     scenario_name = pathlib.Path(agent_result_path).name
     scen_id = search_chronic_num_from_name(scenario_name, env)
     env.set_id(scen_id)
