@@ -1,4 +1,4 @@
-# ChroniX2Grid
+# ChroniX2Grid - The Extensive PowerGrid Time-serie Generator
 
 Chronix2Grid is a python package, providing a command-line application as well, 
 that allows to generate synthetic but realistic consumption, renewable production, electricity loss (dissipation) 
