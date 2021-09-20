@@ -190,6 +190,16 @@ You can develop your own load, renewable, loss and dispatch model using as input
 * Possible pattern files, or trained neural networks
 * Grid demand and generator characteristics in csv
 
+## Citing
+@misc{chronix2grid,
+    author = {A. Marot, N. Megel, V. Renault, M. Jothy },
+    title = {{ChroniX2Grid - The Extensive PowerGrid Time-serie Generator}},
+    year = {2020},
+    publisher = {GitHub},
+    journal = {GitHub repository},
+    howpublished = {\url{https://github.com/BDonnot/ChroniX2Grid}},}
+
+
 ## Running the test suite
 
 To launch the unit test suite:
