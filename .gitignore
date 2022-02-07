@@ -1,5 +1,6 @@
 # Output
 getting_started/example/output/
+getting_started/example/custom/output/
 
 # Variable input files
 chronix2grid/generation/input/dispatch
