@@ -1,0 +1,4 @@
+Optimal - objective value 1.00000000
+      0 x_1                    0                       1
+      1 x_2                    0                       1
+      2 x_3                    1                       1
