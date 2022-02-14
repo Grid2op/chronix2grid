@@ -1,4 +1,4 @@
-#include "constants.h"
+#include "constants.hh"
 #include <math.h>
 
 double objective(array<double, NB_TYPES> energy_mix); 

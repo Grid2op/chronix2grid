@@ -1,4 +1,4 @@
-#include "objective.h"
+#include "objective.hh"
 
 double objective(array<double, NB_TYPES> energy_mix) {
   double res = 0;
