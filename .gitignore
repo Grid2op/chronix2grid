@@ -8,7 +8,8 @@ CMakeFiles/
 cmake_install.cmake
 CMakeCache.txt
 compile_commands.json
-solver
+getting_started/experiments/optimization/solver/build/solver
+Makefile
 
 # Variable input files
 chronix2grid/generation/input/dispatch

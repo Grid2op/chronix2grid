@@ -1,0 +1,1 @@
+mpirun -np $1 ./solver -js $2 -p $3
