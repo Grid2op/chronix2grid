@@ -7,7 +7,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 find_package(MPI REQUIRED)
 include_directories(${MPI_INCLUDE_PATH})
 
-include_directories(headers/)
+include_directories(include/)
 
 file (GLOB_RECURSE SRC_FILES src/*.cc)
 add_executable(solver ${SRC_FILES})

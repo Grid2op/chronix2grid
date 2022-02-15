@@ -2,6 +2,14 @@
 getting_started/example/output/
 getting_started/example/custom/output/
 
+# solver
+.cmake/
+CMakeFiles/
+cmake_install.cmake
+CMakeCache.txt
+compile_commands.json
+solver
+
 # Variable input files
 chronix2grid/generation/input/dispatch
 

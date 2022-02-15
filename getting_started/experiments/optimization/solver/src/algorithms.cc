@@ -1,16 +1,21 @@
 #include "algorithms.hh"
-#include <stdlib.h>     /* srand, rand */
-#include <time.h>       /* time */
+#include <cmath>
+#include <stdlib.h>
 #include <climits>
+#include <chrono>
+using namespace chrono;
 
 double dRand(double min, double max) {
   double f = (double)rand() / RAND_MAX;
   return min + f * (max - min);
 }
 
-Infos mk_infos(string algorithm, int nb_iterations, double elapsed_time) {
-  Infos infos = {algorithm, nb_iterations, elapsed_time};
-  return infos;
+int get_time_sec() {
+  return duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
+}
+
+double get_time_milli() {
+  return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 }
 
 
@@ -18,19 +23,19 @@ Infos mk_infos(string algorithm, int nb_iterations, double elapsed_time) {
 /***********SOLVER**************/
 /*******************************/
 
-Solver::Solver(string name) {
+Algorithm::Algorithm(string name, Problem problem) {
   this->name = name;
-  srand(time(NULL));
+  this->problem = problem;
+  srand(get_time_sec());
 }
 
-void Solver::set_seed(int seed) {
+void Algorithm::set_seed(int seed) {
   if (seed != -1)
     srand(seed);
 }
 
-void Solver::solve_parallel(Result &result, int &nb_iterations) {
-  double start_time = time(NULL);
-  printf("%f\n", start_time);
+void Algorithm::run_parallel(Result &result) {
+  double start_time = get_time_milli();
   
   Result result_final;
 
@@ -41,10 +46,10 @@ void Solver::solve_parallel(Result &result, int &nb_iterations) {
   // Get the rank of the process
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  this->set_seed(time(NULL) + rank + 1);
+  this->set_seed(get_time_sec() + rank + 1);
 
-  result.infos = mk_infos(this->name, nb_iterations, 0.0);
-  this->solve(result, nb_iterations);
+  result.infos = mk_infos(this->name, this->problem.nb_iterations, 0.0);
+  this->run(result);
 
   // Find the minimum objective
   MPI_Allreduce(&result.obj, &result_final.obj, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
@@ -52,37 +57,30 @@ void Solver::solve_parallel(Result &result, int &nb_iterations) {
   // Send the best solution to the main core
   MPI_Request r;  
   if (result.obj == result_final.obj && rank != 0) {
-    MPI_Isend(&result.x, N, MPI_INT, 0, 99, MPI_COMM_WORLD, &r);
+    MPI_Isend(&result.x, this->problem.N, MPI_INT, 0, 99, MPI_COMM_WORLD, &r);
   }
   
   else if (rank == 0) {
     result.obj = result_final.obj;
-    MPI_Irecv(&result.x, N, MPI_INT, MPI_ANY_SOURCE, 99, MPI_COMM_WORLD, &r);
+    MPI_Irecv(&result.x, this->problem.N, MPI_INT, MPI_ANY_SOURCE, 99, MPI_COMM_WORLD, &r);
+    result.infos.elapsed_time = (get_time_milli() - start_time) / 1000;
   }
-}
-
-double Solver::compute_objective(array<int, N> x) {
-  array<double, NB_TYPES> pmaxs      = get_pmaxs(x);
-  array<double, NB_TYPES> energy_mix = get_energy_mix(pmaxs);
-  return objective(energy_mix);
 }
 
 /**********************************/
 /********RANDOM ALGORITHM**********/
 /**********************************/
 
-void RandomSolver::solve(Result &result, int &nb_iterations) {
-  Result result2;
+void RandomAlgorithm::run(Result &result) {
+  vector<int> best_x(this->problem.N);
+  double best_obj = this->problem.objective(best_x);
 
-  array<int, N> best_x;
-  double best_obj = INT_MAX;
-
-  for(int i=0; i<nb_iterations; i++) {
-    array<int, N> x;
-    for (int i=0; i<N; i++) {
-      x[i] = rand() % NB_TYPES;
+  for(int i=0; i<this->problem.nb_iterations; i++) {
+    vector<int> x(this->problem.N);
+    for (int i=0; i<this->problem.N; i++) {
+      x[i] = rand() % this->problem.NB_TYPES;
     }
-    double obj = this->compute_objective(x);
+    double obj = this->problem.objective(x);
     if (best_obj > obj) {
       best_obj = obj;
       copy(x.begin(), x.end(), best_x.begin());
@@ -105,34 +103,36 @@ double SimulatedAnnealing::compute_T(double Tmin, double Tmax, double decay, dou
   return Tmin + (Tmax - Tmin) * exp(-decay * nb_it);
 }
 
-void SimulatedAnnealing::solve(Result &result, int &nb_iterations) {
+void SimulatedAnnealing::run(Result &result) {
   /*
    * Initialize x with a random solver
   */
-  RandomSolver solver;
-  int nb_iter = nb_iterations / 4;
-  solver.solve(result, nb_iter);
-  array<int, N> best_x = result.x;
-  double best_obj = this->compute_objective(best_x);
+  int nb_iter = this->problem.nb_iterations;
+  this->problem.nb_iterations /= 4;
+  RandomAlgorithm solver(this->problem);
+  solver.run(result);
+  this->problem.nb_iterations = nb_iter;
+  vector<int> best_x = result.x;
+  double best_obj = this->problem.objective(best_x);
 
   double Tmin = 0.001;
   double Tmax = 10000;
-  double decay = 1.0 / nb_iterations * 10;
+  double decay = 1.0 / this->problem.nb_iterations * 10;
   double T = this->compute_T(Tmin, Tmax, decay, 0);
 
-  for(int i=0; i<nb_iterations; i++) {
-    int idx = rand() % N;
-    int rand_type = rand() % NB_TYPES;
+  for(int i=0; i<this->problem.nb_iterations; i++) {
+    int idx = rand() % this->problem.N;
+    int rand_type = rand() % this->problem.NB_TYPES;
 
-    array<int, N> tmp_x = best_x;
-    tmp_x[idx] = rand_type;
-    double obj = this->compute_objective(tmp_x);
+    vector<int> x = best_x;
+    x[idx] = rand_type;
+    double obj = this->problem.objective(x);
 
     double acceptance_prob = this->acceptance_probability(best_obj, obj, T);
 
     if (dRand(0, 1) <= acceptance_prob) {
       best_obj = obj;
-      best_x = tmp_x;
+      best_x = x;
     }
     T = this->compute_T(Tmin, Tmax, decay, i+1);
   }

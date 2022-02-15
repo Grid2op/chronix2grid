@@ -1,12 +1,27 @@
-#include <iostream>
+#include <stdexcept>
+#include <memory>
 #include "algorithms.hh"
 #include "parse_args.hh"
 
 int main(int argc, char** argv) {
+  string save_path = getCmdOption(argv, argv + argc, "-p");
+  string json_path = getCmdOption(argv, argv + argc, "-js");
 
-  int nb_iterations = atoi(getCmdOption(argv, argv + argc, "-i"));
+  Problem problem(json_path);
 
-  SimulatedAnnealing solver;
+  unique_ptr<Algorithm> algo;
+
+  if (problem.algorithm == "random")
+    algo = make_unique<RandomAlgorithm>(problem);
+  else if (problem.algorithm == "simulated annealing")
+    algo = make_unique<SimulatedAnnealing>(problem);
+  else {
+    char error[50];
+    sprintf(error, "Unknown \"%s\" algorithm.", problem.algorithm.c_str());
+    throw invalid_argument(error);
+  }
+
+  /* MPI initialisation */
   Result result;
   
   MPI_Init(&argc, &argv);
@@ -15,15 +30,16 @@ int main(int argc, char** argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   Result result_core;
-  solver.solve_parallel(result_core, nb_iterations);
+  algo->run_parallel(result_core);
 
   if (rank == 0) {
     result.obj   = result_core.obj;
     result.x     = result_core.x;
     result.infos = result_core.infos;
-    solver.print_result(result);
+    algo->print_result(result);
+    algo->save_result(result, save_path);
   }
 
-  MPI_Finalize();
+  //MPI_Finalize();
   return 0;
 }
