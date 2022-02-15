@@ -1,4 +1,4 @@
-{"step_opf_min": 5, "mode_opf": "month", "reactive_comp": 1, "dispatch_by_carrier": false, "ramp_mode": "hard", "pyomo": false, "solver_name": "cbc",
+{"step_opf_min": 5, "mode_opf": "month", "reactive_comp": 1, "dispatch_by_carrier": false, "ramp_mode": "easy", "pyomo": false, "solver_name": "cbc",
   "hydro_ramp_reduction_factor": 2,
   "slack_ramp_max_reduction": 6,
   "slack_p_max_reduction": 150,
