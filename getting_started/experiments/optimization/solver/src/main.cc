@@ -39,7 +39,6 @@ int main(int argc, char** argv) {
     algo->print_result(result);
     algo->save_result(result, save_path);
   }
-
-  //MPI_Finalize();
+  MPI_Finalize();
   return 0;
 }

@@ -1,6 +1,6 @@
 { 
   "algorithm": "simulated annealing",
-  "nb_iterations": 10000000,
+  "nb_iterations": 1000000,
   "N": 62,
   "NB_TYPES": 5,
   "average_load": 2800,

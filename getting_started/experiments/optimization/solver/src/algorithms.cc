@@ -55,16 +55,18 @@ void Algorithm::run_parallel(Result &result) {
   MPI_Allreduce(&result.obj, &result_final.obj, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
 
   // Send the best solution to the main core
-  MPI_Request r;  
-  if (result.obj == result_final.obj && rank != 0) {
+  MPI_Request r;
+  if (result.obj == result_final.obj) {
     MPI_Isend(&result.x, this->problem.N, MPI_INT, 0, 99, MPI_COMM_WORLD, &r);
   }
   
   else if (rank == 0) {
+    MPI_Status s;
     result.obj = result_final.obj;
-    MPI_Irecv(&result.x, this->problem.N, MPI_INT, MPI_ANY_SOURCE, 99, MPI_COMM_WORLD, &r);
+    MPI_Recv(&result.x, this->problem.N, MPI_INT, MPI_ANY_SOURCE, 99, MPI_COMM_WORLD, &s);
     result.infos.elapsed_time = (get_time_milli() - start_time) / 1000;
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 /**********************************/

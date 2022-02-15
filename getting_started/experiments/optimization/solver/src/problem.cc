@@ -1,16 +1,18 @@
 #include "problem.hh"
 #include "nlohmann/json.hpp"
 #include <fstream>
+#include <sstream>
 using namespace nlohmann;
 
 Problem::Problem(string path) {
-  ifstream f(path);
+  ifstream file(path);
   string str;
-  if(f) {
+  if(file) {
     ostringstream ss;
-    ss << f.rdbuf(); // reading data
+    ss << file.rdbuf(); // reading data
     str = ss.str();
   }
+  file.close();
   json j = json::parse(str);
 
   this->algorithm     = j["algorithm"];
