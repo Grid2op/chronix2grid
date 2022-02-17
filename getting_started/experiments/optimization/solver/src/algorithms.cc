@@ -50,21 +50,40 @@ void Algorithm::run_parallel(Result &result) {
 
   result.infos = mk_infos(this->name, this->problem.nb_iterations, 0.0);
   this->run(result);
+  result.infos.elapsed_time = (get_time_milli() - start_time) / 1000.0;
 
-  // Find the minimum objective
+  // Find the minimum objective and share it with every process
   MPI_Allreduce(&result.obj, &result_final.obj, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
 
-  // Send the best solution to the main core
-  MPI_Request r;
-  if (result.obj == result_final.obj) {
-    MPI_Isend(&result.x, this->problem.N, MPI_INT, 0, 99, MPI_COMM_WORLD, &r);
+  /*
+   * Now that each process knows the minimum objective, we still need to send
+   * the optimal variables associated to this objective.
+   * To avoid using non-blocking send/receive, every process except the main one
+   * will send its variables to the main process BUT if its objective is not
+   * the same than the minimum found earlier (i.e this process did not found the optimum),
+   * it will set its first variable to -1 (an impossible value). This way, when the
+   * main process receives a array of variables, it checks if the first is -1.
+   * If yes, it discards the array, otherwise it keeps it.
+   * We can synchronize the processes at the end.
+  */
+  int discriminant = -1;
+  if (rank != 0) {
+    if (result.obj != result_final.obj)
+      result.x[0] = discriminant;
+
+    MPI_Send(&result.x[0], this->problem.N, MPI_INT, 0, 99, MPI_COMM_WORLD);
   }
   
-  else if (rank == 0) {
-    MPI_Status s;
+  else {
     result.obj = result_final.obj;
-    MPI_Recv(&result.x, this->problem.N, MPI_INT, MPI_ANY_SOURCE, 99, MPI_COMM_WORLD, &s);
-    result.infos.elapsed_time = (get_time_milli() - start_time) / 1000;
+  
+    MPI_Status s;
+    for(int i=1; i<size; i++) {
+      vector<int> tmp_x(this->problem.N);
+      MPI_Recv(&tmp_x[0], this->problem.N, MPI_INT, i, 99, MPI_COMM_WORLD, &s);
+      if (tmp_x[0] != discriminant)
+        result.x = tmp_x;
+    }
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }

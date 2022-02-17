@@ -1,11 +1,11 @@
 { 
   "algorithm": "simulated annealing",
-  "nb_iterations": 1000000,
+  "nb_iterations": 10000000,
   "N": 62,
   "NB_TYPES": 5,
   "average_load": 2800,
   "power_plant_types": ["hydro", "nuclear", "solar", "thermal", "wind"],
   "avg_pmaxs": [250.0, 400.0, 74.7, 200.0, 67.2],
   "capacity_factor": [30.0, 95.0, 15.0, -1.0, 25.0],
-  "target_energy_mix": [18, 40.0, 7.0, 22.5, 10.5]
+  "target_energy_mix": [9.0, 36.0, 17.0, 2.0, 36.0]
 }
