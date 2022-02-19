@@ -53,9 +53,11 @@ vector<double> Problem::get_energy_mix(vector<double> pmaxs) {
   if (sum > 100) {
     apriori_energy_mix[0] -= (sum - 100);
     apriori_energy_mix[3] = 0;
-  } else {
+  } 
+  else if (pmaxs[3] > 0)
     apriori_energy_mix[3] = 100 - sum;
-  }
+  else if (pmaxs[0] > 0)
+    apriori_energy_mix[0] += 100 - sum;
   return apriori_energy_mix;
 }
 
@@ -63,9 +65,9 @@ double Problem::objective(vector<int> x) {
   vector<double> pmaxs      = this->get_pmaxs(x);
   vector<double> energy_mix = this->get_energy_mix(pmaxs);
 
-  double res = 0;
+  double res = 0.0;
   for (int i=0; i<this->NB_TYPES; i++) {
-    res += pow(this->target_energy_mix[i] - energy_mix[i], 2.0);
+    res += pow(this->target_energy_mix[i] - energy_mix[i], 2);
   }
   return res;
 }
