@@ -78,7 +78,7 @@ void Algorithm::run_parallel(Result &result) {
     result.obj = result_final.obj;
   
     MPI_Status s;
-    for(int i=1; i<size; i++) {
+    for(int i = 1; i < size; i++) {
       vector<int> tmp_x(this->problem.N);
       MPI_Recv(&tmp_x[0], this->problem.N, MPI_INT, i, 99, MPI_COMM_WORLD, &s);
       if (tmp_x[0] != discriminant)
@@ -96,9 +96,9 @@ void RandomAlgorithm::run(Result &result) {
   vector<int> best_x(this->problem.N);
   double best_obj = this->problem.objective(best_x);
 
-  for(int i=0; i<this->problem.nb_iterations; i++) {
+  for(int i = 0; i < this->problem.nb_iterations; i++) {
     vector<int> x(this->problem.N);
-    for (int i=0; i<this->problem.N; i++) {
+    for (int i = 0; i < this->problem.N; i++) {
       x[i] = rand() % this->problem.NB_TYPES;
     }
     double obj = this->problem.objective(x);
@@ -141,7 +141,7 @@ void SimulatedAnnealing::run(Result &result) {
   double decay = 1.0 / this->problem.nb_iterations * 10;
   double T = this->compute_T(Tmin, Tmax, decay, 0);
 
-  for(int i=0; i<this->problem.nb_iterations; i++) {
+  for(int i = 0; i < this->problem.nb_iterations; i++) {
     int idx = rand() % this->problem.N;
     int rand_type = rand() % this->problem.NB_TYPES;
 

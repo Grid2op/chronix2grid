@@ -12,11 +12,11 @@ void Algorithm::print_result(Result result) {
   printf("--------------------------RESULT-----------------------------\n");
 
   vector<int> total_types(this->problem.NB_TYPES);
-  for (int i=0; i<this->problem.N; i++) {
+  for (int i = 0; i < this->problem.N; i++) {
     total_types[result.x[i]]++;
   }
 
-  for (int i=0; i<this->problem.NB_TYPES; i++) {
+  for (int i = 0; i < this->problem.NB_TYPES; i++) {
     cout << this->problem.power_plant_types[i] << ": " << total_types[i] << endl;
   }
   printf("\n");
@@ -47,7 +47,7 @@ void Algorithm::print_result(Result result) {
   printf("\n");
 
   double error = 0.0;
-  for (int i=0; i<this->problem.NB_TYPES; i++){
+  for (int i = 0; i < this->problem.NB_TYPES; i++){
     error += abs(this->problem.target_energy_mix[i] - energy_mix[i]);
   }
   printf("Difference between target and actual energy mix: %.2f%%\n", error);
@@ -58,7 +58,7 @@ void Algorithm::print_result(Result result) {
 void Algorithm::save_result(Result result, string path) {
   ofstream file;
   file.open(path);
-  for (int i=0; i<this->problem.N; i++) {
+  for (int i = 0; i < this->problem.N; i++) {
     file << result.x[i];
 
     if (i != this->problem.N-1)

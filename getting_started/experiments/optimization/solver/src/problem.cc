@@ -30,13 +30,9 @@ Problem::Problem(string path) {
 
 vector<double> Problem::get_pmaxs(vector<int> x) {
   vector<double> pmaxs(this->NB_TYPES);
-  for (int i=0; i<this->NB_TYPES; i++) {
-    int count = 0;
-    for (int j=0; j<N; j++) {
-      if (x[j] == i) count++;
-    }
-
-    pmaxs[i] = this->avg_pmaxs[i] * count;
+  for (int i = 0; i < this->N; i++) {
+    int type = x[i];
+    pmaxs[type] += this->avg_pmaxs[type];
   }
   return pmaxs;
 }
@@ -44,7 +40,7 @@ vector<double> Problem::get_pmaxs(vector<int> x) {
 vector<double> Problem::get_energy_mix(vector<double> pmaxs) {
   vector<double> apriori_energy_mix(this->NB_TYPES);
   double sum = 0;
-  for (int i=0; i<this->NB_TYPES; i++) {
+  for (int i = 0; i < this->NB_TYPES; i++) {
     apriori_energy_mix[i] = this->capacity_factor[i] * pmaxs[i] / average_load;
     if (apriori_energy_mix[i] > 0)
       sum += apriori_energy_mix[i];
@@ -66,7 +62,7 @@ double Problem::objective(vector<int> x) {
   vector<double> energy_mix = this->get_energy_mix(pmaxs);
 
   double res = 0.0;
-  for (int i=0; i<this->NB_TYPES; i++) {
+  for (int i = 0; i < this->NB_TYPES; i++) {
     res += pow(this->target_energy_mix[i] - energy_mix[i], 2);
   }
   return res;
