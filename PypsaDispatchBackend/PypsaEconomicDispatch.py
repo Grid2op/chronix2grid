@@ -1,12 +1,8 @@
 """Class for the economic dispatch framework. Allows to parametrize and run
 an economic dispatch based on RES and consumption time series"""
-
-from collections import namedtuple
-import os
-
-import grid2op
-from grid2op.Chronics import ChangeNothing
+import numpy as np
 import pandas as pd
+from collections import namedtuple
 import pypsa
 
 from .EDispatch_L2RPN2020.run_economic_dispatch import main_run_disptach
@@ -24,6 +20,14 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
     Wrapper around a pypsa.Network to add higher level methods
     """
 
+    # PATCH
+    # to avoid problems for respecting pmax and ramps when rounding production values in chronics at the end, we apply a correcting factor
+    PmaxCorrectingFactor = 1
+    RampCorrectingFactor = 0.1
+    
+    PmaxErrorCorrRatio = 0.95
+    RampErrorCorrRatio = 0.9
+        
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.add('Bus', 'node')
@@ -34,6 +38,9 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
         self._simplified_chronix_scenario = None
         self._has_results = False
         self._has_simplified_results = False
+        
+        self._pmax_solar = None
+        self._pmax_wind = None
 
     @classmethod
     def from_gri2op_env(cls, grid2op_env):
@@ -52,28 +59,48 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
         net._env = grid2op_env
 
         carrier_types_to_exclude = ['wind', 'solar']
-
-        # PATCH
-        # to avoid problems for respecting pmax and ramps when rounding production values in chronics at the end, we apply a correcting factor
-        PmaxCorrectingFactor = 1
-        RampCorrectingFactor = 0.1
-
         for i, generator in enumerate(grid2op_env.name_gen):
             gen_type = grid2op_env.gen_type[i]
             if gen_type not in carrier_types_to_exclude:
                 p_max = grid2op_env.gen_pmax[i]
-                pnom = p_max - PmaxCorrectingFactor
-                rampUp = (grid2op_env.gen_max_ramp_up[i] - RampCorrectingFactor) / p_max
-                RampDown = (grid2op_env.gen_max_ramp_down[i] - RampCorrectingFactor) / p_max
-
+                pnom = p_max - cls.PmaxCorrectingFactor
+                pnom *= cls.PmaxErrorCorrRatio
+                
+                rampUp = (grid2op_env.gen_max_ramp_up[i] - cls.RampCorrectingFactor) / p_max
+                rampDown = (grid2op_env.gen_max_ramp_down[i] - cls.RampCorrectingFactor) / p_max
+                rampUp *= cls.RampErrorCorrRatio
+                rampDown *= cls.RampErrorCorrRatio
+                
                 net.add(
                     class_name='Generator', name=generator, bus='node',
                     p_nom=pnom, carrier=grid2op_env.gen_type[i],
                     marginal_cost=grid2op_env.gen_cost_per_MW[i],
                     ramp_limit_up=rampUp,
-                    ramp_limit_down=RampDown,
+                    ramp_limit_down=rampDown,
                 )
 
+        # add total wind and solar (for curtailment)
+        net._pmax_solar = np.sum([grid2op_env.gen_pmax[i] 
+                              for i in range(grid2op_env.n_gen)
+                              if grid2op_env.gen_type[i] == "solar"])
+        net.add('Generator',
+                name='agg_solar',
+                bus='node',
+                carrier="solar",
+                marginal_cost=0.,
+                p_nom=net._pmax_solar
+                )
+        net._pmax_wind = np.sum([grid2op_env.gen_pmax[i] 
+                              for i in range(grid2op_env.n_gen)
+                              if grid2op_env.gen_type[i] == "wind"])
+        net.add('Generator',
+                name='agg_wind',
+                bus='node',
+                carrier="wind",
+                marginal_cost=0.,
+                p_nom=net._pmax_wind
+        )
+        
         return net
 
     @classmethod
@@ -94,11 +121,6 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
 
         carrier_types_to_exclude = ['wind', 'solar']
 
-        # PATCH
-        # to avoid problems for respecting pmax and ramps when rounding production values in chronics at the end, we apply a correcting factor
-        PmaxCorrectingFactor = 1
-        RampCorrectingFactor = 0.1
-
         for i, (generator, gen_type, p_max, ramp_up, ramp_down, gen_cost_per_MW) in enumerate(zip(env_df['name'],
                                             env_df['type'],
                                             env_df['pmax'],
@@ -106,23 +128,58 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
                                             env_df['max_ramp_down'],
                                             env_df['cost_per_mw'])):
             if gen_type not in carrier_types_to_exclude:
-                pnom = p_max - PmaxCorrectingFactor
-                rampUp = (ramp_up- RampCorrectingFactor) / p_max
-                RampDown = (ramp_down - RampCorrectingFactor) / p_max
+                pnom = (p_max - cls.PmaxCorrectingFactor) * cls.PmaxErrorCorrRatio
+                rampUp = (ramp_up- cls.RampCorrectingFactor) * cls.RampErrorCorrRatio / p_max
+                rampDown = (ramp_down - cls.RampCorrectingFactor) * cls.RampErrorCorrRatio / p_max
 
                 net.add(
-                    class_name='Generator', name=generator, bus='node',
-                    p_nom=pnom, carrier=gen_type,
+                    class_name='Generator',
+                    name=generator,
+                    bus='node',
+                    p_nom=pnom,
+                    carrier=gen_type,
                     marginal_cost=gen_cost_per_MW,
                     ramp_limit_up=rampUp,
-                    ramp_limit_down=RampDown,
+                    ramp_limit_down=rampDown,
                 )
 
+        # add total wind and solar (for curtailment)
+        net._pmax_solar = np.sum([p_max
+                              for i, (gen_type, p_max) in enumerate(zip(env_df['type'],
+                                                                        env_df['pmax']))
+                              if gen_type == "solar"])
+        net.add('Generator',
+                name='agg_solar',
+                bus='node',
+                carrier="solar",
+                marginal_cost=0.,
+                p_nom=net._pmax_solar
+                )
+        
+        net._pmax_wind = np.sum([p_max
+                              for i, (gen_type, p_max) in enumerate(zip(env_df['type'],
+                                                                        env_df['pmax']))
+                              if gen_type == "wind"])
+        net.add('Generator',
+                name='agg_wind',
+                bus='node',
+                carrier="wind",
+                marginal_cost=0.1,  # we prefer to curtail the wind if we have the choice
+                # that's because solar should be distributed on the grid
+                p_nom=net._pmax_wind
+        )
         return net
 
 
-    def run(self, load, params, gen_constraints=None,
-            ramp_mode=RampMode.hard, by_carrier=False, **kwargs):
+    def run(self,
+            load, 
+            total_solar,
+            total_wind,
+            params,
+            gen_constraints=None,
+            ramp_mode=RampMode.hard,
+            by_carrier=False,
+            **kwargs):
         """
         Implements the abstract method of *Dispatcher*
 
@@ -130,9 +187,16 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
         -------
         simplified_net: :class:`pypsa.Network`
         """
-        prods_dispatch, terminal_conditions, marginal_prices = main_run_disptach(
-            self if not by_carrier else self.simplify_net(),
-            load, params, gen_constraints, ramp_mode, **kwargs)
+        
+        total_solar = total_solar / self._pmax_solar
+        total_wind = total_wind / self._pmax_wind
+        prods_dispatch, terminal_conditions, marginal_prices, \
+            solar_gen_after_curtail, wind_gen_after_curtail = \
+                main_run_disptach(
+                    self if not by_carrier else self.simplify_net(),
+                    load, total_solar, total_wind, 
+                    params, gen_constraints, ramp_mode, **kwargs)
+        
         if by_carrier:
             self._simplified_chronix_scenario = self._chronix_scenario.simplify_chronix()
             self._simplified_chronix_scenario.prods_dispatch = prods_dispatch
@@ -150,7 +214,7 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
             self.reset_ramps_from_dataframe()
         else:
             self.reset_ramps_from_grid2op_env()
-
+        
         return DispatchResults(chronix=results, terminal_conditions=terminal_conditions)
 
     def simplify_net(self):
@@ -191,5 +255,3 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
                 df_full_ramp
             ], axis=1))
         return simplified_net
-
-

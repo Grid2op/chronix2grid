@@ -1,0 +1,12 @@
+eolien en mer: pmax = 336
+solaire: 93
+eolien terrestre : 93.3
+
+Par rapport au réseau d'avant:
+- enlevé les "petits" thermiques, surtout remplacés par du solaire
+- augmenté le nombre de "gros" thermiques (gaz avec CSC)
+- mis du "gros éolien" à droite
+- augmenté les rampes du nucléaire 2.8 -> 3.5 (NON)
+- augmenté les rampes de l'hydraulique 10.4 -> 11.2
+- on met plus d'éolien "en mer" à gauche, on rajoute du nucléaire au centre
+

@@ -19,6 +19,8 @@ import chronix2grid.constants as cst
 
 def main_run_disptach(pypsa_net, 
                       load,
+                      total_solar,
+                      total_wind,
                       params={},
                       gen_constraints={},
                       ramp_mode=RampMode.hard,
@@ -29,11 +31,13 @@ def main_run_disptach(pypsa_net,
     gen_constraints = update_gen_constrains(gen_constraints)  
     params = update_params(load.shape[0], load.index[0], params)
 
-    print ('Preprocessing input data..')
+    print ('Preprocessing input data..')    
     # Preprocess input data:
     #   - Add date range as index 
     #   - Check whether gen constraints has same lenght as load
     load_, gen_constraints_ = preprocess_input_data(load, gen_constraints, params)
+    solar_ = pd.DataFrame({"agg_solar": 1.0 * total_solar.values}, index=load_.index)
+    wind_ = pd.DataFrame({"agg_wind": 1.0 * total_wind.values}, index=load_.index)
     tot_snap = load_.index
 
     print('Filter generators ramps up/down')
@@ -59,6 +63,8 @@ def main_run_disptach(pypsa_net,
             snap_per_month = tot_snap[tot_snap.month == month]
             # Filter input data per month
             load_per_month = load_.loc[snap_per_month]
+            total_solar_per_month = solar_.loc[snap_per_month]
+            total_wind_per_month = wind_.loc[snap_per_month]
             # Get gen constraints separated and filter by month
             g_max_pu, g_min_pu = gen_constraints_['p_max_pu'], gen_constraints_['p_min_pu']
             g_max_pu_per_month = g_max_pu.loc[snap_per_month]
@@ -69,12 +75,19 @@ def main_run_disptach(pypsa_net,
                 for snaps in snap_per_mode:
                     # Truncate input data per mode (day, week, month)
                     load_per_mode = load_per_month.loc[snaps]
+                    total_solar_per_mode = total_solar_per_month.loc[snaps]
+                    total_wind_per_mode = total_wind_per_month.loc[snaps]
                     gen_max_pu_per_mode = g_max_pu_per_month.loc[snaps]
                     gen_min_pu_per_mode = g_min_pu_per_month.loc[snaps]
                     # Run opf given in specified mode
                     dispatch, termination_condition = run_opf(
-                        pypsa_net, load_per_mode, gen_max_pu_per_mode,
-                        gen_min_pu_per_mode, params, **kwargs)
+                        pypsa_net,
+                        load_per_mode,
+                        gen_max_pu_per_mode,
+                        gen_min_pu_per_mode, params, 
+                        total_solar=total_solar_per_mode,
+                        total_wind=total_wind_per_mode,
+                        **kwargs)
 
                     results.append(dispatch)
                     termination_conditions.append(termination_condition)
@@ -82,7 +95,7 @@ def main_run_disptach(pypsa_net,
         g_max_pu, g_min_pu = gen_constraints_['p_max_pu'], gen_constraints_['p_min_pu']
         dispatch, termination_condition = run_opf(
                pypsa_net, load_, g_max_pu,
-               g_min_pu, params, **kwargs)
+               g_min_pu, params, total_solar=solar_, total_wind=wind_, **kwargs)
 
         results.append(dispatch)
         termination_conditions.append(termination_condition)
@@ -114,8 +127,12 @@ def main_run_disptach(pypsa_net,
     end = time.time()
     print('Total time {} min'.format(round((end - start)/60, 2)))
     print('OPF Done......')
-
-    return prod_p, termination_conditions, marginal_prices
+    # at this stage prod_p contains the renewable agg_solar and agg_wind
+    
+    solar_gen_after_curtail = prod_p["agg_solar"] # / total_solar
+    wind_gen_after_curtail = prod_p["agg_wind"] # / total_wind
+    return prod_p, termination_conditions, marginal_prices, \
+        solar_gen_after_curtail, wind_gen_after_curtail
 
 # In case to launch by the terminal
 # ++  ++  ++  ++  ++  ++  ++  ++  +

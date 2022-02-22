@@ -1,6 +1,7 @@
 """Class for the economic dispatch framework. Allows to parametrize and run
 an economic dispatch based on RES and consumption time series"""
 
+import copy
 import os
 from abc import ABC, abstractmethod
 from copy import deepcopy
@@ -270,11 +271,36 @@ class Dispatcher(ABC):
             print('Saving results for the grids with aggregated generators by carriers...')
             res_load_scenario = self._simplified_chronix_scenario
 
+        wind_curtail_coeff = 1.0
+        solar_curtail_coeff = 1.0
+        # TODO perf do not recompute the res_load_scenario.wind_p.sum(axis=1)
+        if "agg_wind" in res_load_scenario.prods_dispatch:
+            wind_curtail_coeff = res_load_scenario.prods_dispatch["agg_wind"] / res_load_scenario.wind_p.sum(axis=1)
+            wind_curtail_coeff = wind_curtail_coeff.values.reshape(-1, 1)
+        if "agg_solar" in res_load_scenario.prods_dispatch:
+            solar_curtail_coeff = res_load_scenario.prods_dispatch["agg_solar"] / res_load_scenario.solar_p.sum(axis=1)
+            solar_curtail_coeff = solar_curtail_coeff.values.reshape(-1, 1)
+        
+        new_wind_after_curtail = res_load_scenario.wind_p * wind_curtail_coeff
+        new_solar_after_curtail = res_load_scenario.solar_p * solar_curtail_coeff
+        
         full_opf_dispatch = pd.concat(
-            [res_load_scenario.prods_dispatch, res_load_scenario.wind_p,
-             res_load_scenario.solar_p],
+            [res_load_scenario.prods_dispatch,
+             new_wind_after_curtail,
+             new_solar_after_curtail
+            ],
             axis=1
         )
+        
+        diff_wind = (res_load_scenario.wind_p - new_wind_after_curtail).sum(axis=1).values
+        print(f"INFO: wind curtailment max: {diff_wind.max():.2f} MW")
+        print(f"INFO: wind curtailment min: {diff_wind.min():.2f} MW")
+        print(f"INFO: wind curtailment sum: {diff_wind.sum():.2f} MW (total {new_wind_after_curtail.sum(axis=1).sum():.2f})")
+        diff_solar = (res_load_scenario.solar_p - new_solar_after_curtail).sum(axis=1).values
+        print(f"INFO: solar curtailment max: {diff_solar.max():.2f} MW")
+        print(f"INFO: solar curtailment min: {diff_solar.min():.2f} MW")
+        print(f"INFO: solar curtailment sum: {diff_solar.sum():.2f} MW (total {new_solar_after_curtail.sum(axis=1).sum():.2f})")
+        
         try:
             if self._env is not None:
                 full_opf_dispatch = full_opf_dispatch[self._env.name_gen].round(2)
@@ -291,7 +317,9 @@ class Dispatcher(ABC):
             gen_cap = pd.Series({gen_name: gen_pmax for gen_name, gen_pmax in
                                  zip(self._df['name'], self._df['pmax'])})
 
-        prod_p_forecasted_with_noise = add_noise_gen(full_opf_dispatch, gen_cap, noise_factor=params['planned_std'])
+        prod_p_forecasted_with_noise = add_noise_gen(copy.deepcopy(full_opf_dispatch),
+                                                     gen_cap,
+                                                     noise_factor=params['planned_std'])
 
         # prod_p_forecasted_with_noise.to_csv(
         prod_p_forecasted_with_noise.to_csv(
@@ -312,6 +340,12 @@ class Dispatcher(ABC):
         )
         res_load_scenario.loads.to_csv(
             os.path.join(output_folder, "load_p.csv.bz2"),
+            sep=';', index=False,
+            float_format=cst.FLOATING_POINT_PRECISION_FORMAT
+        )
+        # save the origin time series        
+        pd.concat([res_load_scenario.wind_p, res_load_scenario.solar_p], axis=1).to_csv(
+            os.path.join(output_folder, "prod_p_renew_orig.csv.bz2"),
             sep=';', index=False,
             float_format=cst.FLOATING_POINT_PRECISION_FORMAT
         )
@@ -349,7 +383,8 @@ class ChroniXScenario:
             load_minus_losses = self.loads.sum(axis=1) * (1 + losses_pct / 100)
         else:
             load_minus_losses = self.loads.sum(axis=1) + self.loss
-        return (load_minus_losses - self.total_res).to_frame(name=name)
+        # return (load_minus_losses - self.total_res).to_frame(name=name)
+        return (load_minus_losses).to_frame(name=name)
 
     def simplify_chronix(self):
         simplified_chronix = deepcopy(self)

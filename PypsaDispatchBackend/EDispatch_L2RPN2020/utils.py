@@ -268,7 +268,14 @@ def get_grouped_snapshots(snapshot, mode):
     }
     return periods[mode]
 
-def run_opf(net, demand, gen_max, gen_min, params, **kwargs):
+def run_opf(net,
+            demand,
+            gen_max,
+            gen_min,
+            params,
+            total_solar=None,
+            total_wind=None,
+            **kwargs):
     """ Run linear OPF problem in PyPSA considering
     only marginal costs and ramps as LP problem.
     
@@ -289,7 +296,6 @@ def run_opf(net, demand, gen_max, gen_min, params, **kwargs):
     dataframe
         Results of OPF dispatch
     """    
-    
     to_disp = {'day': demand.index.day.unique().values[0],
                'week': demand.index.week.unique().values[0],
                'month': demand.index.month.unique().values[0],
@@ -304,13 +310,22 @@ def run_opf(net, demand, gen_max, gen_min, params, **kwargs):
     net.loads_t.p_set = net.loads_t.p_set.iloc[0:0, 0:0]
     net.generators_t.p_max_pu = net.generators_t.p_max_pu.iloc[0:0, 0:0]
     net.generators_t.p_min_pu = net.generators_t.p_min_pu.iloc[0:0, 0:0]
+    
     # Set snapshots
     net.set_snapshots(demand.index)
     # ++  ++  ++  ++  ++  ++  ++  ++  ++  ++  ++ 
     # Fill load and gen constraints to PyPSA grid
+    if total_solar is not None or total_wind is not None:
+        gen_max = copy.deepcopy(gen_max)
+        gen_min = copy.deepcopy(gen_min)
+        if total_solar is not None:
+            gen_max["agg_solar"] = total_solar
+        if total_wind is not None:
+            gen_max["agg_wind"] = total_wind
     net.loads_t.p_set = pd.concat([demand])
     net.generators_t.p_max_pu = pd.concat([gen_max], axis=1)
     net.generators_t.p_min_pu = pd.concat([gen_min], axis=1)
+    
     # ++  ++  ++  ++
     # Run Linear OPF
     status, termination_condition = net.lopf(net.snapshots, **kwargs)

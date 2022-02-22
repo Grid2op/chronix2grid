@@ -31,13 +31,13 @@ def main(dispatcher, input_folder, output_folder, grid_folder, seed, params, par
     """
 
     #np.random.seed(seed) # already done before
-
     hydro_constraints = dispatcher.make_hydro_constraints_from_res_load_scenario()
-    agg_load_without_renew = dispatcher.net_load(params_opf['losses_pct'],
-                                                 name=dispatcher.loads.index[0])
-
+    load_with_losses = dispatcher.net_load(params_opf['losses_pct'],
+                                           name=dispatcher.loads.index[0])
     dispatch_results = dispatcher.run(
-        agg_load_without_renew,
+        load=load_with_losses,
+        total_solar=dispatcher.solar_p.sum(axis=1),
+        total_wind=dispatcher.wind_p.sum(axis=1),
         params=params_opf,
         gen_constraints=hydro_constraints,
         ramp_mode=parse_ramp_mode(params_opf['ramp_mode']),
