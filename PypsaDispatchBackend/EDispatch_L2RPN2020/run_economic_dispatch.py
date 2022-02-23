@@ -54,6 +54,13 @@ def main_run_disptach(pypsa_net,
     pypsa_net = preprocess_net(pypsa_net, params['step_opf_min'])
 
     months = tot_snap.month.unique()
+    slack_name = None
+    slack_pmin = None
+    if 'slack_name' in params and 'slack_pmin' in params:
+        # user specified a pmin for the slack bus
+        slack_name = str(params["slack_name"])
+        slack_pmin = float(params["slack_pmin"]) / float(pypsa_net.generators.loc[slack_name].p_nom)
+        
     start = time.time()
     results, termination_conditions = [], []
     if (params['mode_opf'] is not None):
@@ -87,6 +94,8 @@ def main_run_disptach(pypsa_net,
                         gen_min_pu_per_mode, params, 
                         total_solar=total_solar_per_mode,
                         total_wind=total_wind_per_mode,
+                        slack_name=slack_name,
+                        slack_pmin=slack_pmin,
                         **kwargs)
 
                     results.append(dispatch)
@@ -95,7 +104,10 @@ def main_run_disptach(pypsa_net,
         g_max_pu, g_min_pu = gen_constraints_['p_max_pu'], gen_constraints_['p_min_pu']
         dispatch, termination_condition = run_opf(
                pypsa_net, load_, g_max_pu,
-               g_min_pu, params, total_solar=solar_, total_wind=wind_, **kwargs)
+               g_min_pu, params, total_solar=solar_, total_wind=wind_,
+               slack_name=slack_name,
+               slack_pmin=slack_pmin,
+               **kwargs)
 
         results.append(dispatch)
         termination_conditions.append(termination_condition)
@@ -128,11 +140,7 @@ def main_run_disptach(pypsa_net,
     print('Total time {} min'.format(round((end - start)/60, 2)))
     print('OPF Done......')
     # at this stage prod_p contains the renewable agg_solar and agg_wind
-    
-    solar_gen_after_curtail = prod_p["agg_solar"] # / total_solar
-    wind_gen_after_curtail = prod_p["agg_wind"] # / total_wind
-    return prod_p, termination_conditions, marginal_prices, \
-        solar_gen_after_curtail, wind_gen_after_curtail
+    return prod_p, termination_conditions, marginal_prices
 
 # In case to launch by the terminal
 # ++  ++  ++  ++  ++  ++  ++  ++  +

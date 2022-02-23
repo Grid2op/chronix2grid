@@ -1,9 +1,5 @@
-from datetime import datetime
-from enum import Enum
-
 import numpy as np
 import pandas as pd
-import pypsa
 import copy 
 
 from chronix2grid.generation.dispatch.utils import RampMode
@@ -275,6 +271,8 @@ def run_opf(net,
             params,
             total_solar=None,
             total_wind=None,
+            slack_name=None,
+            slack_pmin=None,
             **kwargs):
     """ Run linear OPF problem in PyPSA considering
     only marginal costs and ramps as LP problem.
@@ -313,15 +311,23 @@ def run_opf(net,
     
     # Set snapshots
     net.set_snapshots(demand.index)
+    
     # ++  ++  ++  ++  ++  ++  ++  ++  ++  ++  ++ 
     # Fill load and gen constraints to PyPSA grid
     if total_solar is not None or total_wind is not None:
+        # allow to curtail the solar and wind (to avoid infeasibility)
         gen_max = copy.deepcopy(gen_max)
-        gen_min = copy.deepcopy(gen_min)
         if total_solar is not None:
             gen_max["agg_solar"] = total_solar
         if total_wind is not None:
             gen_max["agg_wind"] = total_wind
+            
+    if slack_name is not None and slack_pmin is not None:
+        # add pmin to the slack bus, to avoid negative production when losses
+        # are added
+        gen_min = copy.deepcopy(gen_min)
+        gen_min[slack_name] = slack_pmin
+        
     net.loads_t.p_set = pd.concat([demand])
     net.generators_t.p_max_pu = pd.concat([gen_max], axis=1)
     net.generators_t.p_min_pu = pd.concat([gen_min], axis=1)
@@ -333,7 +339,6 @@ def run_opf(net,
         print('** OPF failed to find an optimal solution **')
     else:
         print('-- opf succeeded  >Objective value (should be greater than zero!')
-
     return net.generators_t.p.copy(), termination_condition
 
 

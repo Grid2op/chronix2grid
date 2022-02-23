@@ -190,12 +190,11 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
         
         total_solar = total_solar / self._pmax_solar
         total_wind = total_wind / self._pmax_wind
-        prods_dispatch, terminal_conditions, marginal_prices, \
-            solar_gen_after_curtail, wind_gen_after_curtail = \
-                main_run_disptach(
-                    self if not by_carrier else self.simplify_net(),
-                    load, total_solar, total_wind, 
-                    params, gen_constraints, ramp_mode, **kwargs)
+        prods_dispatch, terminal_conditions, marginal_prices = \
+            main_run_disptach(
+                self if not by_carrier else self.simplify_net(),
+                load, total_solar, total_wind, 
+                params, gen_constraints, ramp_mode, **kwargs)
         
         if by_carrier:
             self._simplified_chronix_scenario = self._chronix_scenario.simplify_chronix()
