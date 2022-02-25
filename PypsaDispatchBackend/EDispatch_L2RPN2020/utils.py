@@ -337,9 +337,10 @@ def run_opf(net,
     status, termination_condition = net.lopf(net.snapshots, **kwargs)
     if status != 'ok':
         print('** OPF failed to find an optimal solution **')
+        return None, termination_condition
     else:
         print('-- opf succeeded  >Objective value (should be greater than zero!')
-    return net.generators_t.p.copy(), termination_condition
+        return net.generators_t.p.copy(), termination_condition
 
 
 def interpolate_dispatch(dispatch, method='quadratic'):

@@ -47,7 +47,7 @@ def main(dispatcher, input_folder, output_folder, grid_folder, seed, params, par
     )
     dispatcher.save_results(params, output_folder)
 
-    is_dispatch_successful=(len(dispatcher.chronix_scenario.prods_dispatch.columns)>=1)
+    is_dispatch_successful=(dispatcher.chronix_scenario.prods_dispatch is not None) and (len(dispatcher.chronix_scenario.prods_dispatch.columns)>=1)
     if params_opf["loss_grid2op_simulation"] and is_dispatch_successful:
         new_prod_p, new_prod_forecasted_p = simulate_loss(grid_folder, output_folder, params_opf, write_results = True)
         dispatch_results = update_results_loss(dispatch_results, new_prod_p, params_opf)

@@ -60,11 +60,11 @@ def main_run_disptach(pypsa_net,
         # user specified a pmin for the slack bus
         slack_name = str(params["slack_name"])
         slack_pmin = float(params["slack_pmin"]) / float(pypsa_net.generators.loc[slack_name].p_nom)
-        
+    error_ = False
     start = time.time()
     results, termination_conditions = [], []
     if (params['mode_opf'] is not None):
-        print('mode_opf is not None')
+        print(f'mode_opf is not None: {params["mode_opf"]}')
         for month in months:
             # Get snapshots per month
             snap_per_month = tot_snap[tot_snap.month == month]
@@ -79,7 +79,7 @@ def main_run_disptach(pypsa_net,
             # Get grouped snapsshots given monthly snapshots
             if (params['mode_opf'] is not None):
                 snap_per_mode = get_grouped_snapshots(snap_per_month, params['mode_opf'])
-                for snaps in snap_per_mode:
+                for snap_id, snaps in enumerate(snap_per_mode):
                     # Truncate input data per mode (day, week, month)
                     load_per_mode = load_per_month.loc[snaps]
                     total_solar_per_mode = total_solar_per_month.loc[snaps]
@@ -97,7 +97,10 @@ def main_run_disptach(pypsa_net,
                         slack_name=slack_name,
                         slack_pmin=slack_pmin,
                         **kwargs)
-
+                    if dispatch is None:
+                        print(f"ERROR: dispatch failed for 'month' {month} (snap {snap_id})")
+                        error_ = True
+                        break
                     results.append(dispatch)
                     termination_conditions.append(termination_condition)
     else:
@@ -109,9 +112,15 @@ def main_run_disptach(pypsa_net,
                slack_pmin=slack_pmin,
                **kwargs)
 
+        if dispatch is None:
+            error_ = True
+            print(f"ERROR: dispatch failed.")
         results.append(dispatch)
         termination_conditions.append(termination_condition)
 
+    if error_:
+        return None, termination_condition, None
+    
     # Unpack individual dispatchs and prices
     opf_prod = pd.DataFrame()
     for df in results:

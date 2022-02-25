@@ -26,7 +26,7 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
     RampCorrectingFactor = 0.1
     
     PmaxErrorCorrRatio = 0.95
-    RampErrorCorrRatio = 0.9
+    RampErrorCorrRatio = 0.95
         
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -97,7 +97,8 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
                 name='agg_wind',
                 bus='node',
                 carrier="wind",
-                marginal_cost=0.,
+                marginal_cost=0.1,  # we prefer to curtail the wind if we have the choice
+                # that's because solar should be distributed on the grid
                 p_nom=net._pmax_wind
         )
         
@@ -195,6 +196,8 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
                 self if not by_carrier else self.simplify_net(),
                 load, total_solar, total_wind, 
                 params, gen_constraints, ramp_mode, **kwargs)
+        if prods_dispatch is None or marginal_prices is None:
+            return None
         
         if by_carrier:
             self._simplified_chronix_scenario = self._chronix_scenario.simplify_chronix()

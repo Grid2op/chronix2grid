@@ -271,8 +271,21 @@ class Dispatcher(ABC):
             print('Saving results for the grids with aggregated generators by carriers...')
             res_load_scenario = self._simplified_chronix_scenario
 
+        path_metadata_failed = os.path.join(output_folder, "DISPATCH_FAILED")
+        if res_load_scenario is None:
+            # the backend failed to find a solution
+            print('ERROR: the backend failed to find a consistent state. Nothing is saved.')
+            with open(path_metadata_failed, "w", encoding="utf-8") as f:
+                f.write("The dispatch has failed. We cannot do anything.")
+            return
+        
+        # this did not failed, so I remove it
+        if os.path.exists(path_metadata_failed):
+            os.remove(path_metadata_failed)
+        
         wind_curtail_coeff = 1.0
         solar_curtail_coeff = 1.0
+        
         # TODO perf do not recompute the res_load_scenario.wind_p.sum(axis=1)
         if "agg_wind" in res_load_scenario.prods_dispatch:
             wind_curtail_coeff = res_load_scenario.prods_dispatch["agg_wind"] / res_load_scenario.wind_p.sum(axis=1)

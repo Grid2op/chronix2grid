@@ -43,7 +43,12 @@ def main(scenario_destination_path, seed, params, loads_charac, load_weekly_patt
     temperature_noise = utils.generate_coarse_noise(params, 'temperature')
 
     print('Computing loads ...')
-    loads_series = conso.compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern)
+    start_day = datetime_index[0]
+    loads_series = conso.compute_loads(loads_charac,
+                                       temperature_noise,
+                                       params,
+                                       load_weekly_pattern,
+                                       start_day=start_day)
     loads_series['datetime'] = datetime_index
 
     # Save files
