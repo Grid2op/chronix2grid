@@ -24,9 +24,6 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
     # to avoid problems for respecting pmax and ramps when rounding production values in chronics at the end, we apply a correcting factor
     PmaxCorrectingFactor = 1
     RampCorrectingFactor = 0.1
-    
-    PmaxErrorCorrRatio = 0.9
-    RampErrorCorrRatio = 0.95
         
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -64,12 +61,9 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
             if gen_type not in carrier_types_to_exclude:
                 p_max = grid2op_env.gen_pmax[i]
                 pnom = p_max - cls.PmaxCorrectingFactor
-                pnom *= cls.PmaxErrorCorrRatio
                 
                 rampUp = (grid2op_env.gen_max_ramp_up[i] - cls.RampCorrectingFactor) / p_max
                 rampDown = (grid2op_env.gen_max_ramp_down[i] - cls.RampCorrectingFactor) / p_max
-                rampUp *= cls.RampErrorCorrRatio
-                rampDown *= cls.RampErrorCorrRatio
                 
                 net.add(
                     class_name='Generator', name=generator, bus='node',
@@ -129,9 +123,9 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
                                             env_df['max_ramp_down'],
                                             env_df['cost_per_mw'])):
             if gen_type not in carrier_types_to_exclude:
-                pnom = (p_max - cls.PmaxCorrectingFactor) * cls.PmaxErrorCorrRatio
-                rampUp = (ramp_up- cls.RampCorrectingFactor) * cls.RampErrorCorrRatio / p_max
-                rampDown = (ramp_down - cls.RampCorrectingFactor) * cls.RampErrorCorrRatio / p_max
+                pnom = (p_max - cls.PmaxCorrectingFactor)
+                rampUp = (ramp_up- cls.RampCorrectingFactor) / p_max
+                rampDown = (ramp_down - cls.RampCorrectingFactor) / p_max
 
                 net.add(
                     class_name='Generator',

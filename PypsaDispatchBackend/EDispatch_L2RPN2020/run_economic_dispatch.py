@@ -56,10 +56,17 @@ def main_run_disptach(pypsa_net,
     months = tot_snap.month.unique()
     slack_name = None
     slack_pmin = None
-    if 'slack_name' in params and 'slack_pmin' in params:
-        # user specified a pmin for the slack bus
-        slack_name = str(params["slack_name"])
-        slack_pmin = float(params["slack_pmin"]) / float(pypsa_net.generators.loc[slack_name].p_nom)
+    if 'slack_name' in params:
+        if 'slack_pmin' in params:
+            # user specified a pmin for the slack bus
+            slack_name = str(params["slack_name"])
+            slack_pmin = float(params["slack_pmin"]) / float(pypsa_net.generators.loc[slack_name].p_nom)
+
+        if 'slack_pmax' in params:
+            # user specified a pmin for the slack bus
+            slack_name = str(params["slack_name"])
+            slack_pmax = float(params["slack_pmax"]) / float(pypsa_net.generators.loc[slack_name].p_nom)
+        
     error_ = False
     start = time.time()
     results, termination_conditions = [], []
@@ -96,6 +103,7 @@ def main_run_disptach(pypsa_net,
                         total_wind=total_wind_per_mode,
                         slack_name=slack_name,
                         slack_pmin=slack_pmin,
+                        slack_pmax=slack_pmax,
                         **kwargs)
                     if dispatch is None:
                         print(f"ERROR: dispatch failed for 'month' {month} (snap {snap_id})")
@@ -110,6 +118,7 @@ def main_run_disptach(pypsa_net,
                g_min_pu, params, total_solar=solar_, total_wind=wind_,
                slack_name=slack_name,
                slack_pmin=slack_pmin,
+               slack_pmax=slack_pmax,
                **kwargs)
 
         if dispatch is None:

@@ -273,6 +273,7 @@ def run_opf(net,
             total_wind=None,
             slack_name=None,
             slack_pmin=None,
+            slack_pmax=None,
             **kwargs):
     """ Run linear OPF problem in PyPSA considering
     only marginal costs and ramps as LP problem.
@@ -303,6 +304,34 @@ def run_opf(net,
         print(f'\n--> OPF formulation by => full chronix - Analyzing ')
     else:
         print(f'\n--> OPF formulation by => {mode} - Analyzing {mode} # {to_disp[mode]}')
+    
+    if "PmaxErrorCorrRatio" in params:
+        if "agg_solar" in net.generators.p_nom:
+            init_solar = net.generators.p_nom["agg_solar"]
+        if "agg_wind" in net.generators.p_nom:
+            init_wind = net.generators.p_nom["agg_wind"]
+            
+        net.generators.p_nom *= float(params["PmaxErrorCorrRatio"])
+        
+        if "agg_solar" in net.generators.p_nom:
+            net.generators.p_nom["agg_solar"] = init_solar
+        if "agg_wind" in net.generators.p_nom:
+            net.generators.p_nom["agg_wind"] = init_wind
+    
+    if "RampErrorCorrRatio" in params:
+        if "agg_solar" in net.generators.ramp_limit_up:
+            init_solar = net.generators.ramp_limit_up["agg_solar"]
+        if "agg_wind" in net.generators.ramp_limit_up:
+            init_wind = net.generators.ramp_limit_up["agg_wind"]
+            
+        net.generators.ramp_limit_up *= float(params["RampErrorCorrRatio"])
+        net.generators.ramp_limit_down *= float(params["RampErrorCorrRatio"])
+        
+        if "agg_solar" in net.generators.ramp_limit_up:
+            net.generators.ramp_limit_up["agg_solar"] = init_solar
+        if "agg_wind" in net.generators.ramp_limit_up:
+            net.generators.ramp_limit_up["agg_wind"] = init_wind
+        
     # Reset information previously 
     # saved it in PyPSA instance
     net.loads_t.p_set = net.loads_t.p_set.iloc[0:0, 0:0]
@@ -327,6 +356,16 @@ def run_opf(net,
         # are added
         gen_min = copy.deepcopy(gen_min)
         gen_min[slack_name] = slack_pmin
+            
+    if slack_name is not None and slack_pmax is not None:
+        # add pmin to the slack bus, to avoid negative production when losses
+        # are added
+        gen_max = copy.deepcopy(gen_max)
+        gen_max[slack_name] = slack_pmax
+    
+    if slack_name is not None and "slack_ramp_limit_ratio" in params:
+        net.generators.ramp_limit_up[slack_name] *= float(params["slack_ramp_limit_ratio"])
+        net.generators.ramp_limit_down[slack_name] *= float(params["slack_ramp_limit_ratio"])
         
     net.loads_t.p_set = pd.concat([demand])
     net.generators_t.p_max_pu = pd.concat([gen_max], axis=1)

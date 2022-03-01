@@ -10,81 +10,10 @@ import copy
 import pandas as pd
 import warnings
 import pdb
-OUTPUT_FOLDER = os.path.join('..', 'example', 'custom', 'output')
-path_chronics_outputopf = os.path.join(OUTPUT_FOLDER, "all_scenarios")
 
-########
-# Detailed configuration to be set in <INPUT_FOLDER>/<CASE>/params.json
-weeks = 1
-n_scenarios = 1
+FLOATING_POINT_PRECISION_FORMAT = '%.1f'
 
-mode = 'RLTK'
-mode = 'RL'
-li_months = ["2050-01-01", 
-             "2050-01-08",
-             "2050-01-15",
-             "2050-01-22",
-             "2050-02-01",
-             "2050-02-08",
-             "2050-02-15",
-             "2050-02-22",
-             "2050-03-01",
-             "2050-03-08",
-             "2050-03-15",
-             "2050-03-22",
-             "2050-04-01",
-             "2050-04-08",
-             "2050-04-15",
-             "2050-04-22",
-             "2050-05-01", 
-             "2050-05-08", 
-             "2050-05-15", 
-             "2050-05-22", 
-             "2050-06-01",
-             "2050-06-08",
-             "2050-06-15",
-             "2050-06-22",
-             "2050-07-01", 
-             "2050-07-08", 
-             "2050-07-15", 
-             "2050-07-22", 
-             "2050-08-01", 
-             "2050-08-08", 
-             "2050-08-15", 
-             "2050-08-22", 
-             "2050-09-01", 
-             "2050-09-08", 
-             "2050-09-15", 
-             "2050-09-22", 
-             "2050-10-01", 
-             "2050-10-08", 
-             "2050-10-15", 
-             "2050-10-22", 
-             "2050-11-01", 
-             "2050-11-08", 
-             "2050-11-15", 
-             "2050-11-22", 
-             "2050-12-01",
-             "2050-12-08",
-             "2050-12-15",
-             "2050-12-22",
-            ]
-
-env_name = "case118_l2rpn_wcci_benjamin"
-path_tmp = os.path.join("..", "example", "custom", "input", "generation")
-output_path = os.path.join(path_tmp, env_name)
-grid_path = os.path.join(output_path, "grid.json")
-
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore")
-    env118_withoutchron = grid2op.make(
-        output_path,
-        test=True,
-        grid_path=grid_path, # assign it the 118 grid
-        chronics_class=ChangeNothing, # tell it to change nothing (not the most usable environment...)
-    )
-
-def check_controlable_gens(gen_name, env, prods_p_total):
+def check_controlable_gens(gen_name, env, prods_p_total, weeks=1):
     pmax_ = np.array([env.gen_pmax[np.where(env.name_gen == nm_)[0]] for nm_ in gen_name])
     pmax_ = pmax_.ravel()
     check_pmax = prods_p_total[gen_name] > pmax_
@@ -117,59 +46,34 @@ def check_all_controlable_gens(prods_p_total, gen_hydro_name2, gen_nuclear_name2
 
     errors = []
     if not np.all(check_pmax_hydro.sum() == 0):
-        errors.append(f"some hydro are above pmax:\n{check_pmax_hydro.sum()}")
+        errors.append((check_pmax_hydro.sum(), f"some hydro are above pmax:\n{check_pmax_hydro.sum()}"))
     if not np.all(check_pmin_hydro.sum() == 0):
-        errors.append(f"some hydro are below pmin:\n{check_pmin_hydro.sum()}")
+        errors.append((check_pmin_hydro.sum(), f"some hydro are below pmin:\n{check_pmin_hydro.sum()}"))
     if not np.all(check_max_up_hydro.sum() == 0):
-        errors.append(f"some hydro are above max_up:\n{check_max_up_hydro.sum()}")
+        errors.append((check_max_up_hydro.sum(), f"some hydro are above max_up:\n{check_max_up_hydro.sum()}"))
     if not np.all(check_max_down_hydro.sum() == 0):
-        errors.append(f"some hydro are below max_down:\n{check_max_down_hydro.sum()}")
+        errors.append((check_max_down_hydro.sum(), f"some hydro are below max_down:\n{check_max_down_hydro.sum()}"))
 
     if not np.all(check_pmax_nuclear.sum() == 0):
-        errors.append(f"some nuclear are above pmax:\n{check_pmax_nuclear.sum()}")
+        errors.append((check_pmax_nuclear.sum(), f"some nuclear are above pmax:\n{check_pmax_nuclear.sum()}"))
     if not np.all(check_pmin_nuclear.sum() == 0):
-        errors.append(f"some nuclear are below pmin:\n{check_pmin_nuclear.sum()}")
+        errors.append((check_pmin_nuclear.sum(), f"some nuclear are below pmin:\n{check_pmin_nuclear.sum()}"))
     if not np.all(check_max_up_nuclear.sum() == 0):
-        errors.append(f"some nuclear are above max_up:\n{check_max_up_nuclear.sum()}")
+        errors.append((check_max_up_nuclear.sum(), f"some nuclear are above max_up:\n{check_max_up_nuclear.sum()}"))
     if not np.all(check_max_down_nuclear.sum() == 0):
-        errors.append(f"some nuclear are below max_down:\n{check_max_down_nuclear.sum()}")
+        errors.append((check_max_down_nuclear.sum(), f"some nuclear are below max_down:\n{check_max_down_nuclear.sum()}"))
 
     if not np.all(check_pmax_thermal.sum() == 0):
-        errors.append(f"some thermal are above pmax:\n{check_pmax_thermal.sum()}")
+        errors.append((check_pmax_thermal.sum(), f"some thermal are above pmax:\n{check_pmax_thermal.sum()}"))
     if not np.all(check_pmin_thermal.sum() == 0):
-        errors.append(f"some thermal are below pmin:\n{check_pmin_thermal.sum()}")
+        errors.append((check_pmin_thermal.sum(), f"some thermal are below pmin:\n{check_pmin_thermal.sum()}"))
     if not np.all(check_max_up_thermal.sum() == 0):
-        errors.append(f"some thermal are above max_up:\n{check_max_up_thermal.sum()}")
+        errors.append((check_max_up_thermal.sum(), f"some thermal are above max_up:\n{check_max_up_thermal.sum()}"))
     if not np.all(check_max_down_thermal.sum() == 0):
-        errors.append(f"some thermal are below max_down:\n{check_max_down_thermal.sum()}")
+        errors.append((check_max_down_thermal.sum(), f"some thermal are below max_down:\n{check_max_down_thermal.sum()}"))
 
     return errors
 
-gen_solar_name2 = env118_withoutchron.name_gen[env118_withoutchron.gen_type == "solar"]
-gen_wind_name2 = env118_withoutchron.name_gen[env118_withoutchron.gen_type == "wind"]
-gen_hydro_name2 = env118_withoutchron.name_gen[env118_withoutchron.gen_type == "hydro"]
-gen_nuclear_name2 = env118_withoutchron.name_gen[env118_withoutchron.gen_type == "nuclear"]
-gen_thermal_name2 = env118_withoutchron.name_gen[env118_withoutchron.gen_type == "thermal"]
-########
-    
-path_chronics_fixed = os.path.join(OUTPUT_FOLDER, "fixed_chronics")
-param = env118_withoutchron.parameters
-param.NO_OVERFLOW_DISCONNECTION = True
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore")
-    env_for_loss = grid2op.make(
-        output_path,
-        test=True,
-        grid_path=grid_path, # assign it the 118 grid
-        chronics_path=path_chronics_outputopf,
-        param=param,
-        backend=LightSimBackend()
-        )
-
-###
-slack_id = 37
-
-###
 def fill_real_gen(target,
                   row_id,
                   obs,
@@ -192,15 +96,23 @@ def fill_real_gen(target,
     can_adjust[slack_id] = False
     slack_abs = gen_p_setpoint[slack_id]  # obs.gen_p[slack_id]  # gen_p_setpoint[slack_id]
     
-    max_split_slack = 0.5 * to_split
-    if max_abs_split is not None:
-        # limit the amount of power i got from this
-        if max_split_slack > max_abs_split:
-            max_split_slack = max_abs_split
-        elif max_split_slack < -max_abs_split:
-            max_split_slack = -max_abs_split
+    max_split_slack = 0.7 * to_split
+    if prev is not None:
+        min_slack, max_slack = [max(obs.gen_pmin[slack_id],
+                                    prev[slack_id] - obs.gen_max_ramp_down[slack_id]),
+                                min(obs.gen_pmax[slack_id],
+                                    prev[slack_id] + obs.gen_max_ramp_up[slack_id])]
+        min_slack += 1.0
+        max_slack -= 1.0
+        if max_split_slack > 0.:
+            if slack_abs + max_split_slack > max_slack:
+                max_split_slack = max_slack - slack_abs
+        if max_split_slack < 0.:
+            if slack_abs + max_split_slack < min_slack:
+                max_split_slack = min_slack - slack_abs
+            
         
-    to_split_others = 0.5 * to_split
+    to_split_others = 0.3 * to_split
     
     if to_split_others > 0.:
         total_margin = np.minimum(obs.gen_max_ramp_up[can_adjust] - delta_previous, 
@@ -256,31 +168,14 @@ def fill_real_gen(target,
         # do not turn on turned off generators, because I can
         total_margin[~turned_on] = 0.
     else:
-        # print("\t forced to turn on...")
-        # total_margin_this = abs(np.sum(total_margin[~turned_off]))
-        # needed_margin = abs(to_split) - total_margin_this
-        # total_margin[turned_off] /=  total_margin_this
-        # total_margin[turned_off] *=  needed_margin
         total_margin[~turned_on] = 0.
         to_split_others = np.sign(to_split_others) * (abs(np.sum(total_margin[turned_on])) - rounding_margin)
-        print("to_split limited")
-    # slack_abs -= to_split
         
     sum_margin = np.sum(total_margin)
     redisp_ = 1.0 * gen_p_setpoint[can_adjust]
     
-
-    # redisp_ += np.sign(to_split) * total_margin
     if sum_margin == 0.:
         print("no margin for your system !")
-    else:
-        # if i == 1:
-        #     possible_target_p = redisp_ + to_split * total_margin / sum_margin
-        #     test_ = 1.0 * target
-        #     test_[row_id, can_adjust] = possible_target_p
-        #     np.where(np.arange(obs.n_gen)[can_adjust] == gen_debug_id)[0]
-        #     # import pdb
-        #     # pdb.set_trace()
         
         redisp_ += to_split_others * total_margin / sum_margin
     
@@ -288,133 +183,269 @@ def fill_real_gen(target,
     target[row_id, slack_id] = slack_abs + max_split_slack
     return loss
 
-###
-gen_debug_id = 53  # TODO
-
-final_gen_p = np.full((weeks * 7 * 288 - 1, env_for_loss.n_gen), fill_value=np.NaN, dtype=np.float32)
-final_gen_v = np.full((weeks * 7 * 288 - 1, env_for_loss.n_gen), fill_value=np.NaN, dtype=np.float32)
-final_load_p = np.full((weeks * 7 * 288 - 1, env_for_loss.n_load), fill_value=np.NaN, dtype=np.float32)
-final_load_q = np.full((weeks * 7 * 288 - 1, env_for_loss.n_load), fill_value=np.NaN, dtype=np.float32)
-all_loss_orig = np.zeros(weeks * 7 * 288 - 1)
-
-obs = env_for_loss.reset()
-max_abs_split = 5.0
-i = 0
-all_loss_orig[i] = fill_real_gen(final_gen_p, i, obs, env_for_loss, 
-                                 gen_p_setpoint=env_for_loss.chronics_handler.real_data.data.prod_p[i],
-                                 slack_id=slack_id,
-                                 max_abs_split=max_abs_split)
-final_gen_v[i] = obs.gen_v
-final_load_p[i] = obs.load_p
-final_load_q[i] = obs.load_q
-chron_name = env_for_loss.chronics_handler.get_id()
-done = False
-prev_debug = 1.0 * obs.gen_p
-while not done:
-    obs, reward, done, info = env_for_loss.step(env_for_loss.action_space())
-    i += 1
-    all_loss_orig[i] = fill_real_gen(final_gen_p,
-                                     i,
-                                     obs,
-                                     env_for_loss,
-                                     gen_p_setpoint=env_for_loss.chronics_handler.real_data.data.prod_p[i],
-                                     prev=1.0 * final_gen_p[i-1],
-                                     max_abs_split=max_abs_split,
-                                     # prev_diff=1.0 * (final_gen_p[i-1] - prev_),
-                                     slack_id=slack_id)
-    final_gen_v[i] = 1.0 * obs.gen_v
-    final_load_p[i] = 1.0 * obs.load_p
-    final_load_q[i] = 1.0 * obs.load_q
-    if (final_gen_p[i][gen_debug_id] - final_gen_p[i-1][gen_debug_id]) < -obs.gen_max_ramp_down[gen_debug_id]:
-        print(f"{i = }, final: {final_gen_p[i][gen_debug_id]}, previous : {final_gen_p[i-1][gen_debug_id]}")
-        # import pdb
-        # pdb.set_trace()
-    prev_debug = 1.0 * obs.gen_p
-    
-###
-final_gen_df = pd.DataFrame(final_gen_p, columns=env_for_loss.name_gen)
-errors = check_all_controlable_gens(final_gen_df, gen_hydro_name2, gen_nuclear_name2, gen_thermal_name2, env118_withoutchron)
-if errors:
-    for el in errors:
-        print(el)
-        print()
-    # raise RuntimeError("some constraints are not met")
-print("No errors after iteration 0 !")
-
-###
-# now adjust the generators schedule so that they do not move
-cond_ = True
-all_loss = 1.0 * all_loss_orig
-prev_max_diff = 100000.
-max_abs_split = 5.0
-while cond_:
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore")
-        env_fixed = grid2op.make(
-            output_path,
-            test=True,
-            grid_path=grid_path, # assign it the 118 grid
-            param=param,
-            backend=LightSimBackend(),
-            chronics_class=FromNPY,
-            chronics_path=path_chronics_outputopf,
-            data_feeding_kwargs={"load_p": final_load_p,
-                                "load_q": final_load_q,
-                                "prod_p": 1.0 * final_gen_p,
-                                "prod_v": final_gen_v}
-            )
-    # this should be as close to 0. as possible...
-    # we might do a second "repartition loop" to make sure it's ok :-)
-    i = 0
-    final_gen_p_tmp = final_gen_p * np.NaN
-    diff_ = np.full((weeks * 7 * 288 - 1, env_fixed.n_gen), fill_value=np.NaN)
-    all_loss = np.zeros(weeks * 7 * 288 - 1)
-    obs = env_fixed.reset()
-    diff_[i] = obs.gen_p - final_gen_p[i]
-    all_loss[i] = fill_real_gen(final_gen_p_tmp,
-                                i,
-                                obs,
-                                env_fixed,
-                                gen_p_setpoint=final_gen_p[i],
-                                slack_id=slack_id,
-                                max_abs_split=max_abs_split)
-    # prev_ = obs.gen_p
-    while True:
-        obs, reward, done, info = env_fixed.step(env_for_loss.action_space())
-        if done:
-            break
-        i += 1
+def adjust_gens(all_loss_orig,
+                env_path,
+                grid_path,
+                env_param,
+                path_chronic,
+                load_p, 
+                load_q,
+                gen_p,
+                gen_v,
+                weeks=1,
+                max_abs_split = 5.0,  # dispatch, on the other generators, at most 5.0 MW
+                ):
+    error_ = None
+    cond_ = True
+    gen_p = 1.0 * gen_p  # not to change input data
+    all_loss = 1.0 * all_loss_orig
+    prev_max_diff = 100000.
+    while cond_:
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore")
+            env_fixed = grid2op.make(
+                env_path,
+                test=True,
+                grid_path=grid_path, # assign it the 118 grid
+                param=env_param,
+                backend=LightSimBackend(),
+                chronics_class=FromNPY,
+                chronics_path=path_chronic,
+                data_feeding_kwargs={"load_p": load_p,
+                                     "load_q": load_q,
+                                     "prod_p": 1.0 * gen_p,
+                                     "prod_v": gen_v}
+                )
+            
+        # this should be as close to 0. as possible...
+        # we might do a second "repartition loop" to make sure it's ok :-)
+        i = 0
+        final_gen_p_tmp = gen_p * np.NaN
+        diff_ = np.full((weeks * 7 * 288 - 1, env_fixed.n_gen), fill_value=np.NaN)
+        all_loss = np.zeros(weeks * 7 * 288 - 1)
+        obs = env_fixed.reset()
+        diff_[i] = obs.gen_p - gen_p[i]
         all_loss[i] = fill_real_gen(final_gen_p_tmp,
-                                    i, obs,
+                                    i,
+                                    obs,
                                     env_fixed,
-                                    gen_p_setpoint=final_gen_p[i],
-                                    prev=final_gen_p_tmp[i-1], 
+                                    gen_p_setpoint=gen_p[i],
                                     slack_id=slack_id,
                                     max_abs_split=max_abs_split)
-        diff_[i] = obs.gen_p - final_gen_p_tmp[i]
-    max_diff = np.abs(diff_).max()
-    final_gen_p = 1.0 * final_gen_p_tmp
-    print(f"max diff is {max_diff:.2f}")
-    if max_diff >= prev_max_diff:
-        print("seems to mess something up... stopping here...")
-        cond_ = False
-        break
+        # prev_ = obs.gen_p
+        while True:
+            obs, reward, done, info = env_fixed.step(env_fixed.action_space())
+            if done:
+                break
+            i += 1
+            all_loss[i] = fill_real_gen(final_gen_p_tmp,
+                                        i, obs,
+                                        env_fixed,
+                                        gen_p_setpoint=gen_p[i],
+                                        prev=final_gen_p_tmp[i-1], 
+                                        slack_id=slack_id,
+                                        max_abs_split=max_abs_split)
+            diff_[i] = obs.gen_p - final_gen_p_tmp[i]
+        max_diff = np.abs(diff_).max()
+        gen_p = 1.0 * final_gen_p_tmp
+        # print(f"max diff is {max_diff:.2f}")
+        if max_diff >= prev_max_diff:
+            # print("seems to mess something up... stopping here...")
+            cond_ = False
+            error_ = RuntimeError("Max difference does not decrease!")
+            break
+        
+        # final_gen_df = pd.DataFrame(final_gen_p, columns=env_for_loss.name_gen)
+        # errors = check_all_controlable_gens(final_gen_df, gen_hydro_name2, gen_nuclear_name2, gen_thermal_name2, env118_withoutchron)
+        prev_max_diff = copy.deepcopy(max_diff)
+        cond_ = max_diff > 0.1
+    return gen_p, error_
+
+
+def save_data(env_for_loss,
+              output_path,
+              final_load_p,
+              final_load_q,
+              final_gen_p,
+              final_gen_v,
+              sep=';',
+              float_prec=FLOATING_POINT_PRECISION_FORMAT):
+    scen_id = os.path.split(env_for_loss.chronics_handler.get_id())[-1]
+    this_path_chronics_fixed = os.path.join(output_path, scen_id)
+    shutil.rmtree(this_path_chronics_fixed, ignore_errors=True)
+    os.mkdir(this_path_chronics_fixed)
+
+    pd.DataFrame(final_load_p,
+                columns=env_for_loss.name_load).to_csv(os.path.join(this_path_chronics_fixed, f'load_p.csv.bz2'),
+                                                        sep=sep,
+                                                        float_format=float_prec,
+                                                        header=True,
+                                                        index=False)
+    pd.DataFrame(final_load_q,
+                columns=env_for_loss.name_load).to_csv(os.path.join(this_path_chronics_fixed, f'load_q.csv.bz2'),
+                                                        sep=sep,
+                                                        float_format=float_prec,
+                                                        header=True,
+                                                        index=False)
+    pd.DataFrame(final_gen_p,
+                columns=env_for_loss.name_gen).to_csv(os.path.join(this_path_chronics_fixed, f'prod_p.csv.bz2'),
+                                                        sep=sep,
+                                                        float_format=float_prec,
+                                                        header=True,
+                                                        index=False)
+                
+    pd.DataFrame(final_gen_v,
+                columns=env_for_loss.name_gen).to_csv(os.path.join(this_path_chronics_fixed, f'prod_v.csv.bz2'),
+                                                        sep=sep,
+                                                        float_format=float_prec,
+                                                        header=True,
+                                                        index=False)
+
+    fn_ = "start_datetime.info"
+    for fn_ in ["load_p_forecasted.csv.bz2",
+                "load_q_forecasted.csv.bz2",
+                "start_datetime.info",
+                "time_interval.info",
+                ]:
+        shutil.copy(src=os.path.join(path_chronics_outputopf, scen_id, fn_), 
+                    dst=os.path.join(this_path_chronics_fixed, fn_))
+        
+        
+def fix_losses_one_scenario(path_env, path_chronix2grid, output_path, scenario_id):
+
+    ############################
+    # this can be refacto for all scenario id
+    shutil.rmtree(output_path, ignore_errors=True)
+    if not os.path.exists(output_path):
+        os.mkdir(output_path)
     
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        env118_withoutchron = grid2op.make(
+            path_env,
+            test=True,
+            chronics_class=ChangeNothing, # tell it to change nothing (not the most usable environment...)
+        )
+    
+    slack_id = np.where(env118_withoutchron.backend._grid.gen["slack"])[0]
+    slack_name = env118_withoutchron.name_gen[slack_id]
+    
+    gen_solar_name2 = env118_withoutchron.name_gen[env118_withoutchron.gen_type == "solar"]
+    gen_wind_name2 = env118_withoutchron.name_gen[env118_withoutchron.gen_type == "wind"]
+    gen_hydro_name2 = env118_withoutchron.name_gen[env118_withoutchron.gen_type == "hydro"]
+    gen_nuclear_name2 = env118_withoutchron.name_gen[env118_withoutchron.gen_type == "nuclear"]
+    gen_thermal_name2 = env118_withoutchron.name_gen[env118_withoutchron.gen_type == "thermal"]
+    gen_thermal_name2 = [el for el in gen_thermal_name2 if el != slack_name]
+    ###############################
+    
+    param = env118_withoutchron.parameters
+    param.NO_OVERFLOW_DISCONNECTION = True
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        env_for_loss = grid2op.make(
+            output_path,
+            test=True,
+            # grid_path=grid_path, # assign it the 118 grid
+            chronics_path=path_chronix2grid,
+            param=param,
+            backend=LightSimBackend()
+            )
+        
+    final_gen_p = np.full((weeks * 7 * 288 - 1, env_for_loss.n_gen), fill_value=np.NaN, dtype=np.float32)
+    final_gen_v = np.full((weeks * 7 * 288 - 1, env_for_loss.n_gen), fill_value=np.NaN, dtype=np.float32)
+    final_load_p = np.full((weeks * 7 * 288 - 1, env_for_loss.n_load), fill_value=np.NaN, dtype=np.float32)
+    final_load_q = np.full((weeks * 7 * 288 - 1, env_for_loss.n_load), fill_value=np.NaN, dtype=np.float32)
+    all_loss_orig = np.zeros(weeks * 7 * 288 - 1)
+    
+    env_for_loss.set_id(scenario_id)
+    obs = env_for_loss.reset()
+    
+    ### now start to split the loss
+    max_abs_split = 5.0
+    i = 0
+    all_loss_orig[i] = fill_real_gen(final_gen_p, i, obs, env_for_loss, 
+                                    gen_p_setpoint=env_for_loss.chronics_handler.real_data.data.prod_p[i],
+                                    slack_id=slack_id,
+                                    max_abs_split=max_abs_split)
+    final_gen_v[i] = obs.gen_v
+    final_load_p[i] = obs.load_p
+    final_load_q[i] = obs.load_q
+    done = False
+    while not done:
+        obs, reward, done, info = env_for_loss.step(env_for_loss.action_space())
+        i += 1
+        all_loss_orig[i] = fill_real_gen(final_gen_p,
+                                        i,
+                                        obs,
+                                        env_for_loss,
+                                        gen_p_setpoint=env_for_loss.chronics_handler.real_data.data.prod_p[i],
+                                        prev=1.0 * final_gen_p[i-1],
+                                        max_abs_split=max_abs_split,
+                                        # prev_diff=1.0 * (final_gen_p[i-1] - prev_),
+                                        slack_id=slack_id)
+        final_gen_v[i] = 1.0 * obs.gen_v
+        final_load_p[i] = 1.0 * obs.load_p
+        final_load_q[i] = 1.0 * obs.load_p
+        
+    ###
+    # final_gen_df = pd.DataFrame(final_gen_p, columns=env_for_loss.name_gen)
+    # errors = check_all_controlable_gens(final_gen_df, gen_hydro_name2, gen_nuclear_name2, gen_thermal_name2, env118_withoutchron)
+    # if errors:
+    #     for _, el in errors:
+    #         print(el)
+    #         print()
+        # raise RuntimeError("some constraints are not met")
+    # print("No errors after iteration 0 !")
+    
+        ###
+    # now adjust the generators schedule so that they do not move
+
+
+    final_gen_p, error_ = adjust_gens(all_loss_orig, output_path, grid_path, param,
+                                      path_chronics_outputopf,
+                                      final_load_p, 
+                                      final_load_q,
+                                      final_gen_p,
+                                      final_gen_v)
+
     final_gen_df = pd.DataFrame(final_gen_p, columns=env_for_loss.name_gen)
     errors = check_all_controlable_gens(final_gen_df, gen_hydro_name2, gen_nuclear_name2, gen_thermal_name2, env118_withoutchron)
-    if errors:
+
+    total_errors = sum([sum([sub_el for sub_el in el]) for el, str_ in errors])
+    if total_errors > 0 and total_errors < 30:
+        print(f"There will be some violation of some constraints for {total_errors} generators.step in total")
+    elif total_errors >= 30:
         for el in errors:
             print(el)
             print()
-        # pdb.set_trace()
-    prev_max_diff = copy.deepcopy(max_diff)
-    cond_ = max_diff > 0.1
+        raise RuntimeError("some constraints are not met")
+    print("No error after the iterations")
 
-final_gen_df = pd.DataFrame(final_gen_p, columns=env_for_loss.name_gen)
-errors = check_all_controlable_gens(final_gen_df, gen_hydro_name2, gen_nuclear_name2, gen_thermal_name2, env118_withoutchron)
-if errors:
-    for el in errors:
-        print(el)
-        print()
-    raise RuntimeError("some constraints are not met")
-print("No error after the iterations")
+    # now save it
+    save_data(env_for_loss, output_path, final_load_p, final_load_q, final_gen_p, final_gen_v)
+
+
+if __name__ == "__main__":
+    
+    OUTPUT_FOLDER = os.path.join('..', 'example', 'custom', 'output')
+
+    path_chronics_outputopf = os.path.join(OUTPUT_FOLDER, "all_scenarios")
+    path_chronics_fixed = os.path.join(OUTPUT_FOLDER, "fixed_chronics")
+        
+    ########
+    # Detailed configuration to be set in <INPUT_FOLDER>/<CASE>/params.json
+    weeks = 1
+    n_scenarios = 1
+
+    env_name = "case118_l2rpn_wcci_benjamin"
+    path_tmp = os.path.join("..", "example", "custom", "input", "generation")
+    output_path = os.path.join(path_tmp, env_name)
+    grid_path = os.path.join(output_path, "grid.json")
+    
+    scenario_id = ""
+    fix_losses_one_scenario(output_path,
+                            path_chronics_outputopf,
+                            path_chronics_fixed,
+                            scenario_id)
+
+
