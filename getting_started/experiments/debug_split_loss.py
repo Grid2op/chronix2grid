@@ -401,7 +401,8 @@ def fix_losses_one_scenario(empty_env,
     
 
     if error_ is not None:
-        raise error_
+        print(f"ERROR: {scenario_id}: {error_}")
+        return
     
     final_gen_df = pd.DataFrame(final_gen_p, columns=env_for_loss.name_gen)
     errors = check_all_controlable_gens(final_gen_df, gen_hydro_name2, gen_nuclear_name2, gen_thermal_name2, empty_env)
@@ -413,7 +414,8 @@ def fix_losses_one_scenario(empty_env,
         for el in errors:
             print(el)
             print()
-        raise RuntimeError("some constraints are not met")
+        print(f"ERROR: {scenario_id} too much generators would be violated")
+        return
     # print("No error after the iterations")
 
     # now save it
