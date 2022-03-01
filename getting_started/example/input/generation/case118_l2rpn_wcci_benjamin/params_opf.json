@@ -8,5 +8,5 @@
   "pyomo": false,
   "solver_name": "cbc",
   "slack_name": "gen_68_37",
-  "slack_pmin": 20.0
+  "slack_pmin": 40.0
 }

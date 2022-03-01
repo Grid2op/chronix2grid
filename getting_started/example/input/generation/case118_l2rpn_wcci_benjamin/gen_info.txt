@@ -17,14 +17,14 @@ Changement sur le RES:
 
 - [NON] on remet les parametres de la sandbox... la ça marche pas du tout, ça ne ressemble pas a du vent , c'était   , je mets 
 - on remet les parameters de la sandbox pour le vent: 
-  "std_short_wind_noise": 0.04,
-  "std_medium_wind_noise": 0.3,
-  "std_long_wind_noise": 0.3
+  "std_short_wind_noise": 0.2,
+  "std_medium_wind_noise": 0.15,
+  "std_long_wind_noise": 0.2
   "dx_corr": 1000,
   "dy_corr": 1000,
-  "long_wind_corr": 20160,
-  "medium_wind_corr": 1440,
-  "short_wind_corr": 120,
+  "long_wind_corr": 10080,
+  "medium_wind_corr": 360,
+  "short_wind_corr": 60,
   
  au lieu de 
    "std_short_wind_noise": 0.1,
@@ -38,7 +38,9 @@ Changement sur le RES:
   
   
 Changer les coordonnees des renouvelables sur les memes postes (pour ne pas que les series soient identiques)  +/-30 par coords pour l'un des gen
-  
+ 
+gen 11 => thermique, gen 65 vent (pertes)
+
   
 Problemes rencontres:
 - date de debut: attention au jour de la semaine (a eu besoin d'aller loin dans le code)
@@ -47,4 +49,4 @@ Problemes rencontres:
 - le vent ne ressemble absolument pas a du vent !
 - quand 2 prods renouvelables de meme type sont sur le meme poste, elles ont la meme prod exactement !
 - tourjours de prods renouvelables au dessus de pmax !
-
+- trop de pertes

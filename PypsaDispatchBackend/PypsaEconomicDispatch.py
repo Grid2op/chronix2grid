@@ -25,7 +25,7 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
     PmaxCorrectingFactor = 1
     RampCorrectingFactor = 0.1
     
-    PmaxErrorCorrRatio = 0.95
+    PmaxErrorCorrRatio = 0.9
     RampErrorCorrRatio = 0.95
         
     def __init__(self, *args, **kwargs):

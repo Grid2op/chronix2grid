@@ -1,1 +1,1 @@
-{"step_opf_min": 5, "mode_opf": "month", "reactive_comp": 1, "losses_pct": 3, "dispatch_by_carrier": false, "ramp_mode": "hard", "pyomo": false, "solver_name": "cbc", "slack_name": "gen_68_37", "slack_pmin": 20.0}
+{"step_opf_min": 5, "mode_opf": "month", "reactive_comp": 1, "losses_pct": 3, "dispatch_by_carrier": false, "ramp_mode": "hard", "pyomo": false, "solver_name": "cbc", "slack_name": "gen_68_37", "slack_pmin": 40.0}

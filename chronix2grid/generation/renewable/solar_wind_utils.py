@@ -46,7 +46,7 @@ def compute_wind_series(locations, Pmax, long_noise, medium_noise, short_noise, 
     signal[signal < 0.] = 0.
     signal = smooth(signal)
     wind_series = Pmax * signal
-
+    wind_series[wind_series > 0.95 * Pmax] = 0.95 * Pmax
     return wind_series
 
 def compute_solar_series(locations, Pmax, solar_noise, params, solar_pattern, smoothdist, time_scale):
@@ -66,6 +66,7 @@ def compute_solar_series(locations, Pmax, solar_noise, params, solar_pattern, sm
     signal = smooth(signal)
     solar_series = Pmax*signal
     # solar_series[np.isclose(solar_series, 0.)] = 0
+    solar_series[solar_series > 0.95 * Pmax] = 0.95 * Pmax
 
     return solar_series
 

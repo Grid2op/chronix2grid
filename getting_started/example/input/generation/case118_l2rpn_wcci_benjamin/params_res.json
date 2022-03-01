@@ -9,7 +9,7 @@
   "solar_corr": 20,
   "smoothdist": 0.001,
   "std_solar_noise": 0.1,
-  "std_short_wind_noise": 0.3,
+  "std_short_wind_noise": 0.2,
   "std_medium_wind_noise": 0.15,
   "std_long_wind_noise": 0.2,
   "year_solar_pattern": 2007
