@@ -414,7 +414,7 @@ def fix_losses_one_scenario(empty_env,
         for el in errors:
             print(el)
             print()
-        print(f"ERROR: {scenario_id} too much generators would be violated")
+        print(f"ERROR: {scenario_id} too much generators would be violated ({total_errors})")
         return
     # print("No error after the iterations")
 
