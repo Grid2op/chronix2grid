@@ -1,3 +1,11 @@
+# Copyright (c) 2019-2022, RTE (https://www.rte-france.com)
+# See AUTHORS.txt
+# This Source Code Form is subject to the terms of the Mozilla Public License, version 2.0.
+# If a copy of the Mozilla Public License, version 2.0 was not distributed with this file,
+# you can obtain one at http://mozilla.org/MPL/2.0/.
+# SPDX-License-Identifier: MPL-2.0
+# This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
+
 """Class for the economic dispatch framework. Allows to parametrize and run
 an economic dispatch based on RES and consumption time series"""
 
@@ -306,13 +314,17 @@ class Dispatcher(ABC):
         )
         
         diff_wind = (res_load_scenario.wind_p - new_wind_after_curtail).sum(axis=1).values
-        print(f"INFO: wind curtailment max: {diff_wind.max():.2f} MW")
-        print(f"INFO: wind curtailment min: {diff_wind.min():.2f} MW")
-        print(f"INFO: wind curtailment sum: {diff_wind.sum():.2f} MW (total {new_wind_after_curtail.sum(axis=1).sum():.2f})")
+        total_curt = diff_wind.sum()
+        total_wind = res_load_scenario.wind_p.sum(axis=1).sum()
+        print(f"INFO: wind curtailment max: {diff_wind.max():.2f}MW")
+        print(f"INFO: wind curtailment min: {diff_wind.min():.2f}MW")
+        print(f"INFO: wind curtailment sum: {total_curt / 12.:.2f}MWh (total {total_wind / 12.:.2f}MWh: {100. * total_curt / total_wind:.2f}%)")
         diff_solar = (res_load_scenario.solar_p - new_solar_after_curtail).sum(axis=1).values
-        print(f"INFO: solar curtailment max: {diff_solar.max():.2f} MW")
-        print(f"INFO: solar curtailment min: {diff_solar.min():.2f} MW")
-        print(f"INFO: solar curtailment sum: {diff_solar.sum():.2f} MW (total {new_solar_after_curtail.sum(axis=1).sum():.2f})")
+        total_curt = diff_solar.sum()
+        total_solar = res_load_scenario.solar_p.sum(axis=1).sum()
+        print(f"INFO: solar curtailment max: {diff_solar.max():.2f}MW")
+        print(f"INFO: solar curtailment min: {diff_solar.min():.2f}MW")
+        print(f"INFO: solar curtailment sum: {total_curt / 12.:.2f}MWh (total { total_curt / total_solar:.2f}MWh: {100. * total_curt / total_solar :.2f}%)")
         
         try:
             if self._env is not None:
