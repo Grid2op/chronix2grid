@@ -184,7 +184,7 @@ def fill_real_gen(target,
     redisp_ = 1.0 * gen_p_setpoint[can_adjust]
     
     if sum_margin == 0.:
-        print("no margin for your system !")
+        print("\tWARNING: heuristic to split the losses among generators: no margin for your system. This heuristic will not modify anything.")
     else:
         redisp_ += to_split_others * total_margin / sum_margin
     
@@ -210,6 +210,7 @@ def adjust_gens(all_loss_orig,
     gen_p = 1.0 * gen_p  # not to change input data
     all_loss = 1.0 * all_loss_orig
     prev_max_diff = 100000.
+    prev_quantile = 1.0 * prev_max_diff
     while cond_:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore")
@@ -258,15 +259,31 @@ def adjust_gens(all_loss_orig,
             diff_[i] = obs.gen_p - final_gen_p_tmp[i]
         max_diff = np.abs(diff_).max()
         gen_p = 1.0 * final_gen_p_tmp
-        if max_diff >= prev_max_diff:
+        quantile = np.percentile(np.abs(diff_), 99)
+        if abs(max_diff - prev_max_diff) <= 1e-3:
+            # the algo does not make any progress, this can be good if the percentile is ok
+            if quantile > threshold_stop:
+                cond_ = False
+                error_ = RuntimeError(f"The heuristic to split the loss is stuck and the final error is too high. "
+                                      f"max: {max_diff:.3f}, quantile 99%: {quantile:.3f} threshold: {threshold_stop}.")
+                break
+            else:
+                max_diff = 0.  # To force the exiting of the while loop
+                print("WARNING: the heuristic to split the loss is stuck but the quantile of the losses are bellow "
+                      "your threshold."
+                      f"max: {max_diff:.3f}, quantile 99%: {quantile:.3f} threshold: {threshold_stop}.")
+                break
+        elif max_diff > prev_max_diff:
             # print("seems to mess something up... stopping here...")
             cond_ = False
-            error_ = RuntimeError("Max difference does not decrease!")
+            error_ = RuntimeError(f"Max difference stricly increases (current: {max_diff:.3f} vs previous: {prev_max_diff:.3f}). "
+                                   "The heuristic to split the losses failed.")
             break
         
         # final_gen_df = pd.DataFrame(final_gen_p, columns=env_for_loss.name_gen)
         # errors = check_all_controlable_gens(final_gen_df, gen_hydro_name2, gen_nuclear_name2, gen_thermal_name2, env118_withoutchron)
         prev_max_diff = copy.deepcopy(max_diff)
+        prev_quantile = 1.0 * quantile
         cond_ = max_diff > threshold_stop
     return gen_p, error_
 
@@ -332,6 +349,8 @@ def fix_losses_one_scenario(empty_env,
                             gen_thermal_name2,
                             weeks=1,
                             total_errors_threshold=30,
+                            max_abs_split_orig=20.0,
+                            max_abs_split_loop=10.
                             ):
     
     param = empty_env.parameters
@@ -357,12 +376,11 @@ def fix_losses_one_scenario(empty_env,
     obs = env_for_loss.reset()
     
     ### now start to split the loss
-    max_abs_split = 20.0
     i = 0
     all_loss_orig[i] = fill_real_gen(final_gen_p, i, obs, env_for_loss, 
                                     gen_p_setpoint=env_for_loss.chronics_handler.real_data.data.prod_p[i],
                                     slack_id=slack_id,
-                                    max_abs_split=max_abs_split)
+                                    max_abs_split=max_abs_split_orig)
     final_gen_v[i] = obs.gen_v
     final_load_p[i] = obs.load_p
     final_load_q[i] = obs.load_q
@@ -376,7 +394,7 @@ def fix_losses_one_scenario(empty_env,
                                         env_for_loss,
                                         gen_p_setpoint=env_for_loss.chronics_handler.real_data.data.prod_p[i],
                                         prev=1.0 * final_gen_p[i-1],
-                                        max_abs_split=max_abs_split,
+                                        max_abs_split=max_abs_split_orig,
                                         # prev_diff=1.0 * (final_gen_p[i-1] - prev_),
                                         slack_id=slack_id)
         final_gen_v[i] = 1.0 * obs.gen_v
@@ -404,7 +422,7 @@ def fix_losses_one_scenario(empty_env,
                                       final_load_q,
                                       final_gen_p,
                                       final_gen_v,
-                                      max_abs_split=10.,
+                                      max_abs_split=max_abs_split_loop,
                                       )
     
 
@@ -419,7 +437,7 @@ def fix_losses_one_scenario(empty_env,
     if total_errors > 0 and total_errors < total_errors_threshold:
         print(f"WARNING: {scenario_id}: There will be some violation of some constraints for {total_errors} generators.step in total")
     elif total_errors >= total_errors_threshold:
-        for el in errors:
+        for _, el in errors:
             print(el)
             print()
         print(f"ERROR: {scenario_id} too much generators would be violated ({total_errors})")
@@ -440,7 +458,8 @@ def fix_loss_multiple_scenarios(path_env,
                                 path_chronix2grid,
                                 output_path,
                                 scenario_ids,
-                                weeks=1):
+                                weeks=1,
+                                total_errors_threshold=100):
     ############################
     # this can be refacto for all scenario id
     shutil.rmtree(output_path, ignore_errors=True)
@@ -475,7 +494,10 @@ def fix_loss_multiple_scenarios(path_env,
                                 gen_hydro_name2,
                                 gen_nuclear_name2,
                                 gen_thermal_name2,
-                                weeks=weeks)
+                                weeks=weeks,
+                                total_errors_threshold=total_errors_threshold,
+                                max_abs_split_orig=10.,
+                                max_abs_split_loop=5.0)
     
 if __name__ == "__main__":
     
@@ -494,28 +516,29 @@ if __name__ == "__main__":
     output_path = os.path.join(path_tmp, env_name)
     grid_path = os.path.join(output_path, "grid.json")
     
-    li_months = ["2050-01-03", 
-             "2050-01-10",
-             "2050-01-17",
-             "2050-01-24",
-             "2050-01-31",
-             "2050-02-07",
-             "2050-02-14",
-             "2050-02-21",
-             "2050-02-28",
-             "2050-03-07",
-             "2050-03-14",
-             "2050-03-21",
-             "2050-03-28",
-             "2050-04-04",
-             "2050-04-11",
-             "2050-04-18",
-             "2050-04-25",
-             "2050-05-02", 
-             "2050-05-09", 
-             "2050-05-16", 
-             "2050-05-23", 
-             "2050-05-30",
+    li_months = [
+            #  "2050-01-03", 
+            #  "2050-01-10",
+            #  "2050-01-17",
+            #  "2050-01-24",
+            #  "2050-01-31",
+            #  "2050-02-07",
+            #  "2050-02-14",
+            #  "2050-02-21",
+            #  "2050-02-28",
+            #  "2050-03-07",
+            #  "2050-03-14",
+            #  "2050-03-21",
+            #  "2050-03-28",
+            #  "2050-04-04",
+            #  "2050-04-11",
+            #  "2050-04-18",
+            #  "2050-04-25",
+            #  "2050-05-02", 
+            #  "2050-05-09", 
+            #  "2050-05-16", 
+            #  "2050-05-23", 
+            #  "2050-05-30",
              "2050-06-06",
              "2050-06-13",
              "2050-06-20",

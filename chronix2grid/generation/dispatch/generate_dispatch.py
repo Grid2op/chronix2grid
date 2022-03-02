@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
 
-from PypsaDispatchBackend.EDispatch_L2RPN2020 import run_economic_dispatch # TODO: Supprimer cette dépendance car pas utile (utiliser utils dans chronix2grid)
+from .PypsaDispatchBackend.EDispatch_L2RPN2020 import RampMode # TODO: Supprimer cette dépendance car pas utile (utiliser utils dans chronix2grid)
 from .dispatch_loss_utils import run_grid2op_simulation_donothing, correct_scenario_loss, move_chronics_temporarily, \
     remove_temporary_chronics, remove_simulation_data, move_env_temporarily
 import shutil
@@ -106,12 +106,12 @@ def parse_ramp_mode(mode):
 
     """
     if mode == 'hard':
-        return run_economic_dispatch.RampMode.hard
+        return RampMode.hard
     if mode == 'medium':
-        return run_economic_dispatch.RampMode.medium
+        return RampMode.medium
     if mode == 'easy':
-        return run_economic_dispatch.RampMode.easy
+        return RampMode.easy
     if mode == '':
-        return run_economic_dispatch.RampMode.none
+        return RampMode.none
     raise ValueError(f'mode only takes values from (hard, medium, easy, none), '
                      '{mode} was passed')

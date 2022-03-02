@@ -30,9 +30,13 @@ class DispatchBackend: # TODO - PypsaDispatchBackend - devra créer un PypsaDisp
     params_opf: ``dict``
         dictionnary with specific parameters concerning the dispatch optimization (Optimal Power Flow computation)
     """
-    def __init__(self, dispatcher, scenario_folder_path,
-                         grid_folder,
-                        seed_disp, params, params_opf):
+    def __init__(self,
+                 dispatcher,
+                 scenario_folder_path,
+                 grid_folder,
+                 seed_disp,
+                 params,
+                 params_opf):
         self.dispatcher = dispatcher
         self.params = params
         self.params_opf = params_opf

@@ -274,6 +274,8 @@ def run_opf(net,
             slack_name=None,
             slack_pmin=None,
             slack_pmax=None,
+            gen_min_pu_t=None,  # used when splitting the losses, to remember, for each generators / steps the setpoint
+            gen_max_pu_t=None,  # used when splitting the losses, to remember, for each generators / steps the setpoint
             **kwargs):
     """ Run linear OPF problem in PyPSA considering
     only marginal costs and ramps as LP problem.
@@ -350,7 +352,16 @@ def run_opf(net,
             gen_max["agg_solar"] = total_solar
         if total_wind is not None:
             gen_max["agg_wind"] = total_wind
-            
+    
+    if total_solar is None:
+        # I did not specify any solar time series, i should tell the network they are all 0.
+        gen_max = copy.deepcopy(gen_max)
+        gen_max["agg_solar"] = 0.
+    if total_wind is None:
+        # I did not specify any wind time series, i should tell the network they are all 0.
+        gen_max = copy.deepcopy(gen_max)
+        gen_max["agg_wind"] = 0.
+        
     if slack_name is not None and slack_pmin is not None:
         # add pmin to the slack bus, to avoid negative production when losses
         # are added
@@ -366,7 +377,22 @@ def run_opf(net,
     if slack_name is not None and "slack_ramp_limit_ratio" in params:
         net.generators.ramp_limit_up[slack_name] *= float(params["slack_ramp_limit_ratio"])
         net.generators.ramp_limit_down[slack_name] *= float(params["slack_ramp_limit_ratio"])
-        
+    
+    if gen_max_pu_t is not None:
+        # addition contraint on the max_pu, used for example when splitting the loss
+        for gen_nm, max_val in gen_max_pu_t.items():
+            if gen_nm in gen_max:
+                gen_max[gen_nm] = np.minimum(gen_max[gen_nm], max_val)
+            else:
+                gen_max[gen_nm] = max_val
+    
+    if gen_min_pu_t is not None:
+        # addition contraint on the min_pu, used for example when splitting the loss
+        for gen_nm, min_val in gen_min_pu_t.items():
+            if gen_nm in gen_min:
+                gen_min[gen_nm] = np.maximum(gen_min[gen_nm], min_val)
+            else:
+                gen_min[gen_nm] = min_val
     net.loads_t.p_set = pd.concat([demand])
     net.generators_t.p_max_pu = pd.concat([gen_max], axis=1)
     net.generators_t.p_min_pu = pd.concat([gen_min], axis=1)

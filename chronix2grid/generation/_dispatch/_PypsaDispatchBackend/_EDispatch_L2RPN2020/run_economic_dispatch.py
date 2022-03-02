@@ -30,13 +30,15 @@ def main_run_disptach(pypsa_net,
                       total_solar,
                       total_wind,
                       params={},
-                      gen_constraints={},
+                      gen_constraints=None,
                       ramp_mode=RampMode.hard,
                       **kwargs):
-
     # Update gen constrains dict with 
     # values passed by the users and params
+    if gen_constraints is None:
+        gen_constraints = {}
     gen_constraints = update_gen_constrains(gen_constraints)  
+    
     params = update_params(load.shape[0], load.index[0], params)
 
     print ('Preprocessing input data..')    
@@ -44,8 +46,14 @@ def main_run_disptach(pypsa_net,
     #   - Add date range as index 
     #   - Check whether gen constraints has same lenght as load
     load_, gen_constraints_ = preprocess_input_data(load, gen_constraints, params)
-    solar_ = pd.DataFrame({"agg_solar": 1.0 * total_solar.values}, index=load_.index)
-    wind_ = pd.DataFrame({"agg_wind": 1.0 * total_wind.values}, index=load_.index)
+    if total_solar is not None:
+        solar_ = pd.DataFrame({"agg_solar": 1.0 * total_solar.values}, index=load_.index)
+    else:
+        solar_ = None
+    if total_wind is not None:
+        wind_ = pd.DataFrame({"agg_wind": 1.0 * total_wind.values}, index=load_.index)
+    else:
+        wind_ = None
     tot_snap = load_.index
 
     print('Filter generators ramps up/down')
@@ -64,6 +72,7 @@ def main_run_disptach(pypsa_net,
     months = tot_snap.month.unique()
     slack_name = None
     slack_pmin = None
+    slack_pmax = None
     if 'slack_name' in params:
         if 'slack_pmin' in params:
             # user specified a pmin for the slack bus
@@ -85,8 +94,14 @@ def main_run_disptach(pypsa_net,
             snap_per_month = tot_snap[tot_snap.month == month]
             # Filter input data per month
             load_per_month = load_.loc[snap_per_month]
-            total_solar_per_month = solar_.loc[snap_per_month]
-            total_wind_per_month = wind_.loc[snap_per_month]
+            if solar_ is not None:
+                total_solar_per_month = solar_.loc[snap_per_month]
+            else:
+                total_solar_per_month = None
+            if wind_ is not None:
+                total_wind_per_month = wind_.loc[snap_per_month]
+            else:
+                total_wind_per_month = None
             # Get gen constraints separated and filter by month
             g_max_pu, g_min_pu = gen_constraints_['p_max_pu'], gen_constraints_['p_min_pu']
             g_max_pu_per_month = g_max_pu.loc[snap_per_month]
@@ -97,8 +112,14 @@ def main_run_disptach(pypsa_net,
                 for snap_id, snaps in enumerate(snap_per_mode):
                     # Truncate input data per mode (day, week, month)
                     load_per_mode = load_per_month.loc[snaps]
-                    total_solar_per_mode = total_solar_per_month.loc[snaps]
-                    total_wind_per_mode = total_wind_per_month.loc[snaps]
+                    if total_solar_per_month is not None:
+                        total_solar_per_mode = total_solar_per_month.loc[snaps]
+                    else:
+                        total_solar_per_mode = None
+                    if total_wind_per_month is not None:
+                        total_wind_per_mode = total_wind_per_month.loc[snaps]
+                    else:
+                        total_wind_per_mode = None
                     gen_max_pu_per_mode = g_max_pu_per_month.loc[snaps]
                     gen_min_pu_per_mode = g_min_pu_per_month.loc[snaps]
                     # Run opf given in specified mode
@@ -123,7 +144,9 @@ def main_run_disptach(pypsa_net,
         g_max_pu, g_min_pu = gen_constraints_['p_max_pu'], gen_constraints_['p_min_pu']
         dispatch, termination_condition = run_opf(
                pypsa_net, load_, g_max_pu,
-               g_min_pu, params, total_solar=solar_, total_wind=wind_,
+               g_min_pu, params,
+               total_solar=solar_,
+               total_wind=wind_,
                slack_name=slack_name,
                slack_pmin=slack_pmin,
                slack_pmax=slack_pmax,

@@ -56,19 +56,20 @@ class GeneratorBackend:
         A class that embeds a dispatch backend such as :class:`chronix2grid.generation.dispatch.DispatchBackend`
     """
     def __init__(self):
-        self.general_config_manager = constants.GENERAL_CONFIG
-        self.load_config_manager = constants.LOAD_GENERATION_CONFIG
-        self.res_config_manager = constants.RENEWABLE_GENERATION_CONFIG
-        self.loss_config_manager = constants.LOSS_GENERATION_CONFIG
-        self.dispatch_config_manager = constants.DISPATCH_GENERATION_CONFIG
+        from chronix2grid import default_backend  # lazy import to avoid circular references
+        self.general_config_manager = default_backend.GENERAL_CONFIG
+        self.load_config_manager = default_backend.LOAD_GENERATION_CONFIG
+        self.res_config_manager = default_backend.RENEWABLE_GENERATION_CONFIG
+        self.loss_config_manager = default_backend.LOSS_GENERATION_CONFIG
+        self.dispatch_config_manager = default_backend.DISPATCH_GENERATION_CONFIG
 
-        self.dispatcher_class = constants.DISPATCHER
+        self.dispatcher_class = default_backend.DISPATCHER
 
-        self.consumption_backend_class = constants.LOAD_GENERATION_BACKEND
-        self.dispatch_backend_class = constants.DISPATCH_GENERATION_BACKEND
-        self.hydro_backend_class = constants.HYDRO_GENERATION_BACKEND
-        self.renewable_backend_class = constants.RENEWABLE_GENERATION_BACKEND
-        self.loss_backend_class = constants.LOSS_GENERATION_BACKEND
+        self.consumption_backend_class = default_backend.LOAD_GENERATION_BACKEND
+        self.dispatch_backend_class = default_backend.DISPATCH_GENERATION_BACKEND
+        self.hydro_backend_class = default_backend.HYDRO_GENERATION_BACKEND
+        self.renewable_backend_class = default_backend.RENEWABLE_GENERATION_BACKEND
+        self.loss_backend_class = default_backend.LOSS_GENERATION_BACKEND
 
     # Call generation scripts n_scenario times with dedicated random seeds
     def run(self, case, n_scenarios, input_folder, output_folder, scen_names,

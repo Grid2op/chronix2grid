@@ -8,12 +8,13 @@
 
 """Class for the economic dispatch framework. Allows to parametrize and run
 an economic dispatch based on RES and consumption time series"""
+
 import numpy as np
 import pandas as pd
 from collections import namedtuple
 import pypsa
 
-from .EDispatch_L2RPN2020.run_economic_dispatch import main_run_disptach
+from ._EDispatch_L2RPN2020.run_economic_dispatch import main_run_disptach
 
 ## Dépendances à Chronix2Grid
 from chronix2grid.generation.dispatch.EconomicDispatch import Dispatcher
@@ -182,6 +183,8 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
             gen_constraints=None,
             ramp_mode=RampMode.hard,
             by_carrier=False,
+            gen_min_pu_t=None,
+            gen_max_pu_t=None,
             **kwargs):
         """
         Implements the abstract method of *Dispatcher*
@@ -190,14 +193,17 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
         -------
         simplified_net: :class:`pypsa.Network`
         """
-        
-        total_solar = total_solar / self._pmax_solar
-        total_wind = total_wind / self._pmax_wind
+        if total_solar is not None:
+            total_solar = total_solar / self._pmax_solar
+        if total_wind is not None:
+            total_wind = total_wind / self._pmax_wind
         prods_dispatch, terminal_conditions, marginal_prices = \
             main_run_disptach(
                 self if not by_carrier else self.simplify_net(),
                 load, total_solar, total_wind, 
-                params, gen_constraints, ramp_mode, **kwargs)
+                params, gen_constraints, ramp_mode,
+                gen_min_pu_t=gen_min_pu_t, gen_max_pu_t=gen_max_pu_t,
+                **kwargs)
         if prods_dispatch is None or marginal_prices is None:
             return None
         
