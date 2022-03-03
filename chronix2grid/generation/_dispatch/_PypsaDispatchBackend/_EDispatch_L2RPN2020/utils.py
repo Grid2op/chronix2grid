@@ -1,6 +1,15 @@
+# Copyright (c) 2019-2022, RTE (https://www.rte-france.com)
+# See AUTHORS.txt
+# This Source Code Form is subject to the terms of the Mozilla Public License, version 2.0.
+# If a copy of the Mozilla Public License, version 2.0 was not distributed with this file,
+# you can obtain one at http://mozilla.org/MPL/2.0/.
+# SPDX-License-Identifier: MPL-2.0
+# This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
+
 import numpy as np
 import pandas as pd
 import copy 
+import pypsa
 
 from chronix2grid.generation.dispatch.utils import RampMode
 
@@ -306,6 +315,7 @@ def run_opf(net,
         print(f'\n--> OPF formulation by => full chronix - Analyzing ')
     else:
         print(f'\n--> OPF formulation by => {mode} - Analyzing {mode} # {to_disp[mode]}')
+    net = copy.deepcopy(net)
     
     if "PmaxErrorCorrRatio" in params:
         if "agg_solar" in net.generators.p_nom:
@@ -342,6 +352,7 @@ def run_opf(net,
     
     # Set snapshots
     net.set_snapshots(demand.index)
+    
     
     # ++  ++  ++  ++  ++  ++  ++  ++  ++  ++  ++ 
     # Fill load and gen constraints to PyPSA grid
@@ -393,6 +404,7 @@ def run_opf(net,
                 gen_min[gen_nm] = np.maximum(gen_min[gen_nm], min_val)
             else:
                 gen_min[gen_nm] = min_val
+    
     net.loads_t.p_set = pd.concat([demand])
     net.generators_t.p_max_pu = pd.concat([gen_max], axis=1)
     net.generators_t.p_min_pu = pd.concat([gen_min], axis=1)

@@ -2,7 +2,7 @@
   "step_opf_min": 5,
   "mode_opf": null,
   "reactive_comp": 1,
-  "losses_pct": 3.5,
+  "losses_pct": 2.5,
   "dispatch_by_carrier": false,
   "ramp_mode": "hard",
   "pyomo": false,
