@@ -304,29 +304,29 @@ def save_data(env_for_loss,
 
     pd.DataFrame(final_load_p,
                 columns=env_for_loss.name_load).to_csv(os.path.join(this_path_chronics_fixed, f'load_p.csv.bz2'),
-                                                        sep=sep,
-                                                        float_format=float_prec,
-                                                        header=True,
-                                                        index=False)
+                                                       sep=sep,
+                                                       float_format=float_prec,
+                                                       header=True,
+                                                       index=False)
     pd.DataFrame(final_load_q,
                 columns=env_for_loss.name_load).to_csv(os.path.join(this_path_chronics_fixed, f'load_q.csv.bz2'),
-                                                        sep=sep,
-                                                        float_format=float_prec,
-                                                        header=True,
-                                                        index=False)
+                                                       sep=sep,
+                                                       float_format=float_prec,
+                                                       header=True,
+                                                       index=False)
     pd.DataFrame(final_gen_p,
                 columns=env_for_loss.name_gen).to_csv(os.path.join(this_path_chronics_fixed, f'prod_p.csv.bz2'),
-                                                        sep=sep,
-                                                        float_format=float_prec,
-                                                        header=True,
-                                                        index=False)
+                                                      sep=sep,
+                                                      float_format=float_prec,
+                                                      header=True,
+                                                      index=False)
                 
     pd.DataFrame(final_gen_v,
                 columns=env_for_loss.name_gen).to_csv(os.path.join(this_path_chronics_fixed, f'prod_v.csv.bz2'),
-                                                        sep=sep,
-                                                        float_format=float_prec,
-                                                        header=True,
-                                                        index=False)
+                                                      sep=sep,
+                                                      float_format=float_prec,
+                                                      header=True,
+                                                      index=False)
 
     fn_ = "start_datetime.info"
     for fn_ in ["load_p_forecasted.csv.bz2",
@@ -334,6 +334,8 @@ def save_data(env_for_loss,
                 "start_datetime.info",
                 "time_interval.info",
                 ]:
+        print(f"path_chronix2grid = {path_chronix2grid}")
+        print(f"this_path_chronics_fixed = {this_path_chronics_fixed}")
         shutil.copy(src=os.path.join(path_chronix2grid, scen_id, fn_), 
                     dst=os.path.join(this_path_chronics_fixed, fn_))
         

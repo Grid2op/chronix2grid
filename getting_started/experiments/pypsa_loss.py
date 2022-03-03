@@ -20,48 +20,40 @@ from lightsim2grid import LightSimBackend
 from chronix2grid.generation.dispatch.EconomicDispatch import ChroniXScenario
 from chronix2grid.generation.dispatch.PypsaDispatchBackend import PypsaDispatcher
 
+
+from debug_split_loss import save_data
+
+
 def adjust_gens(all_loss_orig,
+                env_for_loss,
+                datetimes,
+                total_solar,
+                total_wind,
+                params,
                 env_path,
                 env_param,
                 load_without_loss,
-                slack_id,
                 load_p, 
                 load_q,
                 gen_p,
                 gen_v,
+                econimic_dispatch,
+                path_chronix2grid,
+                diff_,
                 threshold_stop=0.1,  # stop when all generators move less that this
-                weeks=1,
-                max_abs_split=5.0,  # dispatch, on the other generators, at most 5.0 MW
+                max_iter=100,
                 ):
     all_loss = all_loss_orig
+    res_gen_p = 1.0 * gen_p
+    error_ = None
+    iter_num = 0
     while True:
+        iter_num += 1
         load = load_without_loss + all_loss
         load = pd.DataFrame(load.ravel(), index=datetimes)
         
-        
-        ## do not modify grid for the losses
-        max__ = np.abs(diff_).max(axis=1)  # absorb at least that many things
-        sum_gens = np.sum(res_gen_p[:,env_for_loss.gen_redispatchable], axis=1).reshape(-1, 1)
-        ratio_gens = res_gen_p / sum_gens
-        
-        # gen_max_pu_t = {gen_nm: np.minimum((res_gen_p[:,gen_id] + ratio_ * max__ * ratio_gens[:, gen_id]) / econimic_dispatch.generators.loc[gen_nm].p_nom,
-        #                                     params["PmaxErrorCorrRatio"])
-        #                 for gen_id, gen_nm in enumerate(env_for_loss.name_gen) if env_for_loss.gen_redispatchable[gen_id]}
-        
-        gen_max_pu_t = {gen_nm: np.minimum((res_gen_p[:,gen_id] + ratio_max * max__.max()) / econimic_dispatch.generators.loc[gen_nm].p_nom,
-                                            params["PmaxErrorCorrRatio"])
-                        for gen_id, gen_nm in enumerate(env_for_loss.name_gen) if env_for_loss.gen_redispatchable[gen_id]}
-                
-        gen_min_pu_t = {gen_nm: np.maximum((res_gen_p[:,gen_id]) / econimic_dispatch.generators.loc[gen_nm].p_nom,
-                                            env_for_loss.gen_pmin[gen_id] / econimic_dispatch.generators.loc[gen_nm].p_nom
-                                            )
-                        for gen_id, gen_nm in enumerate(env_for_loss.name_gen) if env_for_loss.gen_redispatchable[gen_id]}
-        
         # never decrease (during iteration) some generators
         min__ = diff_.min()
-        print(f"min: {min__:.2f}")
-        sum_gens = np.sum(res_gen_p[:,env_for_loss.gen_redispatchable], axis=1).reshape(-1, 1)
-        ratio_gens = res_gen_p / sum_gens
         gen_max_pu_t = None
         gen_min_pu_t = {gen_nm: np.maximum((res_gen_p[:,gen_id] + min__) / econimic_dispatch.generators.loc[gen_nm].p_nom,
                                             env_for_loss.gen_pmin[gen_id] / econimic_dispatch.generators.loc[gen_nm].p_nom
@@ -80,14 +72,10 @@ def adjust_gens(all_loss_orig,
                                              gen_min_pu_t=gen_min_pu_t,
                                              )
         
-        if dispatch_res is None:
-            ratio_max *= 1.2
-            print(f"Pypsa failed to find a solution, increasing ratio_max to {ratio_max} (max value authorized {max__.max():.2f})")
-            continue        
-            # error_ = RuntimeError("Pypsa failed to find a solution")
-            # break
-            
-        ratio_max = 1.
+        if dispatch_res is None:     
+            error_ = RuntimeError("Pypsa failed to find a solution")
+            break
+
         # assign the generators
         for gen_id, gen_nm in enumerate(env_for_loss.name_gen):
             if gen_nm in dispatch_res.chronix.prods_dispatch:
@@ -103,8 +91,9 @@ def adjust_gens(all_loss_orig,
         
         total_wind[:] = 1.0 * dispatch_res.chronix.prods_dispatch["agg_wind"].values
         
-        diff_plan = res_gen_p - res_gen_p_prev
-        print(f"max diff vs prev: {diff_plan.max():.2f}")
+        # diff_plan = res_gen_p - res_gen_p_prev
+        # print(f"max diff vs prev: {diff_plan.max():.2f}")
+        
         # re evaluate the losses
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore")
@@ -116,15 +105,14 @@ def adjust_gens(all_loss_orig,
                 backend=LightSimBackend(),
                 chronics_class=FromNPY,
                 chronics_path=path_chronix2grid,
-                data_feeding_kwargs={"load_p": final_load_p,
-                                     "load_q": final_load_q,
+                data_feeding_kwargs={"load_p": load_p,
+                                     "load_q": load_q,
                                      "prod_p": 1.0 * res_gen_p,
-                                     "prod_v": final_gen_v}
+                                     "prod_v": gen_v}
                 )
         
         diff_ = np.full((env_fixed.max_episode_duration(), env_fixed.n_gen), fill_value=np.NaN)
-        # all_loss = np.full((env_fixed.max_episode_duration() + 1), fill_value=np.NaN)
-        all_loss[:] = np.NaN  # = np.full((env_fixed.max_episode_duration() + 1), fill_value=np.NaN)
+        all_loss[:] = np.NaN
         
         i = 0
         obs = env_fixed.reset()
@@ -140,45 +128,24 @@ def adjust_gens(all_loss_orig,
                 break
             all_loss[i] = np.sum(obs.gen_p) - np.sum(obs.load_p)
             diff_[i] = obs.gen_p - res_gen_p[i]
-        iter_num += 1
         print()
-        print(f"max diff after AC = {diff_.max():.2f}")
+        print(f"iter {iter_num}: {diff_.max():.2f}")
         print()
         
-        # pdb.set_trace()
-        res_gen_p_prev = 1.0 * res_gen_p
-        if diff_.max() <= 0.5:
+        if diff_.max() <= threshold_stop:
             break
+        
+        if iter_num >= max_iter:
+            error_ = RuntimeError("Too much iterations performed")
+            break
+        
+    return res_gen_p, error_
 
-if __name__ == "__main__":
-    
-    
-    OUTPUT_FOLDER = os.path.join('..', 'example', 'custom', 'output')
-
-    path_chronix2grid = os.path.join(OUTPUT_FOLDER, "all_scenarios")
-    path_chronics_fixed = os.path.join(OUTPUT_FOLDER, "fixed_chronics")
-    env_name = "case118_l2rpn_wcci_benjamin"
-    path_tmp = os.path.join("..", "example", "custom", "input", "generation")
-    env_path = os.path.join(path_tmp, env_name)
-    grid_path = os.path.join(env_path, "grid.json")
-    scenario_id = "2050-06-06_0"    
-    scenario_id = "2050-06-13_0"    
-    # scenario_id = "2050-01-03_0"    
-
-    ### run a first environment to compute the loss
-    env_param = Parameters()
-    env_param.NO_OVERFLOW_DISCONNECTION = True
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore")
-        env_for_loss = grid2op.make(
-            env_path,
-            test=True,
-            # grid_path=empty_env._init_grid_path, # assign it the 118 grid
-            chronics_path=path_chronix2grid,
-            param=env_param,
-            backend=LightSimBackend()
-            )
-    
+def fix_losses_one_scenario(env_for_loss, scenario_id, params, output_path,
+                            env_path, env_param, path_chronix2grid,
+                            threshold_stop=0.5,
+                            max_iter=100
+                            ):
     gen_p_orig = np.full((env_for_loss.max_episode_duration() + 1, env_for_loss.n_gen), fill_value=np.NaN, dtype=np.float32)
     final_gen_v = np.full((env_for_loss.max_episode_duration() + 1, env_for_loss.n_gen), fill_value=np.NaN, dtype=np.float32)
     final_load_p = np.full((env_for_loss.max_episode_duration() + 1, env_for_loss.n_load), fill_value=np.NaN, dtype=np.float32)
@@ -189,8 +156,7 @@ if __name__ == "__main__":
     
     env_for_loss.set_id(scenario_id)
     obs = env_for_loss.reset()
-            
-    ### now start to split the loss
+    
     i = 0
     all_loss_orig[i] = np.sum(obs.gen_p) - np.sum(obs.load_p)
     final_gen_v[i] = obs.gen_v
@@ -222,17 +188,79 @@ if __name__ == "__main__":
     df["cost_per_mw"] = df["marginal_cost"]
     econimic_dispatch = PypsaDispatcher.from_dataframe(df)
     econimic_dispatch._chronix_scenario = ChroniXScenario(loads=1.0 * load_without_loss,
-                                                          prods=pd.DataFrame(1.0 * gen_p_orig, columns=env_for_loss.name_gen),
-                                                          scenario_name=scenario_id,
-                                                          res_names= {"wind": env_for_loss.name_gen[env_for_loss.gen_type == "wind"],
-                                                                      "solar": env_for_loss.name_gen[env_for_loss.gen_type == "solar"]
-                                                          }
-                                                          )
+                                                        prods=pd.DataFrame(1.0 * gen_p_orig, columns=env_for_loss.name_gen),
+                                                        scenario_name=scenario_id,
+                                                        res_names= {"wind": env_for_loss.name_gen[env_for_loss.gen_type == "wind"],
+                                                                    "solar": env_for_loss.name_gen[env_for_loss.gen_type == "solar"]
+                                                        }
+                                                        )
     
+    error_ = None
+    total_solar_orig = pd.Series(total_solar.ravel(), index=datetimes)
+    total_wind_orig = pd.Series(total_wind.ravel(), index=datetimes)
+    
+    total_solar = 1.0 * total_solar_orig
+    total_wind = 1.0 * total_wind_orig
+    res_gen_p = 1.0 * gen_p_orig
+    diff_ = 1.0 * max_diff_orig
+    diff_ = diff_.reshape(-1,1)
+    
+    res_gen_p, error_ = adjust_gens(all_loss_orig,
+                                    env_for_loss,
+                                    datetimes,
+                                    total_solar,
+                                    total_wind,
+                                    params,
+                                    env_path,
+                                    env_param,
+                                    load_without_loss,
+                                    final_load_p, 
+                                    final_load_q,
+                                    gen_p_orig,
+                                    final_gen_v,
+                                    econimic_dispatch,
+                                    path_chronix2grid,
+                                    diff_,
+                                    threshold_stop=threshold_stop,
+                                    max_iter=max_iter)
+    
+    if error_ is not None:
+        return error_
+    
+    # now save it
+    save_data(env_for_loss, 
+              path_chronix2grid,
+              output_path, 
+              final_load_p, 
+              final_load_q, 
+              res_gen_p, 
+              final_gen_v)
+    return None
+
+def fix_loss_multiple_scenarios(path_env,
+                                path_chronix2grid,
+                                output_path,
+                                scenario_ids,
+                                threshold_stop=0.5,
+                                max_iter=100):
+    ### run a first environment to compute the loss
+    env_param = Parameters()
+    env_param.NO_OVERFLOW_DISCONNECTION = True
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        env_for_loss = grid2op.make(
+            path_env,
+            test=True,
+            # grid_path=empty_env._init_grid_path, # assign it the 118 grid
+            chronics_path=path_chronix2grid,
+            param=env_param,
+            backend=LightSimBackend()
+            )
+
     # now starts the OPF
-    with open(os.path.join(env_path, "params_opf.json"), "r") as f:
+    with open(os.path.join(path_env, "params_opf.json"), "r") as f:
         params = json.load(f)
-    params["loss_pct"] = 0.  # losses are handled anove
+    params["loss_pct"] = 0.  # losses are handled better in this function
     params["PmaxErrorCorrRatio"] = 0.9
     params["RampErrorCorrRatio"] = 0.95
     
@@ -242,26 +270,90 @@ if __name__ == "__main__":
         del params["slack_pmin"]
     if "slack_pmax" in params:
         del params["slack_pmax"]
+              
+    ### now start to split the loss
+    for scenario_id in scenario_ids:
+        error_ = fix_losses_one_scenario(env_for_loss, scenario_id, params, output_path,
+                                         path_env, env_param, output_path,
+                                         threshold_stop=threshold_stop,
+                                         max_iter=max_iter
+                                         )
+        if error_ is not None:
+            print(f"ERROR for scenario {scenario_id}: {error_}")
     
-    error_ = None
-    total_solar_orig = pd.Series(total_solar.ravel(), index=datetimes)
-    total_wind_orig = pd.Series(total_wind.ravel(), index=datetimes)
-    
-    total_solar = 1.0 * total_solar_orig
-    total_wind = 1.0 * total_wind_orig
-    all_loss = 1.0 * all_loss_orig
-    res_gen_p = 1.0 * gen_p_orig
-    res_gen_p_prev = 1.0 * gen_p_orig
-    iter_num = 1.
-    max__ = 1.2 * max_diff_orig.max()
-    diff_ = 1.0 * max_diff_orig
-    diff_ = diff_.reshape(-1,1)
-    
-    extra_functionality = None
-    ratio_ = 1.
-    ratio_max = 1.
+if __name__ == "__main__":
 
-        
-    if error_ is not None:
-        raise error_
+    OUTPUT_FOLDER = os.path.join('..', 'example', 'custom', 'output')
+
+    path_chronix2grid = os.path.join(OUTPUT_FOLDER, "all_scenarios")
+    path_chronics_fixed = os.path.join(OUTPUT_FOLDER, "fixed_chronics")
+    env_name = "case118_l2rpn_wcci_benjamin"
+    path_tmp = os.path.join("..", "example", "custom", "input", "generation")
+    env_path = os.path.join(path_tmp, env_name)
+    grid_path = os.path.join(env_path, "grid.json")
+    
+    threshold_stop = 0.5
+    max_iter = 100
+    
+    li_months = [
+             "2050-01-03", 
+             "2050-01-10",
+             "2050-01-17",
+             "2050-01-24",
+             "2050-01-31",
+             "2050-02-07",
+             "2050-02-14",
+             "2050-02-21",
+             "2050-02-28",
+             "2050-03-07",
+             "2050-03-14",
+             "2050-03-21",
+             "2050-03-28",
+             "2050-04-04",
+             "2050-04-11",
+             "2050-04-18",
+             "2050-04-25",
+             "2050-05-02", 
+             "2050-05-09", 
+             "2050-05-16", 
+             "2050-05-23", 
+             "2050-05-30",
+             "2050-06-06",
+             "2050-06-13",
+             "2050-06-20",
+             "2050-06-27",
+             "2050-07-04", 
+             "2050-07-11", 
+             "2050-07-18", 
+             "2050-07-25", 
+             "2050-08-01", 
+             "2050-08-08", 
+             "2050-08-15", 
+             "2050-08-22", 
+             "2050-08-29", 
+             "2050-09-05", 
+             "2050-09-12", 
+             "2050-09-19", 
+             "2050-09-26", 
+             "2050-10-03", 
+             "2050-10-10", 
+             "2050-10-17", 
+             "2050-10-24", 
+             "2050-10-31", 
+             "2050-11-07", 
+             "2050-11-14", 
+             "2050-11-21", 
+             "2050-11-28", 
+             "2050-12-05",
+             "2050-12-12",
+             "2050-12-19",
+             "2050-12-26",
+            ]
+                                    
+    fix_loss_multiple_scenarios(env_path,
+                                path_chronix2grid,
+                                path_chronics_fixed,
+                                scenario_ids=[f"{el}_0" for el in li_months],
+                                threshold_stop=threshold_stop,
+                                max_iter=max_iter)
     
