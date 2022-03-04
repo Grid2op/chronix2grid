@@ -273,8 +273,13 @@ def fix_loss_multiple_scenarios(path_env,
               
     ### now start to split the loss
     for scenario_id in scenario_ids:
-        error_ = fix_losses_one_scenario(env_for_loss, scenario_id, params, output_path,
-                                         path_env, env_param, output_path,
+        error_ = fix_losses_one_scenario(env_for_loss,
+                                         scenario_id,
+                                         params,
+                                         output_path,
+                                         path_env,
+                                         env_param,
+                                         path_chronix2grid,
                                          threshold_stop=threshold_stop,
                                          max_iter=max_iter
                                          )
@@ -283,6 +288,9 @@ def fix_loss_multiple_scenarios(path_env,
     
 if __name__ == "__main__":
 
+    # good but it takes a loooot of time, maybe rewriting it using scipy ? or or tools ?
+    
+    
     OUTPUT_FOLDER = os.path.join('..', 'example', 'custom', 'output')
 
     path_chronix2grid = os.path.join(OUTPUT_FOLDER, "all_scenarios")
