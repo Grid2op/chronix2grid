@@ -60,16 +60,19 @@ def main(scenario_destination_path, seed, params, loads_charac, load_weekly_patt
     loads_series['datetime'] = datetime_index
 
     # Save files
-    print('Saving files in zipped csv in "{}"'.format(scenario_destination_path))
-    if not os.path.exists(scenario_destination_path):
-        os.makedirs(scenario_destination_path)
+    if scenario_destination_path is not None:
+        print('Saving files in zipped csv in "{}"'.format(scenario_destination_path))
+        if not os.path.exists(scenario_destination_path):
+            os.makedirs(scenario_destination_path)
+            
     load_p_forecasted = conso.create_csv(loads_series, scenario_destination_path,
-                                         forecasted=True, reordering=True,
-                  shift=True, write_results=write_results, index=False)
+                                        forecasted=True, reordering=True,
+                                        shift=True, write_results=write_results, index=False)
     load_p = conso.create_csv(
         loads_series, scenario_destination_path,
         reordering=True,
-        noise=params['planned_std'], write_results=write_results,
+        noise=params['planned_std'],
+        write_results=write_results,
         index=False
     )
     

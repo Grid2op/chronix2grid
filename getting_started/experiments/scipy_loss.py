@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
 
-from datetime import datetime
+from datetime import datetime, time
 import os
 from grid2op.Parameters import Parameters
 import pandas as pd
@@ -56,6 +56,9 @@ def adjust_gens(all_loss_orig,
     total_step = total_solar.shape[0]
     cost_matrix = identity(total_gen * total_step)
     
+    scaling_factor = np.tile(env_for_loss.gen_pmax[env_for_loss.gen_redispatchable],
+                             total_step)
+    
     # matrix representing gen_i_(t+1) - gen_i_t
     data = []
     rows = []
@@ -73,15 +76,17 @@ def adjust_gens(all_loss_orig,
                               shape=((total_step -1) * total_gen, cost_matrix.size),
                               dtype=float)  
     max_ramp_up = env_for_loss.gen_max_ramp_up[env_for_loss.gen_redispatchable] * params["RampErrorCorrRatio"]
-    max_ramp_up = np.tile(max_ramp_up, (total_step -1))
+    max_ramp_up = np.tile(max_ramp_up / env_for_loss.gen_pmax[env_for_loss.gen_redispatchable],
+                          (total_step -1)) 
     max_ramp_down = - env_for_loss.gen_max_ramp_down[env_for_loss.gen_redispatchable] * params["RampErrorCorrRatio"]
-    max_ramp_down = np.tile(max_ramp_down, (total_step -1))
+    max_ramp_down = np.tile(max_ramp_down / env_for_loss.gen_pmax[env_for_loss.gen_redispatchable],
+                            (total_step -1))
     
     # now pmin / pmax constraints
     mat_pmin_pmax = cost_matrix
-    p_min = np.tile(env_for_loss.gen_pmin[env_for_loss.gen_redispatchable], total_step)
+    p_min = np.tile(env_for_loss.gen_pmin[env_for_loss.gen_redispatchable], total_step) / scaling_factor
     p_max = np.tile(env_for_loss.gen_pmax[env_for_loss.gen_redispatchable] * params["PmaxErrorCorrRatio"],
-                    total_step)
+                    total_step) / scaling_factor
     
     # finally: build the constaint:
     mat_ramps_min_max = vstack((mat_delta_p, mat_pmin_pmax))
@@ -90,7 +95,7 @@ def adjust_gens(all_loss_orig,
     physical_constraints = LinearConstraint(mat_ramps_min_max, ramps_and_pmin, ramps_and_pmax)
     
     # sum of generators = loads at each step
-    data = np.ones(total_step * total_gen)
+    data = np.ones(total_step * total_gen) * scaling_factor
     rows = np.repeat(np.arange(total_step), total_gen)
     cols = np.concatenate([np.arange(total_gen) + t * total_gen for t in range(total_step)])
     
@@ -101,8 +106,7 @@ def adjust_gens(all_loss_orig,
         iter_num += 1
         load = load_without_loss + all_loss
         # load = pd.DataFrame(load.ravel(), index=datetimes)
-        target_vector = res_gen_p[:,env_for_loss.gen_redispatchable].ravel()
-        
+        target_vector = res_gen_p[:,env_for_loss.gen_redispatchable].ravel() / scaling_factor 
         
         # add the constraint that the sum per step should match the load
         equal_load_constraint = LinearConstraint(mat_sum_gen, load, load)
@@ -113,18 +117,17 @@ def adjust_gens(all_loss_orig,
         def jac(x):
             return x
         
-        print("start optimization")
+        print(f"start optimization at {datetime.now():%Y-%m-%d %H:%M:%S}")
         init = 1.0 * target_vector
         this_res = minimize(target,
                             init,
                             method="trust-constr",
                             constraints=[equal_load_constraint, physical_constraints],
-                            # jac=jac,
+                            jac=jac,
                             options={'verbose': 1}
                             )
-        
+        print(f"end optimization at {datetime.now():%Y-%m-%d %H:%M:%S}")
         pdb.set_trace()
-        
         if dispatch_res is None:     
             error_ = RuntimeError("Pypsa failed to find a solution")
             break

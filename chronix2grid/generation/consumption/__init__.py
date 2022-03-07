@@ -6,3 +6,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
 
+__all__ = ["ConsumptionGeneratorBackend"]
+
+from .ConsumptionGeneratorBackend import ConsumptionGeneratorBackend

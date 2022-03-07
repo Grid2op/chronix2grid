@@ -340,5 +340,4 @@ class GeneratorBackend:
         generator_dispatch = self.dispatch_backend_class(dispatcher, scenario_folder_path,
                                                  grid_folder, seed_disp, params, params_opf)
         dispatch_results = generator_dispatch.run()
-
         return dispatch_results

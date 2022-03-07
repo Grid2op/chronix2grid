@@ -147,8 +147,7 @@ def create_csv(dict_, path, forecasted=False, reordering=True, noise=None,
     df_reactive_power = 0.7 * df
     if noise is not None:
         df *= np.random.lognormal(mean=0.0,sigma=noise, size=df.shape)
-        df_reactive_power *= np.random.lognormal(mean=0.0, sigma=noise,
-                                                 size=df.shape)
+        df_reactive_power *= np.random.lognormal(mean=0.0, sigma=noise, size=df.shape)
 
     if write_results:
         file_extension = '_forecasted' if forecasted else ''

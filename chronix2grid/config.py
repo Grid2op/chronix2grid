@@ -201,7 +201,6 @@ class LoadsConfigManager(ConfigManager):
                 params[key] = float(value)
             except ValueError:
                 params[key] = pd.to_datetime(value, format='%Y-%m-%d')
-
         # Nt_inter = int(params['T'] // params['dt'] + 1)
         try:
             loads_charac = pd.read_csv(

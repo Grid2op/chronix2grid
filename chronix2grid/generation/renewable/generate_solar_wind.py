@@ -113,12 +113,14 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
     wind_series['datetime'] = datetime_index
 
     # Save files
-    print('Saving files in zipped csv')
-    if not os.path.exists(scenario_destination_path):
-        os.makedirs(scenario_destination_path)
+    if scenario_destination_path is not None:
+        print('Saving files in zipped csv')
+        if not os.path.exists(scenario_destination_path):
+            os.makedirs(scenario_destination_path)
+            
     prod_solar_forecasted =  swutils.create_csv(
         solar_series,
-        os.path.join(scenario_destination_path, 'solar_p_forecasted.csv.bz2'),
+        os.path.join(scenario_destination_path, 'solar_p_forecasted.csv.bz2') if scenario_destination_path is not None else None,
         reordering=True,
         shift=True,
         write_results=write_results,
@@ -127,7 +129,7 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
 
     prod_solar = swutils.create_csv(
         solar_series,
-        os.path.join(scenario_destination_path, 'solar_p.csv.bz2'),
+        os.path.join(scenario_destination_path, 'solar_p.csv.bz2') if scenario_destination_path is not None else None,
         reordering=True,
         noise=params['planned_std'],
         write_results=write_results
@@ -135,7 +137,7 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
 
     prod_wind_forecasted = swutils.create_csv(
         wind_series,
-        os.path.join(scenario_destination_path, 'wind_p_forecasted.csv.bz2'),
+        os.path.join(scenario_destination_path, 'wind_p_forecasted.csv.bz2') if scenario_destination_path is not None else None,
         reordering=True,
         shift=True,
         write_results=write_results,
@@ -143,14 +145,14 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
     )
 
     prod_wind = swutils.create_csv(
-        wind_series, os.path.join(scenario_destination_path, 'wind_p.csv.bz2'),
+        wind_series, os.path.join(scenario_destination_path, 'wind_p.csv.bz2') if scenario_destination_path is not None else None,
         reordering=True,
         noise=params['planned_std'],
         write_results=write_results
     )
 
     prod_p = swutils.create_csv(
-        prods_series, os.path.join(scenario_destination_path, 'prod_p.csv.bz2'),
+        prods_series, os.path.join(scenario_destination_path, 'prod_p.csv.bz2') if scenario_destination_path is not None else None,
         reordering=True,
         noise=params['planned_std'],
         write_results=write_results
@@ -161,12 +163,13 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
     prod_v.index = [0]
     prod_v = prod_v.reindex(range(len(prod_p)))
     prod_v = prod_v.fillna(method='ffill') * 1.04
-
-    prod_v.to_csv(
-        os.path.join(scenario_destination_path, 'prod_v.csv.bz2'),
-        sep=';',
-        index=False,
-        float_format=cst.FLOATING_POINT_PRECISION_FORMAT
-    )
+    
+    if write_results:
+        prod_v.to_csv(
+            os.path.join(scenario_destination_path, 'prod_v.csv.bz2') if scenario_destination_path is not None else None,
+            sep=';',
+            index=False,
+            float_format=cst.FLOATING_POINT_PRECISION_FORMAT
+        )
 
     return prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted
