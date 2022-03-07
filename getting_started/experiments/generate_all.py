@@ -241,6 +241,7 @@ def adjust_gens(all_loss_orig,
     res_gen_p = 1.0 * gen_p
     error_ = None
     iter_num = 0
+    hydro_constraints = economic_dispatch.make_hydro_constraints_from_res_load_scenario()
     while True:
         iter_num += 1
         load = load_without_loss + all_loss
@@ -255,7 +256,6 @@ def adjust_gens(all_loss_orig,
                         for gen_id, gen_nm in enumerate(env_for_loss.name_gen) if env_for_loss.gen_redispatchable[gen_id]}
         
         
-        hydro_constraints = economic_dispatch.make_hydro_constraints_from_res_load_scenario()
         ### run the dispatch with the loss
         dispatch_res = economic_dispatch.run(load,
                                              total_solar=total_solar,
@@ -263,7 +263,7 @@ def adjust_gens(all_loss_orig,
                                              params=params,
                                              pyomo=False,
                                              solver_name="cbc",
-                                             gen_constraints=hydro_constraints,
+                                             gen_constraints=copy.deepcopy(hydro_constraints),
                                              gen_max_pu_t=gen_max_pu_t,
                                              gen_min_pu_t=gen_min_pu_t,
                                              )
@@ -340,6 +340,7 @@ def fix_losses_one_scenario(env_for_loss,
                             params,
                             env_path,
                             env_param,
+                            load_df,
                             threshold_stop=0.5,
                             max_iter=100
                             ):
@@ -387,13 +388,13 @@ def fix_losses_one_scenario(env_for_loss,
     df["cost_per_mw"] = df["marginal_cost"]
     economic_dispatch = PypsaDispatcher.from_dataframe(df)
     economic_dispatch.read_hydro_guide_curves(os.path.join(ref_pattern_path, 'hydro_french.csv'))
-    economic_dispatch._chronix_scenario = ChroniXScenario(loads=1.0 * load_without_loss,
-                                                        prods=pd.DataFrame(1.0 * gen_p_orig, columns=env_for_loss.name_gen),
-                                                        scenario_name=scenario_id,
-                                                        res_names= {"wind": env_for_loss.name_gen[env_for_loss.gen_type == "wind"],
-                                                                    "solar": env_for_loss.name_gen[env_for_loss.gen_type == "solar"]
-                                                        }
-                                                        )
+    economic_dispatch._chronix_scenario = ChroniXScenario(loads=1.0 * load_df,
+                                                          prods=pd.DataFrame(1.0 * gen_p_orig, columns=env_for_loss.name_gen),
+                                                          scenario_name=scenario_id,
+                                                          res_names= {"wind": env_for_loss.name_gen[env_for_loss.gen_type == "wind"],
+                                                                      "solar": env_for_loss.name_gen[env_for_loss.gen_type == "solar"]
+                                                          }
+                                                         )
     
     error_ = None
     total_solar_orig = pd.Series(total_solar.ravel(), index=datetimes)
@@ -508,7 +509,12 @@ if __name__ == "__main__":
                             loss_param,
                             path_env,
                             env_for_loss.parameters,
+                            load_df=load_p,
                             threshold_stop=0.5,
                             max_iter=100
                             )
+    
+    # and now save everything
+    # TODO prod_p_forecasted
+    # TODO maintenance, hazards etc.
     pdb.set_trace()
