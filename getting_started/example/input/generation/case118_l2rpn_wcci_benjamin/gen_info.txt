@@ -67,9 +67,17 @@ tentative de bouger les parametres
   
 Mise à
 
-  "dx_corr": 250,
-  "dy_corr": 250,
-  
+  "dx_corr": 800,
+  "dy_corr": 800,
+ 
+
+Pour le solaire, ajout du parametre:
+ "scale_solar_coord_for_correlation": 5.0
+ qui va éloigner les générateurs solaires les uns des autres (mais ce n'est pas assez)
+ 
+[INUTILE] passage de "solar_corr": 20 à "solar_corr": 1 nope, inutile
+passage de "std_solar_noise": 0.1 à "std_solar_noise": 0.3 [casse beaucoup la dynamique d'un seul generateur]
+
 ### Recap
 Problemes rencontres:
 - date de debut: attention au jour de la semaine (a eu besoin d'aller loin dans le code)

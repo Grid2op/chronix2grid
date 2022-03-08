@@ -46,9 +46,19 @@ def main(scenario_destination_path, seed, params, loads_charac, load_weekly_patt
         end=params['end_date'],
         freq=str(params['dt']) + 'min')
 
+
+    add_dim = 0
+    dx_corr = int(params['dx_corr'])
+    dy_corr = int(params['dy_corr'])
+    for x,y  in zip(loads_charac["x"], loads_charac["y"]):
+        x_plus = int(x // dx_corr + 1)
+        y_plus = int(y // dy_corr + 1)
+        add_dim = max(y_plus, add_dim)
+        add_dim = max(x_plus, add_dim)
+    
     # Generate GLOBAL temperature noise
     print('Computing global auto-correlated spatio-temporal noise for thermosensible demand...') ## temperature is simply to reflect the fact that loads is correlated spatially, and so is the real "temperature". It is not the real temperature.
-    temperature_noise = utils.generate_coarse_noise(params, 'temperature')
+    temperature_noise = utils.generate_coarse_noise(params, 'temperature', add_dim=add_dim)
 
     print('Computing loads ...')
     start_day = datetime_index[0]
@@ -56,7 +66,8 @@ def main(scenario_destination_path, seed, params, loads_charac, load_weekly_patt
                                        temperature_noise,
                                        params,
                                        load_weekly_pattern,
-                                       start_day=start_day)
+                                       start_day=start_day,
+                                       add_dim=add_dim)
     loads_series['datetime'] = datetime_index
 
     # Save files

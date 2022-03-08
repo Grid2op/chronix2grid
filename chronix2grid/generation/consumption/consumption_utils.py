@@ -16,7 +16,7 @@ from scipy.interpolate import interp1d
 from .. import generation_utils as utils
 import chronix2grid.constants as cst
 
-def compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern, start_day):
+def compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern, start_day, add_dim):
     # Compute active part of loads
     weekly_pattern = load_weekly_pattern['test'].values
     
@@ -32,7 +32,7 @@ def compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern, 
         if loads_charac[mask]['type'].values == 'residential':
             locations = [loads_charac[mask]['x'].values[0], loads_charac[mask]['y'].values[0]]
             Pmax = loads_charac[mask]['Pmax'].values[0]
-            loads_series[name] = compute_residential(locations, Pmax, temperature_noise, params, weekly_pattern, index=i, day_lag=day_lag)
+            loads_series[name] = compute_residential(locations, Pmax, temperature_noise, params, weekly_pattern, index=i, day_lag=day_lag, add_dim=add_dim)
 
         if loads_charac[mask]['type'].values == 'industrial':
             raise NotImplementedError("Impossible to generate industrial loads for now.")
@@ -40,7 +40,7 @@ def compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern, 
             loads_series[name] = compute_industrial(Pmax, params)
     return loads_series
 
-def compute_residential(locations, Pmax, temperature_noise, params, weekly_pattern, index, day_lag=None):
+def compute_residential(locations, Pmax, temperature_noise, params, weekly_pattern, index, day_lag=None, add_dim=0):
 
 
     # Compute refined signals
@@ -48,7 +48,8 @@ def compute_residential(locations, Pmax, temperature_noise, params, weekly_patte
         temperature_noise,
         params,
         locations,
-        time_scale=params['temperature_corr'])
+        time_scale=params['temperature_corr'],
+        add_dim=add_dim)
     temperature_signal = temperature_signal.astype(float)
     
     # Compute seasonal pattern

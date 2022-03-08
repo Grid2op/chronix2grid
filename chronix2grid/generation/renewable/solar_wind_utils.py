@@ -15,23 +15,26 @@ from scipy.interpolate import interp1d
 from .. import generation_utils as utils
 import chronix2grid.constants as cst
 
-def compute_wind_series(locations, Pmax, long_noise, medium_noise, short_noise, params, smoothdist):
+def compute_wind_series(locations, Pmax, long_noise, medium_noise, short_noise, params, smoothdist, add_dim):
     # Compute refined signals
     long_scale_signal = utils.interpolate_noise(
         long_noise,
         params,
         locations,
-        time_scale=params['long_wind_corr'])
+        time_scale=params['long_wind_corr'],
+        add_dim=add_dim)
     medium_scale_signal = utils.interpolate_noise(
         medium_noise,
         params,
         locations,
-        time_scale=params['medium_wind_corr'])
+        time_scale=params['medium_wind_corr'],
+        add_dim=add_dim)
     short_scale_signal = utils.interpolate_noise(
         short_noise,
         params,
         locations,
-        time_scale=params['short_wind_corr'])
+        time_scale=params['short_wind_corr'],
+        add_dim=add_dim)
 
     # Compute seasonal pattern
     Nt_inter = int(params['T'] // params['dt'] + 1)
@@ -57,22 +60,24 @@ def compute_wind_series(locations, Pmax, long_noise, medium_noise, short_noise, 
     wind_series[wind_series > 0.95 * Pmax] = 0.95 * Pmax
     return wind_series
 
-def compute_solar_series(locations, Pmax, solar_noise, params, solar_pattern, smoothdist, time_scale):
+def compute_solar_series(locations, Pmax, solar_noise, params, solar_pattern, smoothdist, time_scale, add_dim, scale_solar_coord_for_correlation=None):
 
     # Compute noise at desired locations
-    final_noise = utils.interpolate_noise(solar_noise, params, locations, time_scale)
+    if scale_solar_coord_for_correlation is not None:
+        locations = [float(scale_solar_coord_for_correlation) * float(locations[0]), float(scale_solar_coord_for_correlation) * float(locations[1])]
+    final_noise = utils.interpolate_noise(solar_noise, params, locations, time_scale, add_dim=add_dim)
 
     # Compute solar pattern
     solar_pattern = compute_solar_pattern(params, solar_pattern)
 
     # Compute solar time series
     std_solar_noise = float(params['std_solar_noise'])
-    signal = solar_pattern*(0.75+std_solar_noise*final_noise)
+    signal = solar_pattern * (0.75 + std_solar_noise * final_noise)
     signal += np.random.uniform(0, smoothdist/Pmax, signal.shape)
     # signal[signal > 1] = 1
     signal[signal < 0.] = 0.
     signal = smooth(signal)
-    solar_series = Pmax*signal
+    solar_series = Pmax * signal
     # solar_series[np.isclose(solar_series, 0.)] = 0
     solar_series[solar_series > 0.95 * Pmax] = 0.95 * Pmax
     return solar_series

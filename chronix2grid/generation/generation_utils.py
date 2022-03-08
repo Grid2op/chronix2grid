@@ -31,7 +31,7 @@ def make_generation_input_output_directories(input_folder, case, year, output_fo
     return dispatch_input_folder, dispatch_input_folder_case, dispatch_output_folder
 
 
-def generate_coarse_noise(params, data_type):
+def generate_coarse_noise(params, data_type, add_dim):
     """
     This function generates a spatially and temporally correlated noise.
     Because it may take a lot of time to compute a correlated noise on
@@ -57,16 +57,16 @@ def generate_coarse_noise(params, data_type):
     dt_corr = params[data_type + '_corr']
 
     # Compute number of element in each dimension
-    Nx_comp = int(Lx // dx_corr + 1) + 1
-    Ny_comp = int(Ly // dy_corr + 1) + 1
-    Nt_comp = int(T // dt_corr + 1) + 1
+    Nx_comp = int(Lx // dx_corr + 1) + add_dim
+    Ny_comp = int(Ly // dy_corr + 1) + add_dim
+    Nt_comp = int(T // dt_corr + 1) + add_dim
 
     # Generate gaussian noise input·
     output = np.random.normal(0, 1, (Nx_comp, Ny_comp, Nt_comp))
 
     return output
 
-def interpolate_noise(computation_noise, params, locations, time_scale):
+def interpolate_noise(computation_noise, params, locations, time_scale, add_dim):
     """
     This interpolates an autocarrelated noise mesh, to make it more granular.
 
@@ -91,9 +91,9 @@ def interpolate_noise(computation_noise, params, locations, time_scale):
     dt_corr = time_scale
 
     # Compute number of element in each dimension
-    Nx_comp = int(Lx // dx_corr + 1) + 1
-    Ny_comp = int(Ly // dy_corr + 1) + 1
-    Nt_comp = int(T // dt_corr + 1) + 1
+    Nx_comp = int(Lx // dx_corr + 1) + add_dim
+    Ny_comp = int(Ly // dy_corr + 1) + add_dim
+    Nt_comp = int(T // dt_corr + 1) + add_dim
 
     # Get interpolation temporal mesh size
     dt = params['dt']

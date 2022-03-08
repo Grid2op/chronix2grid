@@ -32,6 +32,9 @@ import pdb
 
 FLOATING_POINT_PRECISION_FORMAT = '%.1f'
 
+# TODO log somewhere the amount of solar curtailed, as well as the amount of wind curtailed and the losses
+# TODO allow for a "debug" mode where we can save the values for the prices, the renewables generated, the renewables after dispatch 
+# and the renewables after the losses
 
 def generate_loads(path_env, load_seed, start_date_dt, end_date_dt, dt, number_of_minutes, generic_params,
                    load_q_from_p_coeff=0.7):
