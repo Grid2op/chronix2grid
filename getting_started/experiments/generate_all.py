@@ -11,9 +11,7 @@
 import copy
 from datetime import datetime, timedelta
 import json
-import pdb
 import shutil
-from black import err
 import pandas as pd
 import os
 import grid2op
@@ -28,7 +26,9 @@ from chronix2grid.generation.renewable import RenewableBackend
 from chronix2grid.generation.dispatch.PypsaDispatchBackend import PypsaDispatcher
 from chronix2grid.getting_started.example.input.generation.patterns import ref_pattern_path
 from chronix2grid.generation.dispatch.EconomicDispatch import ChroniXScenario
+
 import warnings
+import pdb
 
 FLOATING_POINT_PRECISION_FORMAT = '%.1f'
 
@@ -829,7 +829,7 @@ if __name__ == "__main__":
     # required parameters
     env_name = "../example/custom/input/generation/case118_l2rpn_wcci_benjamin" 
     env = grid2op.make(env_name, chronics_class=ChangeNothing)
-    output_dir = "/home/donnotben/Documents/chronix2grid_gaetan/getting_started/example/custom/output/fixed_chronics_complete"
+    output_dir = "../example/custom/output/fixed_chronics_complete"
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
         

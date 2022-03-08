@@ -58,7 +58,18 @@ after above: 0.57%, 2.54%, 5.45%
  => ajout de parametres "slack_ramp_limit_ratio" pour le slack: pour etre "plus sur" que ses rampes seront bien limitées (on les multiplie par ce ratio dans l'opf)
  => ajout du parametre "PmaxErrorCorrRatio" pour diminuer les pmax dans l'opf (pour garder plus de marges en temps reel)
  => ajout du parametre "RampErrorCorrRatio" pour diminuer les rampes dans l'opf (pour garder plus de marges en temps reel)
- 
+
+
+### Probleme : trop de correlation
+tentative de bouger les parametres 
+  "dx_corr": 1000,
+  "dy_corr": 1000,
+  
+Mise à
+
+  "dx_corr": 250,
+  "dy_corr": 250,
+  
 ### Recap
 Problemes rencontres:
 - date de debut: attention au jour de la semaine (a eu besoin d'aller loin dans le code)

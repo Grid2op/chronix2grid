@@ -57,9 +57,9 @@ def generate_coarse_noise(params, data_type):
     dt_corr = params[data_type + '_corr']
 
     # Compute number of element in each dimension
-    Nx_comp = int(Lx // dx_corr + 1)
-    Ny_comp = int(Ly // dy_corr + 1)
-    Nt_comp = int(T // dt_corr + 1)
+    Nx_comp = int(Lx // dx_corr + 1) + 1
+    Ny_comp = int(Ly // dy_corr + 1) + 1
+    Nt_comp = int(T // dt_corr + 1) + 1
 
     # Generate gaussian noise input·
     output = np.random.normal(0, 1, (Nx_comp, Ny_comp, Nt_comp))
@@ -91,9 +91,9 @@ def interpolate_noise(computation_noise, params, locations, time_scale):
     dt_corr = time_scale
 
     # Compute number of element in each dimension
-    Nx_comp = int(Lx // dx_corr + 1)
-    Ny_comp = int(Ly // dy_corr + 1)
-    Nt_comp = int(T // dt_corr + 1)
+    Nx_comp = int(Lx // dx_corr + 1) + 1
+    Ny_comp = int(Ly // dy_corr + 1) + 1
+    Nt_comp = int(T // dt_corr + 1) + 1
 
     # Get interpolation temporal mesh size
     dt = params['dt']

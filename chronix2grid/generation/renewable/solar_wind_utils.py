@@ -75,7 +75,6 @@ def compute_solar_series(locations, Pmax, solar_noise, params, solar_pattern, sm
     solar_series = Pmax*signal
     # solar_series[np.isclose(solar_series, 0.)] = 0
     solar_series[solar_series > 0.95 * Pmax] = 0.95 * Pmax
-
     return solar_series
 
 def compute_solar_pattern(params, solar_pattern):

@@ -50,8 +50,6 @@ def compute_residential(locations, Pmax, temperature_noise, params, weekly_patte
         locations,
         time_scale=params['temperature_corr'])
     temperature_signal = temperature_signal.astype(float)
-    # print(f"{temperature_signal.mean()=}")
-
     
     # Compute seasonal pattern
     Nt_inter = int(params['T'] // params['dt'] + 1)
@@ -61,10 +59,6 @@ def compute_residential(locations, Pmax, temperature_noise, params, weekly_patte
     
     start_year = pd.to_datetime(str(params['start_date'].year) + '/01/01', format='%Y-%m-%d')
     start_min = float(pd.Timedelta(params['start_date'] - start_year).total_seconds())
-    # print(f"{np.max(t) = }")
-    # print(f"{start_min = }")
-    # print(f"{np.min(t) = }")
-    # print(f"{Nt_inter = }")
     nb_sec_per_day =  24. * 60. * 60.
     nb_sec_per_year = (365. * nb_sec_per_day)
     year_pattern = 2. * np.pi / nb_sec_per_year
