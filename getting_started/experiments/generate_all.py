@@ -242,7 +242,9 @@ def _adjust_gens(all_loss_orig,
                 economic_dispatch,
                 diff_,
                 threshold_stop=0.1,  # stop when all generators move less that this
-                max_iter=100,
+                max_iter=100,  # declare a failure after this number of iteration
+                iter_quality_decrease=50,  # acept a reduction of the quality after this number of iteration
+                percentile_quality_decrease=99,
                 ):
     """This function is an auxilliary function.
     
@@ -295,6 +297,7 @@ def _adjust_gens(all_loss_orig,
     error_ = None
     iter_num = 0
     hydro_constraints = economic_dispatch.make_hydro_constraints_from_res_load_scenario()
+    quality_ = None
     while True:
         iter_num += 1
         load = load_without_loss + all_loss
@@ -372,18 +375,37 @@ def _adjust_gens(all_loss_orig,
                 break
             all_loss[i] = np.sum(obs.gen_p) - np.sum(obs.load_p)
             diff_[i] = obs.gen_p - res_gen_p[i]
+        
+        max_diff_ = np.abs(diff_).max()
         print()
-        print(f"iter {iter_num}: {diff_.max():.2f}")
+        print(f"iter {iter_num}: {max_diff_:.2f}")
         print()
         
-        if diff_.max() <= threshold_stop:
+        if max_diff_ <= threshold_stop:
+            quality_ = (iter_num,
+                        float(np.mean(np.abs(diff_))),
+                        float(np.percentile(np.abs(diff_), 95)),
+                        float(np.percentile(np.abs(diff_), 99)),
+                        float(max_diff_)
+            )
             break
         
+        if iter_num >= iter_quality_decrease:
+            quantile = np.percentile(np.abs(diff_), percentile_quality_decrease)
+            if quantile <= threshold_stop:
+                quality_ = (iter_num,
+                            float(np.mean(np.abs(diff_))),
+                            float(np.percentile(np.abs(diff_), 95)),
+                            float(np.percentile(np.abs(diff_), 99)),
+                            float(np.max(np.abs(diff_)))
+                )
+                break
+                    
         if iter_num >= max_iter:
             error_ = RuntimeError("Too much iterations performed")
             break
         
-    return res_gen_p, error_
+    return res_gen_p, error_, quality_
 
 def _fix_losses_one_scenario(env_for_loss,
                             scenario_id,
@@ -391,8 +413,10 @@ def _fix_losses_one_scenario(env_for_loss,
                             env_path,
                             env_param,
                             load_df,
-                            threshold_stop=0.5,
-                            max_iter=100
+                            threshold_stop=0.5,  # decide I stop when the data move of less of 0.5 MW at maximum
+                            max_iter=100,  # maximum number of iteration
+                            iter_quality_decrease=20,  # after 20 iteration accept a degradation in the quality
+                            percentile_quality_decrease=99,  # replace the "at maximum" by "percentile 99%"
                             ):
     """This function is an auxilliary function.
     
@@ -485,28 +509,31 @@ def _fix_losses_one_scenario(env_for_loss,
     diff_ = 1.0 * max_diff_orig
     diff_ = diff_.reshape(-1,1)
     
-    res_gen_p, error_ = _adjust_gens(all_loss_orig,
-                                    env_for_loss,
-                                    datetimes,
-                                    total_solar,
-                                    total_wind,
-                                    params,
-                                    env_path,
-                                    env_param,
-                                    load_without_loss,
-                                    final_load_p, 
-                                    final_load_q,
-                                    gen_p_orig,
-                                    final_gen_v,
-                                    economic_dispatch,
-                                    diff_,
-                                    threshold_stop=threshold_stop,
-                                    max_iter=max_iter)
+    res_gen_p, error_, quality_ = _adjust_gens(all_loss_orig,
+                                               env_for_loss,
+                                               datetimes,
+                                               total_solar,
+                                               total_wind,
+                                               params,
+                                               env_path,
+                                               env_param,
+                                               load_without_loss,
+                                               final_load_p, 
+                                               final_load_q,
+                                               gen_p_orig,
+                                               final_gen_v,
+                                               economic_dispatch,
+                                               diff_,
+                                               threshold_stop=threshold_stop,
+                                               max_iter=max_iter,
+                                               iter_quality_decrease=iter_quality_decrease,
+                                               percentile_quality_decrease=percentile_quality_decrease)
     
     if error_ is not None:
-        return None, error_
+        # the procedure failed
+        return None, error_, None
     
-    return res_gen_p, error_
+    return res_gen_p, error_, quality_
 
 
 def handle_losses(path_env, env,
@@ -589,19 +616,22 @@ def handle_losses(path_env, env,
                                  "time_interval": dt_dt,
             }
             )
-    res_gen_p, error_ = _fix_losses_one_scenario(env_for_loss,
-                                                scenario_id,
-                                                loss_param,
-                                                path_env,
-                                                env_for_loss.parameters,
-                                                load_df=load_p,
-                                                threshold_stop=threshold_stop,
-                                                max_iter=max_iter
-                                                )
+    res_gen_p, error_, quality_ = _fix_losses_one_scenario(env_for_loss,
+                                                           scenario_id,
+                                                           loss_param,
+                                                           path_env,
+                                                           env_for_loss.parameters,
+                                                           load_df=load_p,
+                                                           threshold_stop=threshold_stop,
+                                                           max_iter=max_iter
+                                                           )
+    if error_ is not None:
+        return None, error_, None
+    
     # reformat the generators
     res_gen_p_df = pd.DataFrame(res_gen_p, index=final_gen_p.index, columns=env_for_loss.name_gen)
     
-    return res_gen_p_df, error_
+    return res_gen_p_df, error_, quality_
 
 def save_generated_data(this_scen_path, load_p, load_p_forecasted, load_q, load_q_forecasted, prod_p, prod_p_forecasted,
                         sep=';',
@@ -638,7 +668,7 @@ def save_generated_data(this_scen_path, load_p, load_p_forecasted, load_q, load_
                   index=False)
 
 
-def save_ref_data(this_scen_path, path_env, start_date_dt, dt_dt : timedelta, load_seed, renew_seed, gen_p_forecast_seed):
+def save_meta_data(this_scen_path, path_env, start_date_dt, dt_dt : timedelta, load_seed, renew_seed, gen_p_forecast_seed, quality):
     """This function saves the "meta data" required for a succesful grid2op run !
 
     Parameters
@@ -657,6 +687,8 @@ def save_ref_data(this_scen_path, path_env, start_date_dt, dt_dt : timedelta, lo
         _description_
     gen_p_forecast_seed : _type_
         _description_
+    quality: tuple
+
     """
     with open(os.path.join(this_scen_path, "time_interval.info"), "w", encoding="utf-8") as f:
         # f.write(datetime.strftime(dt_dt, "%H:%M"))  # what I want to do but cannot (TypeError: descriptor 'strftime' for 'datetime.date' objects doesn't apply to a 'datetime.timedelta' object)
@@ -670,6 +702,17 @@ def save_ref_data(this_scen_path, path_env, start_date_dt, dt_dt : timedelta, lo
     with open(os.path.join(this_scen_path, "_seeds_info.json"), "w", encoding="utf-8") as f:
         json.dump(obj={"load_seed": int(load_seed), "renew_seed": int(renew_seed), "gen_p_forecast_seed": int(gen_p_forecast_seed)},
                   fp=f)
+    with open(os.path.join(this_scen_path, "gen_p_quality.json"), "w", encoding="utf-8") as f:
+        iter_num, mean_, percent_95, percent_99, max_ = quality
+        json.dump(obj={"iter_num": int(iter_num),
+                       "avg": float(mean_),
+                       "percent_95": float(percent_95),
+                       "percent_99": float(percent_99),
+                       "max": float(max_), 
+                       "info": ("this 'quality' is the difference between the DC solver and the AC solver. This is the number of "
+                                "MW that will differ from the grid2op observation compared to the generated data.")
+                       },
+                  fp=f)
     
     for fn_ in ["maintenance_meta.json"]:
         src_path = os.path.join(path_env, fn_)
@@ -678,9 +721,52 @@ def save_ref_data(this_scen_path, path_env, start_date_dt, dt_dt : timedelta, lo
                         dst=os.path.join(this_scen_path, fn_))
     
 
-def generate_a_scenario(env_name, env, output_dir, 
-                        start_date, dt, scen_id,
-                        load_seed, renew_seed, gen_p_forecast_seed):
+def generate_a_scenario(env_name,
+                        env,
+                        output_dir, 
+                        start_date,
+                        dt,
+                        scen_id,
+                        load_seed,
+                        renew_seed,
+                        gen_p_forecast_seed):
+    """This function generates and save the data for a scenario.
+    
+    Generation includes:
+    - load active value
+    - load reactive value
+    - renewable generation
+    - controlable generation
+
+    Put "outputdir=None" if you don't want to save the data.
+    
+    
+    Parameters
+    ----------
+    env_name : _type_
+        _description_
+    env : _type_
+        _description_
+    output_dir : _type_
+        _description_
+    start_date : _type_
+        _description_
+    dt : _type_
+        _description_
+    scen_id : _type_
+        _description_
+    load_seed : _type_
+        _description_
+    renew_seed : _type_
+        _description_
+    gen_p_forecast_seed : _type_
+        _description_
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
     scenario_id = f"{start_date}_{scen_id}"  # TODO
     path_env = env.get_path_env()
     dt_dt = timedelta(minutes=int(dt))
@@ -715,16 +801,16 @@ def generate_a_scenario(env_name, env, output_dir,
         return error_, None, None, None, None, None, None
     
     # now try to move the generators so that when I run an AC powerflow, the setpoint of generators does not change "too much"
-    res_gen_p_df, error_ = handle_losses(path_env, env,
-                                         gens_charac, load_p, load_q, gen_p_after_dispatch,
-                                         start_date_dt, dt_dt, scenario_id, 
-                                         PmaxErrorCorrRatio=0.9,
-                                         RampErrorCorrRatio=0.95,
-                                         threshold_stop=0.5,
-                                         max_iter=100)
+    res_gen_p_df, error_, quality_ = handle_losses(path_env, env,
+                                                   gens_charac, load_p, load_q, gen_p_after_dispatch,
+                                                   start_date_dt, dt_dt, scenario_id, 
+                                                   PmaxErrorCorrRatio=0.9,
+                                                   RampErrorCorrRatio=0.95,
+                                                   threshold_stop=0.5,
+                                                   max_iter=100)
     if error_ is not None:
         # TODO log that !
-        return error_, None, None, None, None, None, None
+        return error_, None, None, None, None, None, None, None
     
     prng = default_rng(gen_p_forecast_seed)
     res_gen_p_forecasted_df = res_gen_p_df * prng.lognormal(mean=0.0, sigma=float(generic_params["planned_std"]), size=res_gen_p_df.shape)
@@ -735,9 +821,9 @@ def generate_a_scenario(env_name, env, output_dir,
         if not os.path.exists(this_scen_path):
             os.mkdir(this_scen_path)
         save_generated_data(this_scen_path, load_p, load_p_forecasted, load_q, load_q_forecasted, res_gen_p_df, res_gen_p_forecasted_df)
-        save_ref_data(this_scen_path, path_env, start_date_dt, dt_dt, load_seed, renew_seed, gen_p_forecast_seed)
+        save_meta_data(this_scen_path, path_env, start_date_dt, dt_dt, load_seed, renew_seed, gen_p_forecast_seed, quality_)
         
-    return error_, load_p, load_p_forecasted, load_q, load_q_forecasted, res_gen_p_df, res_gen_p_forecasted_df
+    return error_, quality_, load_p, load_p_forecasted, load_q, load_q_forecasted, res_gen_p_df, res_gen_p_forecasted_df
     
 if __name__ == "__main__":
     # required parameters
@@ -819,10 +905,10 @@ if __name__ == "__main__":
     for i, start_date in enumerate(li_months):
         res_gen = generate_a_scenario(env_name, env, output_dir, start_date, dt, scen_id,
                                       load_seeds[i], renew_seeds[i], gen_p_forecast_seeds[i])
-        error_, load_p, load_p_forecasted, load_q, load_q_forecasted, res_gen_p_df, res_gen_p_forecasted_df = res_gen
+        error_, quality_, load_p, load_p_forecasted, load_q, load_q_forecasted, res_gen_p_df, res_gen_p_forecasted_df = res_gen
         if error_ is not None:
             print("=============================")
-            print(f"     Error for {scen_id}        ")
+            print(f"     Error for {start_date} {scen_id}        ")
             print(f"{error_}")
             print("=============================")
             errors[f'{start_date}_{scen_id}'] = f"{error_}"
