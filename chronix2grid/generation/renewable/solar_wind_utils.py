@@ -15,7 +15,7 @@ from scipy.interpolate import interp1d
 from .. import generation_utils as utils
 import chronix2grid.constants as cst
 
-def compute_wind_series(locations, Pmax, long_noise, medium_noise, short_noise, params, smoothdist, add_dim):
+def compute_wind_series(prng, locations, Pmax, long_noise, medium_noise, short_noise, params, smoothdist, add_dim):
     # Compute refined signals
     long_scale_signal = utils.interpolate_noise(
         long_noise,
@@ -50,8 +50,8 @@ def compute_wind_series(locations, Pmax, long_noise, medium_noise, short_noise, 
     signal = (0.7 + 0.3 * seasonal_pattern) * (0.3 + std_medium_wind_noise * medium_scale_signal + std_long_wind_noise * long_scale_signal)
     signal += std_short_wind_noise * short_scale_signal
     signal = 1e-1 * np.exp(4 * signal)
-    # signal += np.random.uniform(0, SMOOTHDIST/Pmax, signal.shape)
-    signal += np.random.uniform(0, smoothdist, signal.shape)
+    # signal += prng.uniform(0, SMOOTHDIST/Pmax, signal.shape)
+    signal += prng.uniform(0, smoothdist, signal.shape)
 
     # signal *= 0.95
     signal[signal < 0.] = 0.
@@ -60,7 +60,7 @@ def compute_wind_series(locations, Pmax, long_noise, medium_noise, short_noise, 
     wind_series[wind_series > 0.95 * Pmax] = 0.95 * Pmax
     return wind_series
 
-def compute_solar_series(locations, Pmax, solar_noise, params, solar_pattern, smoothdist, time_scale, add_dim, scale_solar_coord_for_correlation=None):
+def compute_solar_series(prng, locations, Pmax, solar_noise, params, solar_pattern, smoothdist, time_scale, add_dim, scale_solar_coord_for_correlation=None):
 
     # Compute noise at desired locations
     if scale_solar_coord_for_correlation is not None:
@@ -72,8 +72,14 @@ def compute_solar_series(locations, Pmax, solar_noise, params, solar_pattern, sm
 
     # Compute solar time series
     std_solar_noise = float(params['std_solar_noise'])
-    signal = solar_pattern * (0.75 + std_solar_noise * final_noise)
-    signal += np.random.uniform(0, smoothdist/Pmax, signal.shape)
+    if "mean_solar_pattern" in params:
+        mean_solar_pattern = float(params["mean_solar_pattern"])
+    else:
+        # legacy behaviour
+        mean_solar_pattern = 0.75
+        
+    signal = solar_pattern * (mean_solar_pattern + std_solar_noise * final_noise)
+    # signal += prng.uniform(0, smoothdist/Pmax, signal.shape)
     # signal[signal > 1] = 1
     signal[signal < 0.] = 0.
     signal = smooth(signal)
@@ -154,7 +160,7 @@ def smooth(x, alpha=0.5, beta=None):
     return x
 
 
-def create_csv(dict_, path, reordering=True, noise=None, shift=False,
+def create_csv(prng, dict_, path, reordering=True, noise=None, shift=False,
                write_results=True, index=False):
     if type(dict_) is dict:
         df = pd.DataFrame.from_dict(dict_)
@@ -170,7 +176,7 @@ def create_csv(dict_, path, reordering=True, noise=None, shift=False,
         new_ordering = [x for _ ,x in sorted(zip(value ,list(df)))]
         df = df[new_ordering]
     if noise is not None:
-        df *= ( 1 +noise *np.random.normal(0, 1, df.shape))
+        df *= ( 1 +noise * prng.normal(0, 1, df.shape))
     if shift:
         df = df.shift(-1)
         df = df.fillna(0)

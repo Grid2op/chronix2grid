@@ -35,6 +35,8 @@ FLOATING_POINT_PRECISION_FORMAT = '%.1f'
 # TODO log somewhere the amount of solar curtailed, as well as the amount of wind curtailed and the losses
 # TODO allow for a "debug" mode where we can save the values for the prices, the renewables generated, the renewables after dispatch 
 # and the renewables after the losses
+# TODO add some information in an "info.json" about total load, total generation for each type of generator, curtailment of solar, and losses
+# TODO add a parameter to generate data more correlated for data in the same area but less correlated within different area.
 
 def generate_loads(path_env, load_seed, start_date_dt, end_date_dt, dt, number_of_minutes, generic_params,
                    load_q_from_p_coeff=0.7):
@@ -222,10 +224,11 @@ def generate_economic_dispatch(path_env, start_date_dt, end_date_dt, dt, number_
     for gen_id, gen_nm in enumerate(env.name_gen):
         if gen_nm in res_dispatch.chronix.prods_dispatch:
             final_gen_p.iloc[:, gen_id] = 1.0 * res_dispatch.chronix.prods_dispatch[gen_nm].values
-            
+    
     #handle curtailment
     final_gen_p.iloc[:, env.gen_type == "wind"] *= (res_dispatch.chronix.prods_dispatch['agg_wind'].values / total_wind.values).reshape(-1,1)   
-    final_gen_p.iloc[:, env.gen_type == "solar"] *= (res_dispatch.chronix.prods_dispatch['agg_solar'].values / total_solar.values).reshape(-1,1)
+    mask_solar = total_solar.values > 0.001  # be carefull not to divide by 0 in case of solar !
+    final_gen_p.iloc[mask_solar, env.gen_type == "solar"] *= (res_dispatch.chronix.prods_dispatch['agg_solar'].values[mask_solar] / total_solar.values[mask_solar]).reshape(-1,1)
     return final_gen_p, None
 
 
@@ -383,7 +386,13 @@ def _adjust_gens(all_loss_orig,
         print()
         print(f"iter {iter_num}: {max_diff_:.2f}")
         print()
-        
+        if not np.isfinite(max_diff_):
+            error_ = RuntimeError("Some nans were found in the generated data.")
+            res_gen_p = None
+            quality_ = None
+            break
+            
+            
         if max_diff_ <= threshold_stop:
             quality_ = (iter_num,
                         float(np.mean(np.abs(diff_))),
@@ -406,6 +415,8 @@ def _adjust_gens(all_loss_orig,
                     
         if iter_num >= max_iter:
             error_ = RuntimeError("Too much iterations performed")
+            res_gen_p = None
+            quality_ = None
             break
         
     return res_gen_p, error_, quality_
@@ -511,7 +522,6 @@ def _fix_losses_one_scenario(env_for_loss,
     res_gen_p = 1.0 * gen_p_orig
     diff_ = 1.0 * max_diff_orig
     diff_ = diff_.reshape(-1,1)
-    
     res_gen_p, error_, quality_ = _adjust_gens(all_loss_orig,
                                                env_for_loss,
                                                datetimes,
@@ -732,7 +742,8 @@ def generate_a_scenario(env_name,
                         scen_id,
                         load_seed,
                         renew_seed,
-                        gen_p_forecast_seed):
+                        gen_p_forecast_seed,
+                        handle_loss=True):
     """This function generates and save the data for a scenario.
     
     Generation includes:
@@ -801,19 +812,23 @@ def generate_a_scenario(env_name,
                                                               load_p, prod_solar, prod_wind, env, scenario_id, final_gen_p, gens_charac)
     if error_ is not None:
         # TODO log that !
-        return error_, None, None, None, None, None, None
-    
-    # now try to move the generators so that when I run an AC powerflow, the setpoint of generators does not change "too much"
-    res_gen_p_df, error_, quality_ = handle_losses(path_env, env,
-                                                   gens_charac, load_p, load_q, gen_p_after_dispatch,
-                                                   start_date_dt, dt_dt, scenario_id, 
-                                                   PmaxErrorCorrRatio=0.9,
-                                                   RampErrorCorrRatio=0.95,
-                                                   threshold_stop=0.5,
-                                                   max_iter=100)
-    if error_ is not None:
-        # TODO log that !
         return error_, None, None, None, None, None, None, None
+
+    # now try to move the generators so that when I run an AC powerflow, the setpoint of generators does not change "too much"
+    if handle_loss:
+        res_gen_p_df, error_, quality_ = handle_losses(path_env, env,
+                                                    gens_charac, load_p, load_q, gen_p_after_dispatch,
+                                                    start_date_dt, dt_dt, scenario_id, 
+                                                    PmaxErrorCorrRatio=0.9,
+                                                    RampErrorCorrRatio=0.95,
+                                                    threshold_stop=0.5,
+                                                    max_iter=100)
+        if error_ is not None:
+            # TODO log that !
+            return error_, None, None, None, None, None, None, None
+    else:
+        res_gen_p_df = 1.0 * final_gen_p
+        quality_ = (-1, float("Nan"), float("Nan"), float("Nan"), float("Nan"))
     
     prng = default_rng(gen_p_forecast_seed)
     res_gen_p_forecasted_df = res_gen_p_df * prng.lognormal(mean=0.0, sigma=float(generic_params["planned_std"]), size=res_gen_p_df.shape)
@@ -840,80 +855,88 @@ if __name__ == "__main__":
     dt = "5"
     scen_id = "0"
     seed = 0
+    with_loss = True
     np.random.seed(seed)
+    min_ = 0
+    max_ = 52
     
+    scen_ids = ["0", "1", "2"]
     li_months = ["2050-01-03", 
-             "2050-01-10",
-             "2050-01-17",
-             "2050-01-24",
-             "2050-01-31",
-             "2050-02-07",
-             "2050-02-14",
-             "2050-02-21",
-             "2050-02-28",
-             "2050-03-07",
-             "2050-03-14",
-             "2050-03-21",
-             "2050-03-28",
-             "2050-04-04",
-             "2050-04-11",
-             "2050-04-18",
-             "2050-04-25",
-             "2050-05-02", 
-             "2050-05-09", 
-             "2050-05-16", 
-             "2050-05-23", 
-             "2050-05-30",
-             "2050-06-06",
-             "2050-06-13",
-             "2050-06-20",
-             "2050-06-27",
-             "2050-07-04", 
-             "2050-07-11", 
-             "2050-07-18", 
-             "2050-07-25", 
-             "2050-08-01", 
-             "2050-08-08", 
-             "2050-08-15", 
-             "2050-08-22", 
-             "2050-08-29", 
-             "2050-09-05", 
-             "2050-09-12", 
-             "2050-09-19", 
-             "2050-09-26", 
-             "2050-10-03", 
-             "2050-10-10", 
-             "2050-10-17", 
-             "2050-10-24", 
-             "2050-10-31", 
-             "2050-11-07", 
-             "2050-11-14", 
-             "2050-11-21", 
-             "2050-11-28", 
-             "2050-12-05",
-             "2050-12-12",
-             "2050-12-19",
-             "2050-12-26",
-            ]
+                 "2050-01-10",
+                 "2050-01-17",
+                 "2050-01-24",
+                 "2050-01-31",
+                 "2050-02-07",
+                 "2050-02-14",
+                 "2050-02-21",
+                 "2050-02-28",
+                 "2050-03-07",
+                 "2050-03-14",
+                 "2050-03-21",
+                 "2050-03-28",
+                 "2050-04-04",
+                 "2050-04-11",
+                 "2050-04-18",
+                 "2050-04-25",
+                 "2050-05-02", 
+                 "2050-05-09", 
+                 "2050-05-16", 
+                 "2050-05-23", 
+                 "2050-05-30",
+                 "2050-06-06",
+                 "2050-06-13",
+                 "2050-06-20",
+                 "2050-06-27",
+                 "2050-07-04", 
+                 "2050-07-11", 
+                 "2050-07-18", 
+                 "2050-07-25", 
+                 "2050-08-01", 
+                 "2050-08-08", 
+                 "2050-08-15", 
+                 "2050-08-22", 
+                 "2050-08-29", 
+                 "2050-09-05", 
+                 "2050-09-12", 
+                 "2050-09-19", 
+                 "2050-09-26", 
+                 "2050-10-03", 
+                 "2050-10-10", 
+                 "2050-10-17", 
+                 "2050-10-24", 
+                 "2050-10-31", 
+                 "2050-11-07", 
+                 "2050-11-14", 
+                 "2050-11-21", 
+                 "2050-11-28", 
+                 "2050-12-05",
+                 "2050-12-12",
+                 "2050-12-19",
+                 "2050-12-26",
+                 ]
     load_seeds = []
     renew_seeds = []
     gen_p_forecast_seeds = []
-    for start_date in li_months:
-        load_seed, renew_seed, gen_p_forecast_seed = np.random.randint(2**32 - 1, size=3)
-        load_seeds.append(load_seed)
-        renew_seeds.append(renew_seed)
-        gen_p_forecast_seeds.append(gen_p_forecast_seed)
+    for scen_id in scen_ids:
+        for start_date in li_months:
+            load_seed, renew_seed, gen_p_forecast_seed = np.random.randint(2**32 - 1, size=3)
+            load_seeds.append(load_seed)
+            renew_seeds.append(renew_seed)
+            gen_p_forecast_seeds.append(gen_p_forecast_seed)
         
     errors = {}
-    for i, start_date in enumerate(li_months):
-        res_gen = generate_a_scenario(env_name, env, output_dir, start_date, dt, scen_id,
-                                      load_seeds[i], renew_seeds[i], gen_p_forecast_seeds[i])
-        error_, quality_, load_p, load_p_forecasted, load_q, load_q_forecasted, res_gen_p_df, res_gen_p_forecasted_df = res_gen
-        if error_ is not None:
-            print("=============================")
-            print(f"     Error for {start_date} {scen_id}        ")
-            print(f"{error_}")
-            print("=============================")
-            errors[f'{start_date}_{scen_id}'] = f"{error_}"
-            with open(os.path.join(output_dir, "errors.json"), "w", encoding="utf-8") as f:
-                json.dump(errors, fp=f)
+    for j, scen_id in enumerate(scen_ids):
+        for i, start_date in enumerate(li_months[min_:max_]):
+            seed_num = i + j * len(li_months)
+            res_gen = generate_a_scenario(env_name, env, output_dir, start_date, dt, scen_id,
+                                          load_seeds[seed_num], renew_seeds[seed_num], gen_p_forecast_seeds[seed_num],
+                                          handle_loss=with_loss)
+            error_, quality_, load_p, load_p_forecasted, load_q, load_q_forecasted, res_gen_p_df, res_gen_p_forecasted_df = res_gen
+            if error_ is not None:
+                print("=============================")
+                print(f"     Error for {start_date} {scen_id}        ")
+                print(f"{error_}")
+                print("=============================")
+                errors[f'{start_date}_{scen_id}'] = f"{error_}"
+                with open(os.path.join(output_dir, "errors.json"), "w", encoding="utf-8") as f:
+                    json.dump(errors, fp=f)

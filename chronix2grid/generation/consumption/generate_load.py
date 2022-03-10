@@ -8,6 +8,7 @@
 
 import os
 import json
+from numpy.random import default_rng
 
 # Other Python libraries
 import pandas as pd
@@ -38,7 +39,7 @@ def main(scenario_destination_path, seed, params, loads_charac, load_weekly_patt
     """
 
     # Set random seed of scenario
-    np.random.seed(seed)
+    prng = default_rng(seed)
 
     # Define reference datetime indices
     datetime_index = pd.date_range(
@@ -58,7 +59,7 @@ def main(scenario_destination_path, seed, params, loads_charac, load_weekly_patt
     
     # Generate GLOBAL temperature noise
     print('Computing global auto-correlated spatio-temporal noise for thermosensible demand...') ## temperature is simply to reflect the fact that loads is correlated spatially, and so is the real "temperature". It is not the real temperature.
-    temperature_noise = utils.generate_coarse_noise(params, 'temperature', add_dim=add_dim)
+    temperature_noise = utils.generate_coarse_noise(prng, params, 'temperature', add_dim=add_dim)
 
     print('Computing loads ...')
     start_day = datetime_index[0]
@@ -76,10 +77,11 @@ def main(scenario_destination_path, seed, params, loads_charac, load_weekly_patt
         if not os.path.exists(scenario_destination_path):
             os.makedirs(scenario_destination_path)
             
-    load_p_forecasted = conso.create_csv(loads_series, scenario_destination_path,
+    load_p_forecasted = conso.create_csv(prng, loads_series, scenario_destination_path,
                                         forecasted=True, reordering=True,
                                         shift=True, write_results=write_results, index=False)
     load_p = conso.create_csv(
+        prng,
         loads_series, scenario_destination_path,
         reordering=True,
         noise=params['planned_std'],

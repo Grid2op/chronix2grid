@@ -14,6 +14,7 @@ import shutil
 import click
 import multiprocessing
 from functools import partial
+from numpy.random import default_rng
 
 from chronix2grid.GeneratorBackend import GeneratorBackend
 from chronix2grid import constants as cst
@@ -56,12 +57,13 @@ from chronix2grid import utils as ut
 def generate_mp(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
              input_folder, output_folder, scenario_name,
              seed_for_loads, seed_for_res, seed_for_dispatch, nb_core, ignore_warnings):
-    generate_mp_core(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
+    prng = default_rng()
+    generate_mp_core(prng, case, start_date, weeks, by_n_weeks, n_scenarios, mode,
                      input_folder, output_folder, scenario_name,
                      seed_for_loads, seed_for_res, seed_for_dispatch, nb_core, ignore_warnings)
 
 
-def generate_mp_core(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
+def generate_mp_core(prng, case, start_date, weeks, by_n_weeks, n_scenarios, mode,
              input_folder, output_folder, scenario_name,
              seed_for_loads, seed_for_res, seed_for_dispatch, nb_core, ignore_warnings):
 
@@ -81,7 +83,7 @@ def generate_mp_core(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
         warn_user=not ignore_warnings)
 
     # seeds
-    default_seed = generate_default_seed()
+    default_seed = generate_default_seed(prng)
     seed_for_loads = parse_seed_arg(seed_for_loads, '--seed-for-loads',
                                     default_seed)
     seed_for_res = parse_seed_arg(seed_for_res, '--seed-for-res',

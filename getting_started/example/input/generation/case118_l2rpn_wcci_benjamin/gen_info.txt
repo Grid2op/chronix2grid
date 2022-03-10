@@ -76,7 +76,8 @@ Pour le solaire, ajout du parametre:
  qui va éloigner les générateurs solaires les uns des autres (mais ce n'est pas assez)
  
 [INUTILE] passage de "solar_corr": 20 à "solar_corr": 1 nope, inutile
-passage de "std_solar_noise": 0.1 à "std_solar_noise": 0.3 [casse beaucoup la dynamique d'un seul generateur]
+[NON] passage de "std_solar_noise": 0.1 à "std_solar_noise": 0.3 [casse beaucoup la dynamique d'un seul generateur]
+Pour corriger le solaire => passage à "solar_corr": 300000 et scale_solar_coord_for_correlation": 2.0 et "std_solar_noise": 0.8, ajout du parametre de "mean_solar_pattern": 1.0
 
 ### Recap
 Problemes rencontres:

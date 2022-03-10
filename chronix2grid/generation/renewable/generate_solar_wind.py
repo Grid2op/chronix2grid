@@ -12,6 +12,7 @@ import json
 # Other Python libraries
 import pandas as pd
 import numpy as np
+from numpy.random import default_rng
 
 # Libraries developed for this module
 from . import solar_wind_utils as swutils
@@ -42,7 +43,7 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
     pandas.DataFrame: wind production chronics forecasted for the scenario without additional gaussian noise
     """
 
-    np.random.seed(seed)
+    prng = default_rng(seed)
     smoothdist = params['smoothdist']
 
     # Define datetime indices
@@ -78,10 +79,10 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
         y_plus = int(y // dy_corr + 1)
         add_dim = max(y_plus, add_dim)
         add_dim = max(x_plus, add_dim)
-    solar_noise = utils.generate_coarse_noise(params, 'solar', add_dim=add_dim)
-    long_scale_wind_noise = utils.generate_coarse_noise(params, 'long_wind', add_dim=add_dim)
-    medium_scale_wind_noise = utils.generate_coarse_noise(params, 'medium_wind', add_dim=add_dim)
-    short_scale_wind_noise = utils.generate_coarse_noise(params, 'short_wind', add_dim=add_dim)
+    solar_noise = utils.generate_coarse_noise(prng, params, 'solar', add_dim=add_dim)
+    long_scale_wind_noise = utils.generate_coarse_noise(prng, params, 'long_wind', add_dim=add_dim)
+    medium_scale_wind_noise = utils.generate_coarse_noise(prng, params, 'medium_wind', add_dim=add_dim)
+    short_scale_wind_noise = utils.generate_coarse_noise(prng, params, 'short_wind', add_dim=add_dim)
 
     # Compute Wind and solar series of scenario
     print('Generating solar and wind production chronics')
@@ -92,6 +93,7 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
             locations = [prods_charac[mask]['x'].values[0], prods_charac[mask]['y'].values[0]]
             Pmax = prods_charac[mask]['Pmax'].values[0]
             prods_series[name] = swutils.compute_solar_series(
+                prng,
                 locations,
                 Pmax,
                 solar_noise,
@@ -104,6 +106,7 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
             locations = [prods_charac[mask]['x'].values[0], prods_charac[mask]['y'].values[0]]
             Pmax = prods_charac[mask]['Pmax'].values[0]
             prods_series[name] = swutils.compute_wind_series(
+                prng,
                 locations,
                 Pmax,
                 long_scale_wind_noise,
@@ -134,6 +137,7 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
             os.makedirs(scenario_destination_path)
             
     prod_solar_forecasted =  swutils.create_csv(
+        prng,
         solar_series,
         os.path.join(scenario_destination_path, 'solar_p_forecasted.csv.bz2') if scenario_destination_path is not None else None,
         reordering=True,
@@ -143,6 +147,7 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
     )
 
     prod_solar = swutils.create_csv(
+        prng,
         solar_series,
         os.path.join(scenario_destination_path, 'solar_p.csv.bz2') if scenario_destination_path is not None else None,
         reordering=True,
@@ -151,6 +156,7 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
     )
 
     prod_wind_forecasted = swutils.create_csv(
+        prng,
         wind_series,
         os.path.join(scenario_destination_path, 'wind_p_forecasted.csv.bz2') if scenario_destination_path is not None else None,
         reordering=True,
@@ -160,6 +166,7 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
     )
 
     prod_wind = swutils.create_csv(
+        prng,
         wind_series, os.path.join(scenario_destination_path, 'wind_p.csv.bz2') if scenario_destination_path is not None else None,
         reordering=True,
         noise=params['planned_std'],
@@ -167,6 +174,7 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
     )
 
     prod_p = swutils.create_csv(
+        prng,
         prods_series, os.path.join(scenario_destination_path, 'prod_p.csv.bz2') if scenario_destination_path is not None else None,
         reordering=True,
         noise=params['planned_std'],

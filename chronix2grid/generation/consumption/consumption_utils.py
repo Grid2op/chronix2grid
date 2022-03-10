@@ -123,7 +123,7 @@ def compute_load_pattern(params, weekly_pattern, index, day_lag):
     return output
 
 
-def create_csv(dict_, path, forecasted=False, reordering=True, noise=None,
+def create_csv(prng, dict_, path, forecasted=False, reordering=True, noise=None,
                shift=False, write_results=True, index=False):
     df = pd.DataFrame.from_dict(dict_)
     df.set_index('datetime', inplace=True)
@@ -141,8 +141,8 @@ def create_csv(dict_, path, forecasted=False, reordering=True, noise=None,
 
     df_reactive_power = 0.7 * df
     if noise is not None:
-        df *= np.random.lognormal(mean=0.0,sigma=noise, size=df.shape)
-        df_reactive_power *= np.random.lognormal(mean=0.0, sigma=noise, size=df.shape)
+        df *= prng.lognormal(mean=0.0,sigma=noise, size=df.shape)
+        df_reactive_power *= prng.lognormal(mean=0.0, sigma=noise, size=df.shape)
 
     if write_results:
         file_extension = '_forecasted' if forecasted else ''
