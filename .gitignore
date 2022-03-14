@@ -153,3 +153,4 @@ dmypy.json
 Pipfile.lock
 getting_started/example/custom/input/generation/case118_l2rpn_wcci_benjamin_test/
 .DS_Store
+getting_started/example/custom/input/generation/case118_l2rpn_wcci*
