@@ -8,6 +8,7 @@ import pandas as pd
 import pathlib
 
 import chronix2grid.constants as cst
+import chronix2grid.default_backend as def_bk
 from chronix2grid.generation.dispatch.EconomicDispatch import (
             ChroniXScenario, init_dispatcher_from_config)
 from chronix2grid.generation.dispatch.utils import modify_hydro_ramps, modify_slack_characs
@@ -79,7 +80,7 @@ class TestDispatch(unittest.TestCase):
         self.dispatcher = init_dispatcher_from_config(
             self.grid_path,
             os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME),
-            cst.DISPATCHER,
+            def_bk.DISPATCHER,
             params_opf = {"hydro_ramp_reduction_factor":1.,
                           "slack_p_max_reduction":0.,
                            "slack_ramp_max_reduction":0.}
@@ -94,8 +95,8 @@ class TestDispatch(unittest.TestCase):
         grid2op_env = grid2op.make(self.grid2op_path,
                            chronics_path=self.grid2op_path,
                            chronics_class=ChangeNothing)
-        dispatcher = cst.DISPATCHER.from_gri2op_env(grid2op_env)
-        self.assertTrue(isinstance(dispatcher, cst.DISPATCHER))
+        dispatcher = def_bk.DISPATCHER.from_gri2op_env(grid2op_env)
+        self.assertTrue(isinstance(dispatcher, def_bk.DISPATCHER))
 
     def test_read_hydro_guide_curves(self):
         self.dispatcher.read_hydro_guide_curves(self.hydro_file_path)

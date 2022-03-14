@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 import chronix2grid.constants as cst
+import chronix2grid.default_backend as def_bk
 
 def usa_gan_trainingset_to_kpi(kpi_case_input_folder, timestep, prods_charac, loads_charac, params,year):
     try:
@@ -35,12 +36,12 @@ def usa_gan_trainingset_to_kpi(kpi_case_input_folder, timestep, prods_charac, lo
 
     ## WIND
     repo_in = os.path.join(kpi_case_input_folder, 'USA - Washington State', 'NREL',
-                           cst.GAN_TRAINING_SET_REFERENCE_FOLDER, "wind.csv")
+                           def_bk.GAN_TRAINING_SET_REFERENCE_FOLDER, "wind.csv")
     ref_prod_wind = gan_trainingdata_processing_wind(repo_in, T, prods_charac, params)
 
     ## Solar TEMPORARY ============
     repo_in = os.path.join(kpi_case_input_folder, 'USA - Washington State', 'NREL',
-                           cst.GAN_TRAINING_SET_REFERENCE_FOLDER, "solar.csv")
+                           def_bk.GAN_TRAINING_SET_REFERENCE_FOLDER, "solar.csv")
     ref_prod_solar = gan_trainingdata_processing_solar(repo_in, T, prods_charac, params)
 
     ## Concatenate
@@ -255,11 +256,11 @@ def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac,
     wind_file_name = f'wind.csv'
     repo_in_solar = os.path.join(
         kpi_input_folder, cst.REFERENCE_ZONE,
-        cst.RENEWABLE_NINJA_REFERENCE_FOLDER, solar_file_name)
+        def_bk.RENEWABLE_NINJA_REFERENCE_FOLDER, solar_file_name)
     ninja_solar = pd.read_csv(repo_in_solar, sep=';', encoding='latin1', decimal='.')
     repo_in_wind = os.path.join(
         kpi_input_folder, cst.REFERENCE_ZONE,
-        cst.RENEWABLE_NINJA_REFERENCE_FOLDER, wind_file_name)
+        def_bk.RENEWABLE_NINJA_REFERENCE_FOLDER, wind_file_name)
     ninja_wind = pd.read_csv(repo_in_wind, sep=';', encoding='latin1', decimal='.')
     timestep_ninja = 60 # Pas de temps une heure dans l'extraction renewable ninja
     ninja = pd.concat([ninja_solar, ninja_wind], axis = 1)

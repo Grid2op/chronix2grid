@@ -1,23 +1,34 @@
+# Copyright (c) 2019-2022, RTE (https://www.rte-france.com)
+# See AUTHORS.txt
+# This Source Code Form is subject to the terms of the Mozilla Public License, version 2.0.
+# If a copy of the Mozilla Public License, version 2.0 was not distributed with this file,
+# you can obtain one at http://mozilla.org/MPL/2.0/.
+# SPDX-License-Identifier: MPL-2.0
+# This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
+
 import os
 import unittest
 import shutil
 
 import numpy as np
+from numpy.random import default_rng
 import pandas as pd
 import pathlib
 import datetime as dt
 
 from chronix2grid import main
 from chronix2grid import constants as cst
+from chronix2grid import default_backend as def_bk
 import chronix2grid.generation.generation_utils as gu
 from chronix2grid.config import ResConfigManager
 from chronix2grid.generation.renewable.RenewableBackend import RenewableBackend
 
-cst.RENEWABLE_GENERATION_CONFIG = ResConfigManager
-cst.RENEWABLE_GENERATION_BACKEND = RenewableBackend
+def_bk.RENEWABLE_GENERATION_CONFIG = ResConfigManager
+def_bk.RENEWABLE_GENERATION_BACKEND = RenewableBackend
 
 class TestLoadProdCoherence(unittest.TestCase):
     def setUp(self):
+        prng = default_rng()
         self.input_folder = os.path.join(
             pathlib.Path(__file__).parent.parent.absolute(),
             'data', 'input')
@@ -39,7 +50,7 @@ class TestLoadProdCoherence(unittest.TestCase):
             self.n_scenarios, 'LRK', warn_user=False)
         self.generation_output_folder = generation_output_folder
         self.kpi_output_folder = kpi_output_folder
-        seeds_for_loads, seeds_for_res, seeds_for_disp = gu.generate_seeds(
+        seeds_for_loads, seeds_for_res, seeds_for_disp = gu.generate_seeds(prng,
             self.n_scenarios, self.seed_loads, self.seed_res, self.seed_dispatch
         )
         self.seeds_for_loads = seeds_for_loads
@@ -75,7 +86,7 @@ class TestLoadProdCoherence(unittest.TestCase):
             self.input_folder, cst.GENERATION_FOLDER_NAME
         )
 
-        general_config_manager = cst.GENERAL_CONFIG(
+        general_config_manager = def_bk.GENERAL_CONFIG(
             name="Global Generation",
             root_directory=generation_input_folder,
             input_directories=dict(case=self.case),
@@ -85,7 +96,7 @@ class TestLoadProdCoherence(unittest.TestCase):
         general_config_manager.validate_configuration()
         params = general_config_manager.read_configuration()
 
-        res_config_manager = cst.RENEWABLE_GENERATION_CONFIG(
+        res_config_manager = def_bk.RENEWABLE_GENERATION_CONFIG(
             name="Renewables Generation",
             root_directory=generation_input_folder,
             input_directories=dict(case=self.case, patterns='patterns'),

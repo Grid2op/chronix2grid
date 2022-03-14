@@ -16,6 +16,7 @@ from copy import deepcopy
 import datetime as dt
 from collections import namedtuple
 import pathlib
+from numpy.random import default_rng
 
 import grid2op
 from grid2op.Chronics import ChangeNothing
@@ -259,7 +260,7 @@ class Dispatcher(ABC):
         )
         return fig
 
-    def save_results(self, params, output_folder):
+    def save_results(self, params, output_folder, prng=None):
         """
         Saves dispatch results in prod_p.csv.bz2, prod_p_forecasted.csv.bz2, load_p.csv.bz2, prices.csv
 
@@ -269,6 +270,8 @@ class Dispatcher(ABC):
         output_folder: ``str``
 
         """
+        if prng is None:
+            prng = default_rng()
         if not self._has_results and not self._has_simplified_results:
             print('The optimization has first to run successfully in order to '
                   'save results.')
@@ -342,7 +345,8 @@ class Dispatcher(ABC):
             gen_cap = pd.Series({gen_name: gen_pmax for gen_name, gen_pmax in
                                  zip(self._df['name'], self._df['pmax'])})
 
-        prod_p_forecasted_with_noise = add_noise_gen(copy.deepcopy(full_opf_dispatch),
+        prod_p_forecasted_with_noise = add_noise_gen(prng,
+                                                     copy.deepcopy(full_opf_dispatch),
                                                      gen_cap,
                                                      noise_factor=params['planned_std'])
 

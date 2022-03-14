@@ -1,3 +1,11 @@
+# Copyright (c) 2019-2022, RTE (https://www.rte-france.com)
+# See AUTHORS.txt
+# This Source Code Form is subject to the terms of the Mozilla Public License, version 2.0.
+# If a copy of the Mozilla Public License, version 2.0 was not distributed with this file,
+# you can obtain one at http://mozilla.org/MPL/2.0/.
+# SPDX-License-Identifier: MPL-2.0
+# This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
+
 import os
 import unittest
 import shutil
@@ -5,6 +13,8 @@ import shutil
 import numpy as np
 import pandas as pd
 import pathlib
+
+from numpy.random import default_rng
 
 from chronix2grid import main
 from chronix2grid import constants as cst
@@ -18,6 +28,7 @@ cst.RENEWABLE_GENERATION_BACKEND = RenewableBackend
 
 class TestLoadProdCoherence(unittest.TestCase):
     def setUp(self):
+        prng = default_rng()
         self.input_folder = os.path.join(
             pathlib.Path(__file__).parent.parent.absolute(),
             'data', 'input')
@@ -39,7 +50,7 @@ class TestLoadProdCoherence(unittest.TestCase):
             self.n_scenarios, 'LRK', warn_user=False)
         self.generation_output_folder = generation_output_folder
         self.kpi_output_folder = kpi_output_folder
-        seeds_for_loads, seeds_for_res, seeds_for_disp = gu.generate_seeds(
+        seeds_for_loads, seeds_for_res, seeds_for_disp = gu.generate_seeds(prng,
             self.n_scenarios, self.seed_loads, self.seed_res, self.seed_dispatch
         )
         self.seeds_for_loads = seeds_for_loads
