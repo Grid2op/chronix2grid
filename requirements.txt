@@ -21,6 +21,7 @@ python-dateutil==2.8.1
 pytz==2019.3
 #pywin32==300
 #pywinpty==0.5.7
+PyUtilib==5.7.2
 requests==2.23.0
 seaborn==0.10.0
 scipy==1.4.1
