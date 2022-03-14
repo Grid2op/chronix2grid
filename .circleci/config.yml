@@ -36,6 +36,7 @@ jobs:
       - run: pip install .
       - run: pip install pypsa==0.17.0
       - run: pip freeze
+      - run: sudo apt-get install -y coinor-cbc
       - run:
           name: Run tests
           # This assumes pytest is installed via the install-package step above
