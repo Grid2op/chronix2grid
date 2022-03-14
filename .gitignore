@@ -155,3 +155,6 @@ getting_started/example/custom/input/generation/case118_l2rpn_wcci_benjamin_test
 .DS_Store
 getting_started/example/custom/input/generation/case118_l2rpn_wcci*
 getting_started/example/custom/input*
+getting_started/example/input/generation/case118_l2rpn_wcci_benjamin/remove_load.py
+getting_started/example/input/generation/case118_l2rpn_wcci_benjamin/prods_charac_orig.csv
+getting_started/example/input/generation/case118_l2rpn_wcci_benjamin/loads_charac_old.csv
