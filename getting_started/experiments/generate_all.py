@@ -12,6 +12,7 @@ import copy
 from datetime import datetime, timedelta
 import json
 import shutil
+import time
 import pandas as pd
 import os
 import grid2op
@@ -32,10 +33,8 @@ import pdb
 
 FLOATING_POINT_PRECISION_FORMAT = '%.1f'
 
-# TODO log somewhere the amount of solar curtailed, as well as the amount of wind curtailed and the losses
 # TODO allow for a "debug" mode where we can save the values for the prices, the renewables generated, the renewables after dispatch 
 # and the renewables after the losses
-# TODO add some information in an "info.json" about total load, total generation for each type of generator, curtailment of solar, and losses
 # TODO add a parameter to generate data more correlated for data in the same area but less correlated within different area.
 
 def generate_loads(path_env, load_seed, start_date_dt, end_date_dt, dt, number_of_minutes, generic_params,
@@ -217,7 +216,7 @@ def generate_economic_dispatch(path_env, start_date_dt, end_date_dt, dt, number_
     
     if res_dispatch is None:     
         error_ = RuntimeError("Pypsa failed to find a solution")
-        return None, error_
+        return None, None, None, error_
     
     # now assign the results
     final_gen_p = 1.0 * final_gen_p  # copy the data frame to avoid modify the original one
@@ -226,10 +225,14 @@ def generate_economic_dispatch(path_env, start_date_dt, end_date_dt, dt, number_
             final_gen_p.iloc[:, gen_id] = 1.0 * res_dispatch.chronix.prods_dispatch[gen_nm].values
     
     #handle curtailment
-    final_gen_p.iloc[:, env.gen_type == "wind"] *= (res_dispatch.chronix.prods_dispatch['agg_wind'].values / total_wind.values).reshape(-1,1)   
+    wind_curt = (res_dispatch.chronix.prods_dispatch['agg_wind'].values / total_wind.values).reshape(-1,1)
+    final_gen_p.iloc[:, env.gen_type == "wind"] *= wind_curt
     mask_solar = total_solar.values > 0.001  # be carefull not to divide by 0 in case of solar !
-    final_gen_p.iloc[mask_solar, env.gen_type == "solar"] *= (res_dispatch.chronix.prods_dispatch['agg_solar'].values[mask_solar] / total_solar.values[mask_solar]).reshape(-1,1)
-    return final_gen_p, None
+    solar_curt = (res_dispatch.chronix.prods_dispatch['agg_solar'].values[mask_solar] / total_solar.values[mask_solar]).reshape(-1,1)
+    final_gen_p.iloc[mask_solar, env.gen_type == "solar"] *= solar_curt
+    total_wind_curt = total_wind.values.sum() - res_dispatch.chronix.prods_dispatch['agg_wind'].values.sum()
+    total_solar_curt = total_solar.values[mask_solar].sum() - res_dispatch.chronix.prods_dispatch['agg_solar'].values[mask_solar].sum()
+    return final_gen_p, total_wind_curt, total_solar_curt, None
 
 
 def _adjust_gens(all_loss_orig,
@@ -339,10 +342,7 @@ def _adjust_gens(all_loss_orig,
                 res_gen_p[:, gen_id] = 1.0 * dispatch_res.chronix.prods_dispatch[gen_nm].values
                 
         sum_wind_tmp = total_wind.sum()
-        sum_diff = sum_wind_tmp - dispatch_res.chronix.prods_dispatch['agg_wind'].sum() 
-        print(f"total curtailed: {sum_diff/12.:.2f}MWh "
-              f"({sum_wind_tmp / 12.:.2f}MWh, {sum_diff / sum_wind_tmp:.2f}%)")
-        
+        sum_diff = sum_wind_tmp - dispatch_res.chronix.prods_dispatch['agg_wind'].sum()        
         #handle wind curtailment
         res_gen_p[:, env_for_loss.gen_type == "wind"] *= (dispatch_res.chronix.prods_dispatch['agg_wind'].values / total_wind.values).reshape(-1,1)
         
@@ -383,9 +383,6 @@ def _adjust_gens(all_loss_orig,
             diff_[i] = obs.gen_p - res_gen_p[i]
         
         max_diff_ = np.abs(diff_).max()
-        print()
-        print(f"iter {iter_num}: {max_diff_:.2f}")
-        print()
         if not np.isfinite(max_diff_):
             error_ = RuntimeError("Some nans were found in the generated data.")
             res_gen_p = None
@@ -414,7 +411,7 @@ def _adjust_gens(all_loss_orig,
                 break
                     
         if iter_num >= max_iter:
-            error_ = RuntimeError("Too much iterations performed")
+            error_ = RuntimeError("Too much iterations performed when adjusting for the losses")
             res_gen_p = None
             quality_ = None
             break
@@ -681,7 +678,23 @@ def save_generated_data(this_scen_path, load_p, load_p_forecasted, load_q, load_
                   index=False)
 
 
-def save_meta_data(this_scen_path, path_env, start_date_dt, dt_dt : timedelta, load_seed, renew_seed, gen_p_forecast_seed, quality):
+def save_meta_data(this_scen_path,
+                   path_env,
+                   start_date_dt,
+                   dt_dt : timedelta,
+                   load_seed,
+                   renew_seed,
+                   gen_p_forecast_seed,
+                   quality,
+                   total_load,
+                   total_gen,
+                   losses_mwh,
+                   losses_avg,
+                   wind_curtailed_opf,
+                   wind_curtailed_losses,
+                   solar_curtailed_opf,
+                   generation_time,
+                   files_to_copy=("maintenance_meta.json",)):
     """This function saves the "meta data" required for a succesful grid2op run !
 
     Parameters
@@ -715,19 +728,38 @@ def save_meta_data(this_scen_path, path_env, start_date_dt, dt_dt : timedelta, l
     with open(os.path.join(this_scen_path, "_seeds_info.json"), "w", encoding="utf-8") as f:
         json.dump(obj={"load_seed": int(load_seed), "renew_seed": int(renew_seed), "gen_p_forecast_seed": int(gen_p_forecast_seed)},
                   fp=f)
-    with open(os.path.join(this_scen_path, "gen_p_quality.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(this_scen_path, "generation_quality.json"), "w", encoding="utf-8") as f:
         iter_num, mean_, percent_95, percent_99, max_ = quality
         json.dump(obj={"iter_num": int(iter_num),
                        "avg": float(mean_),
                        "percent_95": float(percent_95),
                        "percent_99": float(percent_99),
                        "max": float(max_), 
-                       "info": ("this 'quality' is the difference between the DC solver and the AC solver. This is the number of "
-                                "MW that will differ from the grid2op observation compared to the generated data.")
+                       "info": ("avg, percent_95, percent_99, max: this 'quality' is the difference between the DC solver and the AC solver. This is the number of "
+                                "MW that will differ from the grid2op observation compared to the generated data by chronix2grid.",
+                                "total_load, total_gen: total amount of energy consumed / produced for the generated scenario.",
+                                "losses_mwh: total amount of losses for the scenario (in energy)",
+                                "losses_avg: average (per step) of the loss (avg[loss_this_step / total_generation_this_step])",
+                                "wind_curtailed_opf: total (in energy) wind power curtailed by the OPF",
+                                "wind_curtailed_losses: total (in energy) wind power curtailed by the loss",
+                                "solar_curtailed_opf: total (in energy) solar power curtailed by the OPF",
+                                "iter_num: number of iteration of the loss algorithm",
+                                "generation_time: total time spent to generat these data",
+                                ),
+                       "total_load": float(total_load),
+                       "total_gen": float(total_gen),
+                       "losses_mwh": float(losses_mwh),
+                       "losses_avg": float(losses_avg),
+                       "wind_curtailed_opf": float(wind_curtailed_opf),
+                       "wind_curtailed_losses": float(wind_curtailed_losses),
+                       "solar_curtailed_opf": float(solar_curtailed_opf),
+                       "generation_time": float(generation_time),
                        },
-                  fp=f)
+                  fp=f,
+                  sort_keys=True,
+                  indent=4)
     
-    for fn_ in ["maintenance_meta.json"]:
+    for fn_ in files_to_copy:
         src_path = os.path.join(path_env, fn_)
         if os.path.exists(src_path):
             shutil.copy(src=src_path, 
@@ -781,7 +813,8 @@ def generate_a_scenario(env_name,
     _type_
         _description_
     """
-    scenario_id = f"{start_date}_{scen_id}"  # TODO
+    beg_ = time.perf_counter()
+    scenario_id = f"{start_date}_{scen_id}"
     path_env = env.get_path_env()
     dt_dt = timedelta(minutes=int(dt))
     start_date_dt = datetime.strptime(start_date, "%Y-%m-%d") - dt_dt
@@ -808,8 +841,10 @@ def generate_a_scenario(env_name,
     final_gen_p = final_gen_p[env.name_gen]
     
     # generate economic dispatch
-    gen_p_after_dispatch, error_ = generate_economic_dispatch(path_env, start_date_dt, end_date_dt, dt, number_of_minutes, generic_params, 
-                                                              load_p, prod_solar, prod_wind, env, scenario_id, final_gen_p, gens_charac)
+    res_disp = generate_economic_dispatch(path_env, start_date_dt, end_date_dt, dt, number_of_minutes, generic_params,
+                                          load_p, prod_solar, prod_wind, env, scenario_id, final_gen_p, gens_charac)
+    gen_p_after_dispatch, total_wind_curt_opf, total_solar_curt_opf, error_ = res_disp
+    
     if error_ is not None:
         # TODO log that !
         return error_, None, None, None, None, None, None, None
@@ -817,12 +852,12 @@ def generate_a_scenario(env_name,
     # now try to move the generators so that when I run an AC powerflow, the setpoint of generators does not change "too much"
     if handle_loss:
         res_gen_p_df, error_, quality_ = handle_losses(path_env, env,
-                                                    gens_charac, load_p, load_q, gen_p_after_dispatch,
-                                                    start_date_dt, dt_dt, scenario_id, 
-                                                    PmaxErrorCorrRatio=0.9,
-                                                    RampErrorCorrRatio=0.95,
-                                                    threshold_stop=0.5,
-                                                    max_iter=100)
+                                                       gens_charac, load_p, load_q, gen_p_after_dispatch,
+                                                       start_date_dt, dt_dt, scenario_id, 
+                                                       PmaxErrorCorrRatio=0.9,
+                                                       RampErrorCorrRatio=0.95,
+                                                       threshold_stop=0.5,
+                                                       max_iter=100)
         if error_ is not None:
             # TODO log that !
             return error_, None, None, None, None, None, None, None
@@ -834,12 +869,37 @@ def generate_a_scenario(env_name,
     res_gen_p_forecasted_df = res_gen_p_df * prng.lognormal(mean=0.0, sigma=float(generic_params["planned_std"]), size=res_gen_p_df.shape)
     res_gen_p_forecasted_df = res_gen_p_forecasted_df.shift(-1)
     res_gen_p_forecasted_df.iloc[-1] = 1.0 * res_gen_p_forecasted_df.iloc[-2]
+    end_ = time.perf_counter()
     if output_dir is not None:
+        beg_save = time.perf_counter()
         this_scen_path = os.path.join(output_dir, scenario_id)
         if not os.path.exists(this_scen_path):
             os.mkdir(this_scen_path)
         save_generated_data(this_scen_path, load_p, load_p_forecasted, load_q, load_q_forecasted, res_gen_p_df, res_gen_p_forecasted_df)
-        save_meta_data(this_scen_path, path_env, start_date_dt, dt_dt, load_seed, renew_seed, gen_p_forecast_seed, quality_)
+        total_load = float(load_p.sum().sum())
+        total_gen = float(res_gen_p_df.sum().sum())
+        gen_p_per_step = res_gen_p_df.sum(axis=1)
+        proper_MWh_unit = float(dt_dt.total_seconds() / 3600.)
+        wind_curtailed_losses = (gen_p_after_dispatch.iloc[:, env.gen_type=="wind"].sum().sum() - res_gen_p_df.iloc[:, env.gen_type=="wind"].sum().sum())
+        end_save = time.perf_counter()
+        save_meta_data(this_scen_path,
+                       path_env,
+                       start_date_dt,
+                       dt_dt,
+                       load_seed,
+                       renew_seed,
+                       gen_p_forecast_seed,
+                       quality_,
+                       total_load=total_load * proper_MWh_unit,
+                       total_gen=total_gen * proper_MWh_unit,
+                       losses_mwh=(total_gen - total_load) * proper_MWh_unit,
+                       losses_avg=np.mean((gen_p_per_step - load_p.sum(axis=1)) / gen_p_per_step),
+                       wind_curtailed_opf=float(total_wind_curt_opf * proper_MWh_unit),
+                       wind_curtailed_losses=float(wind_curtailed_losses * proper_MWh_unit),
+                       solar_curtailed_opf=float(total_solar_curt_opf * proper_MWh_unit),
+                       generation_time=end_ - beg_,
+                       saving_time=end_save - beg_save
+                       )
         
     return error_, quality_, load_p, load_p_forecasted, load_q, load_q_forecasted, res_gen_p_df, res_gen_p_forecasted_df
     
@@ -860,7 +920,7 @@ if __name__ == "__main__":
     min_ = 0
     max_ = 52
     
-    scen_ids = ["0", "1", "2"]
+    scen_ids = ["0", "1", "2", "3", "4", "5"]
     li_months = ["2050-01-03", 
                  "2050-01-10",
                  "2050-01-17",
