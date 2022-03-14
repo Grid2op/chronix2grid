@@ -8,6 +8,7 @@
 import os
 import numpy as np
 import json
+from multiprocessing import Pool
 
 import grid2op
 from chronix2grid.grid2op_utils.utils import generate_a_scenario, get_last_scenario_id
@@ -77,20 +78,28 @@ def add_data(env: grid2op.Environment.Environment,
     name_gen = env.name_gen
     gen_type = env.gen_type
     errors = {}
+    argss = []
     for j, scen_id in enumerate(scen_ids):
         for i, start_date in enumerate(li_months):
             seed_num = i + j * len(li_months)
-            res_gen = generate_a_scenario(path_env,
-                                          name_gen,
-                                          gen_type,
-                                          output_dir,
-                                          start_date,
-                                          dt,
-                                          scen_id,
-                                          load_seeds[seed_num],
-                                          renew_seeds[seed_num],
-                                          gen_p_forecast_seeds[seed_num],
-                                          handle_loss=with_loss)
+            argss.append((path_env,
+                          name_gen,
+                          gen_type,
+                          output_dir,
+                          start_date,
+                          dt,
+                          scen_id,
+                          load_seeds[seed_num],
+                          renew_seeds[seed_num],
+                          gen_p_forecast_seeds[seed_num],
+                          with_loss
+                          ))
+    if nb_core == 1:
+        for args in argss:
+            path_env, name_gen, gen_type, output_dir, start_date, dt, scen_id, load_seed, renew_seed, \
+                gen_p_forecast_seed, handle_loss = args
+            res_gen = generate_a_scenario(path_env, name_gen, gen_type, output_dir, start_date, dt, scen_id, load_seed, renew_seed, 
+                                          gen_p_forecast_seed, handle_loss)
             error_, *_ = res_gen
             if error_ is not None:
                 print("=============================")
@@ -101,3 +110,6 @@ def add_data(env: grid2op.Environment.Environment,
                 # TODO do not erase that, read it and write it if you need too
                 with open(os.path.join(output_dir, "errors.json"), "w", encoding="utf-8") as f:
                     json.dump(errors, fp=f)
+    else:
+        with Pool(nb_core) as p:
+            p.map(generate_a_scenario, argss)
