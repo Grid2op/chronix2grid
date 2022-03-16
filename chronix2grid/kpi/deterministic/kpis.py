@@ -1,3 +1,11 @@
+# Copyright (c) 2019-2022, RTE (https://www.rte-france.com)
+# See AUTHORS.txt
+# This Source Code Form is subject to the terms of the Mozilla Public License, version 2.0.
+# If a copy of the Mozilla Public License, version 2.0 was not distributed with this file,
+# you can obtain one at http://mozilla.org/MPL/2.0/.
+# SPDX-License-Identifier: MPL-2.0
+# This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
+
 # Python built-in modules
 import os
 
@@ -189,14 +197,13 @@ class EconomicDispatchValidator:
     def _pairwise_corr_different_dfs(self, df1, df2):
         """
         Compute pairwise correlation of 2 dataframes
-        """
-
+        """        
         n_col_df1 = df1.shape[1]
         n_col_df2 = df2.shape[1]
 
         tmp_corr = np.zeros((n_col_df1, n_col_df2))
         for i, j in product(range(n_col_df1), range(n_col_df2)):
-            tmp_corr[i, j] = df1.iloc[:, i].corr(df2.iloc[:, j])
+            tmp_corr[i, j] = df1.iloc[:, i].astype('float64').corr(df2.iloc[:, j].astype('float64'))
 
         corr_wind = pd.DataFrame(tmp_corr, index=df1.columns, columns=df2.columns)
 

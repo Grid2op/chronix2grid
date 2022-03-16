@@ -1,5 +1,14 @@
+# Copyright (c) 2019-2022, RTE (https://www.rte-france.com)
+# See AUTHORS.txt
+# This Source Code Form is subject to the terms of the Mozilla Public License, version 2.0.
+# If a copy of the Mozilla Public License, version 2.0 was not distributed with this file,
+# you can obtain one at http://mozilla.org/MPL/2.0/.
+# SPDX-License-Identifier: MPL-2.0
+# This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
+
 import os
 import json
+from numpy.random import default_rng
 
 # Other Python libraries
 import pandas as pd
@@ -30,7 +39,7 @@ def main(scenario_destination_path, seed, params, loads_charac, load_weekly_patt
     """
 
     # Set random seed of scenario
-    np.random.seed(seed)
+    prng = default_rng(seed)
 
     # Define reference datetime indices
     datetime_index = pd.date_range(
@@ -38,25 +47,45 @@ def main(scenario_destination_path, seed, params, loads_charac, load_weekly_patt
         end=params['end_date'],
         freq=str(params['dt']) + 'min')
 
+
+    add_dim = 0
+    dx_corr = int(params['dx_corr'])
+    dy_corr = int(params['dy_corr'])
+    for x,y  in zip(loads_charac["x"], loads_charac["y"]):
+        x_plus = int(x // dx_corr + 1)
+        y_plus = int(y // dy_corr + 1)
+        add_dim = max(y_plus, add_dim)
+        add_dim = max(x_plus, add_dim)
+    
     # Generate GLOBAL temperature noise
     print('Computing global auto-correlated spatio-temporal noise for thermosensible demand...') ## temperature is simply to reflect the fact that loads is correlated spatially, and so is the real "temperature". It is not the real temperature.
-    temperature_noise = utils.generate_coarse_noise(params, 'temperature')
+    temperature_noise = utils.generate_coarse_noise(prng, params, 'temperature', add_dim=add_dim)
 
     print('Computing loads ...')
-    loads_series = conso.compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern)
+    start_day = datetime_index[0]
+    loads_series = conso.compute_loads(loads_charac,
+                                       temperature_noise,
+                                       params,
+                                       load_weekly_pattern,
+                                       start_day=start_day,
+                                       add_dim=add_dim)
     loads_series['datetime'] = datetime_index
 
     # Save files
-    print('Saving files in zipped csv in "{}"'.format(scenario_destination_path))
-    if not os.path.exists(scenario_destination_path):
-        os.makedirs(scenario_destination_path)
-    load_p_forecasted = conso.create_csv(loads_series, scenario_destination_path,
-                                         forecasted=True, reordering=True,
-                  shift=True, write_results=write_results, index=False)
+    if scenario_destination_path is not None:
+        print('Saving files in zipped csv in "{}"'.format(scenario_destination_path))
+        if not os.path.exists(scenario_destination_path):
+            os.makedirs(scenario_destination_path)
+            
+    load_p_forecasted = conso.create_csv(prng, loads_series, scenario_destination_path,
+                                        forecasted=True, reordering=True,
+                                        shift=True, write_results=write_results, index=False)
     load_p = conso.create_csv(
+        prng,
         loads_series, scenario_destination_path,
         reordering=True,
-        noise=params['planned_std'], write_results=write_results,
+        noise=params['planned_std'],
+        write_results=write_results,
         index=False
     )
     

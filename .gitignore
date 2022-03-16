@@ -1,3 +1,17 @@
+# Output
+getting_started/example/output/
+getting_started/example/custom/output/
+
+# solver
+.cmake/
+CMakeFiles/
+cmake_install.cmake
+CMakeCache.txt
+compile_commands.json
+getting_started/experiments/optimization/solver/build/solver
+Makefile
+.vscode/
+
 # Variable input files
 chronix2grid/generation/input/dispatch
 
@@ -11,7 +25,6 @@ __pycache__/
 
 # Distribution / packaging
 .Python
-build/
 develop-eggs/
 dist/
 downloads/
@@ -138,5 +151,17 @@ dmypy.json
 
 
 Pipfile.lock
-
+getting_started/example/custom/input/generation/case118_l2rpn_wcci_benjamin_test/
 .DS_Store
+getting_started/example/custom/input/generation/case118_l2rpn_wcci*
+getting_started/example/custom/input*
+getting_started/example/input/generation/case118_l2rpn_wcci_benjamin/remove_load.py
+getting_started/example/input/generation/case118_l2rpn_wcci_benjamin/prods_charac_orig.csv
+getting_started/example/input/generation/case118_l2rpn_wcci_benjamin/loads_charac_old.csv
+getting_started/experiments/check_loss.py
+getting_started/experiments/debug_split_loss.py
+getting_started/experiments/generate_all.py
+getting_started/experiments/example/custom/output/generation/case118_l2rpn_wcci/2012-01-01*
+getting_started/experiments/optimization
+getting_started/example/input/generation/case118_l2rpn_wcci_benjamin.7z
+getting_started/experiments/pypsa_loss.py
