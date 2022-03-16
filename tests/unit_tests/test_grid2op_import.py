@@ -1,4 +1,13 @@
+# Copyright (c) 2019-2022, RTE (https://www.rte-france.com)
+# See AUTHORS.txt
+# This Source Code Form is subject to the terms of the Mozilla Public License, version 2.0.
+# If a copy of the Mozilla Public License, version 2.0 was not distributed with this file,
+# you can obtain one at http://mozilla.org/MPL/2.0/.
+# SPDX-License-Identifier: MPL-2.0
+# This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
+
 import os
+import pdb
 import unittest
 
 import grid2op
@@ -34,10 +43,12 @@ class TestGrid2OpImport(unittest.TestCase):
             'generation', self.CASE, self.start_date
         )
         self.env = grid2op.make(
-            "rte_case118_example",
+            # "rte_case118_example",
+            os.path.split(self.grid_path)[0],
             test=True,
-            grid_path=self.grid_path,
+            # grid_path=self.grid_path,
             chronics_class=Multifolder,
+            chronics_path=os.path.abspath(self.generation_output_folder),
             data_feeding_kwargs={
                "path": os.path.abspath(self.generation_output_folder),
                "gridvalueClass": GridStateFromFileWithForecasts},
@@ -56,12 +67,16 @@ class TestGrid2OpImport(unittest.TestCase):
         NB_CORE = 1
         max_iter = 2
         runner = Runner(**self.env.get_params_for_runner())
-        res = runner.run(nb_episode=nb_episode, nb_process=NB_CORE,
-                         path_save=None, pbar=tqdm, max_iter=max_iter,
+        res = runner.run(nb_episode=nb_episode,
+                         nb_process=NB_CORE,
+                         path_save=None,
+                         pbar=tqdm,
+                         max_iter=max_iter,
                          add_detailed_output=True)
         id_chron, name_chron, cum_reward, nb_timestep, max_ts, episode_data = res.pop()
 
         # data_this_episode = EpisodeData.from_disk(path_data_saved, 'Scenario_0')
         prods_p = pd.DataFrame(
-            np.array([obs.prod_p for obs in episode_data.observations if obs is not None]))
-        self.assertAlmostEqual(prods_p.sum().mean(), 112.64725, places=5)
+            np.array([obs.gen_p for obs in episode_data.observations if obs is not None]))
+        # self.assertAlmostEqual(prods_p.sum().mean(), 112.64725, places=5)
+        self.assertAlmostEqual(prods_p.sum().mean(), 169.10182, places=5)

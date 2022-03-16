@@ -1,5 +1,6 @@
 import datetime as dt
 import os
+import pdb
 import tempfile
 import unittest
 
@@ -14,6 +15,7 @@ from chronix2grid.generation.dispatch.EconomicDispatch import (
 from chronix2grid.generation.dispatch.utils import modify_hydro_ramps, modify_slack_characs
 import grid2op
 from grid2op.Chronics import ChangeNothing
+
 
 class TestPreprocessing(unittest.TestCase):
     def setUp(self):
@@ -75,10 +77,10 @@ class TestDispatch(unittest.TestCase):
         self.CASE = 'case118_l2rpn_wcci'
         self.year = 2012
         self.scenario_name = 'Scenario_0'
-        self.grid_path = os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME,
-                               self.CASE, 'grid.json')
+        self.grid_path = os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME, self.CASE, 'grid.json')
+        print(f"{self.grid_path=}")
         self.dispatcher = init_dispatcher_from_config(
-            self.grid_path,
+            os.path.split(self.grid_path)[0],
             os.path.join(self.input_folder, cst.GENERATION_FOLDER_NAME),
             def_bk.DISPATCHER,
             params_opf = {"hydro_ramp_reduction_factor":1.,
@@ -93,8 +95,8 @@ class TestDispatch(unittest.TestCase):
 
     def test_from_grid2op_env(self):
         grid2op_env = grid2op.make(self.grid2op_path,
-                           chronics_path=self.grid2op_path,
-                           chronics_class=ChangeNothing)
+                                   chronics_path=self.grid2op_path,
+                                   chronics_class=ChangeNothing)
         dispatcher = def_bk.DISPATCHER.from_gri2op_env(grid2op_env)
         self.assertTrue(isinstance(dispatcher, def_bk.DISPATCHER))
 
@@ -114,8 +116,8 @@ class TestChronixScenario(unittest.TestCase):
                                    cst.GENERATION_FOLDER_NAME,
                                    self.case)
         self.grid2op_env = grid2op.make(self.grid2op_path,
-                                    chronics_path = self.grid2op_path,
-                                    chronics_class=ChangeNothing)
+                                        chronics_path = self.grid2op_path,
+                                        chronics_class=ChangeNothing)
         self.start_date = dt.datetime(2019, 9, 1, 0, 0)
         self.end_date = dt.datetime(2019, 9, 1, 0, 5)
         self.dt = 5
@@ -157,7 +159,8 @@ class TestChronixScenario(unittest.TestCase):
 
     def test_net_load(self):
         net_load = self.chronix_scenario.net_load(50., 'net_load')
-        self.assertEqual(float(net_load.iloc[0]), 21.5)
+        # self.assertEqual(float(net_load.iloc[0]), 21.5)  # change in the net_load stuff to only count the loads
+        self.assertEqual(float(net_load.iloc[0]), 28.5)
 
     def test_simplify_chronix(self):
         simplified_chronix = self.chronix_scenario.simplify_chronix()

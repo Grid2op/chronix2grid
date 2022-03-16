@@ -28,11 +28,10 @@ import chronix2grid.constants as cst
 
 DispatchResults = namedtuple('DispatchResults', ['chronix', 'terminal_conditions'])
 
-def init_dispatcher_from_config(grid_path, input_folder, dispatcher_class, params_opf):
+def init_dispatcher_from_config(env_path, input_folder, dispatcher_class, params_opf):
     # Read grid and gens characs
-    env118_withoutchron = grid2op.make("rte_case118_example",
+    env118_withoutchron = grid2op.make(env_path,
                                        test=True,
-                                       grid_path=grid_path,
                                        chronics_class=ChangeNothing)
     # grid_path_parent = pathlib.Path(grid_path).parent.absolute()
     # env118_withoutchron = grid2op.make(str(grid_path_parent),
