@@ -40,9 +40,14 @@ jobs:
       - run: pip install numpy==1.18.3
       - run: pip freeze
       - run:
-          name: Run tests
+          name: Run basic tests
           # This assumes pytest is installed via the install-package step above
-          command: pytest
+          command: pytest tests --ignore tests/integration_tests/test_integration.py
+      - run:
+          name: Run integration tests
+          # This assumes pytest is installed via the install-package step above
+          command: pytest tests/integration_tests
+
 
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
