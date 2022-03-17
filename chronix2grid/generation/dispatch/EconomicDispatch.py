@@ -1,12 +1,22 @@
+# Copyright (c) 2019-2022, RTE (https://www.rte-france.com)
+# See AUTHORS.txt
+# This Source Code Form is subject to the terms of the Mozilla Public License, version 2.0.
+# If a copy of the Mozilla Public License, version 2.0 was not distributed with this file,
+# you can obtain one at http://mozilla.org/MPL/2.0/.
+# SPDX-License-Identifier: MPL-2.0
+# This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
+
 """Class for the economic dispatch framework. Allows to parametrize and run
 an economic dispatch based on RES and consumption time series"""
 
+import copy
 import os
 from abc import ABC, abstractmethod
 from copy import deepcopy
 import datetime as dt
 from collections import namedtuple
 import pathlib
+from numpy.random import default_rng
 
 import grid2op
 from grid2op.Chronics import ChangeNothing
@@ -18,11 +28,10 @@ import chronix2grid.constants as cst
 
 DispatchResults = namedtuple('DispatchResults', ['chronix', 'terminal_conditions'])
 
-def init_dispatcher_from_config(grid_path, input_folder, dispatcher_class, params_opf):
+def init_dispatcher_from_config(env_path, input_folder, dispatcher_class, params_opf):
     # Read grid and gens characs
-    env118_withoutchron = grid2op.make("rte_case118_example",
+    env118_withoutchron = grid2op.make(env_path,
                                        test=True,
-                                       grid_path=grid_path,
                                        chronics_class=ChangeNothing)
     # grid_path_parent = pathlib.Path(grid_path).parent.absolute()
     # env118_withoutchron = grid2op.make(str(grid_path_parent),
@@ -250,7 +259,7 @@ class Dispatcher(ABC):
         )
         return fig
 
-    def save_results(self, params, output_folder):
+    def save_results(self, params, output_folder, prng=None):
         """
         Saves dispatch results in prod_p.csv.bz2, prod_p_forecasted.csv.bz2, load_p.csv.bz2, prices.csv
 
@@ -260,6 +269,8 @@ class Dispatcher(ABC):
         output_folder: ``str``
 
         """
+        if prng is None:
+            prng = default_rng()
         if not self._has_results and not self._has_simplified_results:
             print('The optimization has first to run successfully in order to '
                   'save results.')
@@ -270,11 +281,53 @@ class Dispatcher(ABC):
             print('Saving results for the grids with aggregated generators by carriers...')
             res_load_scenario = self._simplified_chronix_scenario
 
+        path_metadata_failed = os.path.join(output_folder, "DISPATCH_FAILED")
+        if res_load_scenario is None:
+            # the backend failed to find a solution
+            print('ERROR: the backend failed to find a consistent state. Nothing is saved.')
+            with open(path_metadata_failed, "w", encoding="utf-8") as f:
+                f.write("The dispatch has failed. We cannot do anything.")
+            return
+        
+        # this did not failed, so I remove it
+        if os.path.exists(path_metadata_failed):
+            os.remove(path_metadata_failed)
+        
+        wind_curtail_coeff = 1.0
+        solar_curtail_coeff = 1.0
+        
+        # TODO perf do not recompute the res_load_scenario.wind_p.sum(axis=1)
+        if "agg_wind" in res_load_scenario.prods_dispatch:
+            wind_curtail_coeff = res_load_scenario.prods_dispatch["agg_wind"] / res_load_scenario.wind_p.sum(axis=1)
+            wind_curtail_coeff = wind_curtail_coeff.values.reshape(-1, 1)
+        if "agg_solar" in res_load_scenario.prods_dispatch:
+            solar_curtail_coeff = res_load_scenario.prods_dispatch["agg_solar"] / res_load_scenario.solar_p.sum(axis=1)
+            solar_curtail_coeff = solar_curtail_coeff.values.reshape(-1, 1)
+        
+        new_wind_after_curtail = res_load_scenario.wind_p * wind_curtail_coeff
+        new_solar_after_curtail = res_load_scenario.solar_p * solar_curtail_coeff
+        
         full_opf_dispatch = pd.concat(
-            [res_load_scenario.prods_dispatch, res_load_scenario.wind_p,
-             res_load_scenario.solar_p],
+            [res_load_scenario.prods_dispatch,
+             new_wind_after_curtail,
+             new_solar_after_curtail
+            ],
             axis=1
         )
+        
+        diff_wind = (res_load_scenario.wind_p - new_wind_after_curtail).sum(axis=1).values
+        total_curt = diff_wind.sum()
+        total_wind = res_load_scenario.wind_p.sum(axis=1).sum()
+        print(f"INFO: wind curtailment max: {diff_wind.max():.2f}MW")
+        print(f"INFO: wind curtailment min: {diff_wind.min():.2f}MW")
+        print(f"INFO: wind curtailment sum: {total_curt / 12.:.2f}MWh (total {total_wind / 12.:.2f}MWh: {100. * total_curt / total_wind:.2f}%)")
+        diff_solar = (res_load_scenario.solar_p - new_solar_after_curtail).sum(axis=1).values
+        total_curt = diff_solar.sum()
+        total_solar = res_load_scenario.solar_p.sum(axis=1).sum()
+        print(f"INFO: solar curtailment max: {diff_solar.max():.2f}MW")
+        print(f"INFO: solar curtailment min: {diff_solar.min():.2f}MW")
+        print(f"INFO: solar curtailment sum: {total_curt / 12.:.2f}MWh (total { total_curt / total_solar:.2f}MWh: {100. * total_curt / total_solar :.2f}%)")
+        
         try:
             if self._env is not None:
                 full_opf_dispatch = full_opf_dispatch[self._env.name_gen].round(2)
@@ -291,7 +344,10 @@ class Dispatcher(ABC):
             gen_cap = pd.Series({gen_name: gen_pmax for gen_name, gen_pmax in
                                  zip(self._df['name'], self._df['pmax'])})
 
-        prod_p_forecasted_with_noise = add_noise_gen(full_opf_dispatch, gen_cap, noise_factor=params['planned_std'])
+        prod_p_forecasted_with_noise = add_noise_gen(prng,
+                                                     copy.deepcopy(full_opf_dispatch),
+                                                     gen_cap,
+                                                     noise_factor=params['planned_std'])
 
         # prod_p_forecasted_with_noise.to_csv(
         prod_p_forecasted_with_noise.to_csv(
@@ -312,6 +368,12 @@ class Dispatcher(ABC):
         )
         res_load_scenario.loads.to_csv(
             os.path.join(output_folder, "load_p.csv.bz2"),
+            sep=';', index=False,
+            float_format=cst.FLOATING_POINT_PRECISION_FORMAT
+        )
+        # save the origin time series        
+        pd.concat([res_load_scenario.wind_p, res_load_scenario.solar_p], axis=1).to_csv(
+            os.path.join(output_folder, "prod_p_renew_orig.csv.bz2"),
             sep=';', index=False,
             float_format=cst.FLOATING_POINT_PRECISION_FORMAT
         )
@@ -349,7 +411,8 @@ class ChroniXScenario:
             load_minus_losses = self.loads.sum(axis=1) * (1 + losses_pct / 100)
         else:
             load_minus_losses = self.loads.sum(axis=1) + self.loss
-        return (load_minus_losses - self.total_res).to_frame(name=name)
+        # return (load_minus_losses - self.total_res).to_frame(name=name)
+        return (load_minus_losses).to_frame(name=name)
 
     def simplify_chronix(self):
         simplified_chronix = deepcopy(self)

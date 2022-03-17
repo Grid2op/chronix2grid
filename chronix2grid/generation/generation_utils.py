@@ -1,3 +1,11 @@
+# Copyright (c) 2019-2022, RTE (https://www.rte-france.com)
+# See AUTHORS.txt
+# This Source Code Form is subject to the terms of the Mozilla Public License, version 2.0.
+# If a copy of the Mozilla Public License, version 2.0 was not distributed with this file,
+# you can obtain one at http://mozilla.org/MPL/2.0/.
+# SPDX-License-Identifier: MPL-2.0
+# This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
+
 import datetime as dt
 from functools import partial
 import os
@@ -6,6 +14,7 @@ import re
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
+from numpy.random import default_rng
 
 from ..config import DispatchConfigManager, LoadsConfigManager, ResConfigManager
 
@@ -23,7 +32,7 @@ def make_generation_input_output_directories(input_folder, case, year, output_fo
     return dispatch_input_folder, dispatch_input_folder_case, dispatch_output_folder
 
 
-def generate_coarse_noise(params, data_type):
+def generate_coarse_noise(prng, params, data_type, add_dim):
     """
     This function generates a spatially and temporally correlated noise.
     Because it may take a lot of time to compute a correlated noise on
@@ -49,16 +58,16 @@ def generate_coarse_noise(params, data_type):
     dt_corr = params[data_type + '_corr']
 
     # Compute number of element in each dimension
-    Nx_comp = int(Lx // dx_corr + 1)
-    Ny_comp = int(Ly // dy_corr + 1)
-    Nt_comp = int(T // dt_corr + 1)
+    Nx_comp = int(Lx // dx_corr + 1) + add_dim
+    Ny_comp = int(Ly // dy_corr + 1) + add_dim
+    Nt_comp = int(T // dt_corr + 1) + add_dim
 
     # Generate gaussian noise input·
-    output = np.random.normal(0, 1, (Nx_comp, Ny_comp, Nt_comp))
+    output = prng.normal(0, 1, (Nx_comp, Ny_comp, Nt_comp))
 
     return output
 
-def interpolate_noise(computation_noise, params, locations, time_scale):
+def interpolate_noise(computation_noise, params, locations, time_scale, add_dim):
     """
     This interpolates an autocarrelated noise mesh, to make it more granular.
 
@@ -83,9 +92,9 @@ def interpolate_noise(computation_noise, params, locations, time_scale):
     dt_corr = time_scale
 
     # Compute number of element in each dimension
-    Nx_comp = int(Lx // dx_corr + 1)
-    Ny_comp = int(Ly // dy_corr + 1)
-    Nt_comp = int(T // dt_corr + 1)
+    Nx_comp = int(Lx // dx_corr + 1) + add_dim
+    Ny_comp = int(Ly // dy_corr + 1) + add_dim
+    Nt_comp = int(T // dt_corr + 1) + add_dim
 
     # Get interpolation temporal mesh size
     dt = params['dt']
@@ -158,27 +167,25 @@ def updated_time_parameters_with_timestep(time_parameters, timestep):
     return time_parameters
 
 
-def generate_seeds(n_seeds, seed_for_loads=None, seed_for_res=None, seed_for_disp=None):
+def generate_seeds(prng, n_seeds, seed_for_loads=None, seed_for_res=None, seed_for_disp=None):
 
-    default_seed = np.random.randint(low=0, high=2 ** 31)
+    default_seed = prng.integers(low=0, high=2 ** 31, dtype=int)
     if seed_for_loads is not None:
-        np.random.seed(seed_for_loads)
+        prng_load = default_rng(seed_for_loads)
     else:
-        np.random.seed(default_seed)
-    seeds_for_loads = [np.random.randint(low=0, high=2 ** 31) for _ in
-                       range(n_seeds)]
+        prng_load = default_rng(default_seed)
+    seeds_for_loads = [prng_load.integers(low=0, high=2 ** 31, dtype=int) for _ in range(n_seeds)]
+    
     if seed_for_res is not None:
-        np.random.seed(seed_for_res)
+        prng_res = default_rng(seed_for_res)
     else:
-        np.random.seed(default_seed)
-    seeds_for_res = [np.random.randint(low=0, high=2 ** 31) for _ in
-                       range(n_seeds)]
+        prng_res = default_rng(default_seed)
+    seeds_for_res = [prng_res.integers(low=0, high=2 ** 31, dtype=int) for _ in range(n_seeds)]
     if seed_for_disp is not None:
-        np.random.seed(seed_for_disp)
+        prng_disp = default_rng(seed_for_disp)
     else:
-        np.random.seed(default_seed)
-    seeds_for_disp = [np.random.randint(low=0, high=2 ** 31) for _ in
-                       range(n_seeds)]
+        prng_disp = default_rng(default_seed)
+    seeds_for_disp = [prng_disp.integers(low=0, high=2 ** 31, dtype=int) for _ in range(n_seeds)]
 
     return seeds_for_loads, seeds_for_res, seeds_for_disp
 

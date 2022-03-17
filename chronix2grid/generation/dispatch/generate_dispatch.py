@@ -1,4 +1,12 @@
-from PypsaDispatchBackend.EDispatch_L2RPN2020 import run_economic_dispatch # TODO: Supprimer cette dépendance car pas utile (utiliser utils dans chronix2grid)
+# Copyright (c) 2019-2022, RTE (https://www.rte-france.com)
+# See AUTHORS.txt
+# This Source Code Form is subject to the terms of the Mozilla Public License, version 2.0.
+# If a copy of the Mozilla Public License, version 2.0 was not distributed with this file,
+# you can obtain one at http://mozilla.org/MPL/2.0/.
+# SPDX-License-Identifier: MPL-2.0
+# This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
+
+from .PypsaDispatchBackend.EDispatch_L2RPN2020 import RampMode # TODO: Supprimer cette dépendance car pas utile (utiliser utils dans chronix2grid)
 from .dispatch_loss_utils import run_grid2op_simulation_donothing, correct_scenario_loss, move_chronics_temporarily, \
     remove_temporary_chronics, remove_simulation_data, move_env_temporarily
 import shutil
@@ -31,13 +39,13 @@ def main(dispatcher, input_folder, output_folder, grid_folder, seed, params, par
     """
 
     #np.random.seed(seed) # already done before
-
     hydro_constraints = dispatcher.make_hydro_constraints_from_res_load_scenario()
-    agg_load_without_renew = dispatcher.net_load(params_opf['losses_pct'],
-                                                 name=dispatcher.loads.index[0])
-
+    load_with_losses = dispatcher.net_load(params_opf['losses_pct'],
+                                           name=dispatcher.loads.index[0])
     dispatch_results = dispatcher.run(
-        agg_load_without_renew,
+        load=load_with_losses,
+        total_solar=dispatcher.solar_p.sum(axis=1),
+        total_wind=dispatcher.wind_p.sum(axis=1),
         params=params_opf,
         gen_constraints=hydro_constraints,
         ramp_mode=parse_ramp_mode(params_opf['ramp_mode']),
@@ -47,7 +55,7 @@ def main(dispatcher, input_folder, output_folder, grid_folder, seed, params, par
     )
     dispatcher.save_results(params, output_folder)
 
-    is_dispatch_successful=(len(dispatcher.chronix_scenario.prods_dispatch.columns)>=1)
+    is_dispatch_successful=(dispatcher.chronix_scenario.prods_dispatch is not None) and (len(dispatcher.chronix_scenario.prods_dispatch.columns)>=1)
     if params_opf["loss_grid2op_simulation"] and is_dispatch_successful:
         new_prod_p, new_prod_forecasted_p = simulate_loss(grid_folder, output_folder, params_opf, write_results = True)
         dispatch_results = update_results_loss(dispatch_results, new_prod_p, params_opf)
@@ -98,12 +106,12 @@ def parse_ramp_mode(mode):
 
     """
     if mode == 'hard':
-        return run_economic_dispatch.RampMode.hard
+        return RampMode.hard
     if mode == 'medium':
-        return run_economic_dispatch.RampMode.medium
+        return RampMode.medium
     if mode == 'easy':
-        return run_economic_dispatch.RampMode.easy
+        return RampMode.easy
     if mode == '':
-        return run_economic_dispatch.RampMode.none
+        return RampMode.none
     raise ValueError(f'mode only takes values from (hard, medium, easy, none), '
                      '{mode} was passed')

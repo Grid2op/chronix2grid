@@ -1,9 +1,18 @@
+# Copyright (c) 2019-2022, RTE (https://www.rte-france.com)
+# See AUTHORS.txt
+# This Source Code Form is subject to the terms of the Mozilla Public License, version 2.0.
+# If a copy of the Mozilla Public License, version 2.0 was not distributed with this file,
+# you can obtain one at http://mozilla.org/MPL/2.0/.
+# SPDX-License-Identifier: MPL-2.0
+# This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
+
 import os
 import json
 
 # Other Python libraries
 import pandas as pd
 import numpy as np
+from numpy.random import default_rng
 
 # Libraries developed for this module
 from . import solar_wind_utils as swutils
@@ -34,7 +43,7 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
     pandas.DataFrame: wind production chronics forecasted for the scenario without additional gaussian noise
     """
 
-    np.random.seed(seed)
+    prng = default_rng(seed)
     smoothdist = params['smoothdist']
 
     # Define datetime indices
@@ -58,10 +67,22 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
 
     # Generate GLOBAL temperature noise
     print('Computing global auto-correlated spatio-temporal noise for sun and wind...')
-    solar_noise = utils.generate_coarse_noise(params, 'solar')
-    long_scale_wind_noise = utils.generate_coarse_noise(params, 'long_wind')
-    medium_scale_wind_noise = utils.generate_coarse_noise(params, 'medium_wind')
-    short_scale_wind_noise = utils.generate_coarse_noise(params, 'short_wind')
+    scale_solar_coord_for_correlation = float(params["scale_solar_coord_for_correlation"]) if "scale_solar_coord_for_correlation" in params else None
+    add_dim = 0
+    dx_corr = int(params['dx_corr'])
+    dy_corr = int(params['dy_corr'])
+    for x, y, type_gen  in zip(prods_charac["x"], prods_charac["y"], prods_charac["type"]):
+        if type_gen == "solar" and scale_solar_coord_for_correlation is not None:
+            x = scale_solar_coord_for_correlation * x
+            y = scale_solar_coord_for_correlation * y
+        x_plus = int(x // dx_corr + 1)
+        y_plus = int(y // dy_corr + 1)
+        add_dim = max(y_plus, add_dim)
+        add_dim = max(x_plus, add_dim)
+    solar_noise = utils.generate_coarse_noise(prng, params, 'solar', add_dim=add_dim)
+    long_scale_wind_noise = utils.generate_coarse_noise(prng, params, 'long_wind', add_dim=add_dim)
+    medium_scale_wind_noise = utils.generate_coarse_noise(prng, params, 'medium_wind', add_dim=add_dim)
+    short_scale_wind_noise = utils.generate_coarse_noise(prng, params, 'short_wind', add_dim=add_dim)
 
     # Compute Wind and solar series of scenario
     print('Generating solar and wind production chronics')
@@ -72,22 +93,27 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
             locations = [prods_charac[mask]['x'].values[0], prods_charac[mask]['y'].values[0]]
             Pmax = prods_charac[mask]['Pmax'].values[0]
             prods_series[name] = swutils.compute_solar_series(
+                prng,
                 locations,
                 Pmax,
                 solar_noise,
                 params, solar_pattern, smoothdist,
-                time_scale=params['solar_corr'])
+                time_scale=params['solar_corr'],
+                add_dim=add_dim,
+                scale_solar_coord_for_correlation=scale_solar_coord_for_correlation)
 
         elif prods_charac[mask]['type'].values == 'wind':
             locations = [prods_charac[mask]['x'].values[0], prods_charac[mask]['y'].values[0]]
             Pmax = prods_charac[mask]['Pmax'].values[0]
             prods_series[name] = swutils.compute_wind_series(
+                prng,
                 locations,
                 Pmax,
                 long_scale_wind_noise,
                 medium_scale_wind_noise,
                 short_scale_wind_noise,
-                params, smoothdist)
+                params, smoothdist,
+                add_dim=add_dim)
 
     # Séparation ds séries solaires et éoliennes
     solar_series = {}
@@ -105,12 +131,15 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
     wind_series['datetime'] = datetime_index
 
     # Save files
-    print('Saving files in zipped csv')
-    if not os.path.exists(scenario_destination_path):
-        os.makedirs(scenario_destination_path)
+    if scenario_destination_path is not None:
+        print('Saving files in zipped csv')
+        if not os.path.exists(scenario_destination_path):
+            os.makedirs(scenario_destination_path)
+            
     prod_solar_forecasted =  swutils.create_csv(
+        prng,
         solar_series,
-        os.path.join(scenario_destination_path, 'solar_p_forecasted.csv.bz2'),
+        os.path.join(scenario_destination_path, 'solar_p_forecasted.csv.bz2') if scenario_destination_path is not None else None,
         reordering=True,
         shift=True,
         write_results=write_results,
@@ -118,16 +147,18 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
     )
 
     prod_solar = swutils.create_csv(
+        prng,
         solar_series,
-        os.path.join(scenario_destination_path, 'solar_p.csv.bz2'),
+        os.path.join(scenario_destination_path, 'solar_p.csv.bz2') if scenario_destination_path is not None else None,
         reordering=True,
         noise=params['planned_std'],
         write_results=write_results
     )
 
     prod_wind_forecasted = swutils.create_csv(
+        prng,
         wind_series,
-        os.path.join(scenario_destination_path, 'wind_p_forecasted.csv.bz2'),
+        os.path.join(scenario_destination_path, 'wind_p_forecasted.csv.bz2') if scenario_destination_path is not None else None,
         reordering=True,
         shift=True,
         write_results=write_results,
@@ -135,14 +166,16 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
     )
 
     prod_wind = swutils.create_csv(
-        wind_series, os.path.join(scenario_destination_path, 'wind_p.csv.bz2'),
+        prng,
+        wind_series, os.path.join(scenario_destination_path, 'wind_p.csv.bz2') if scenario_destination_path is not None else None,
         reordering=True,
         noise=params['planned_std'],
         write_results=write_results
     )
 
     prod_p = swutils.create_csv(
-        prods_series, os.path.join(scenario_destination_path, 'prod_p.csv.bz2'),
+        prng,
+        prods_series, os.path.join(scenario_destination_path, 'prod_p.csv.bz2') if scenario_destination_path is not None else None,
         reordering=True,
         noise=params['planned_std'],
         write_results=write_results
@@ -153,12 +186,13 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
     prod_v.index = [0]
     prod_v = prod_v.reindex(range(len(prod_p)))
     prod_v = prod_v.fillna(method='ffill') * 1.04
-
-    prod_v.to_csv(
-        os.path.join(scenario_destination_path, 'prod_v.csv.bz2'),
-        sep=';',
-        index=False,
-        float_format=cst.FLOATING_POINT_PRECISION_FORMAT
-    )
+    
+    if write_results:
+        prod_v.to_csv(
+            os.path.join(scenario_destination_path, 'prod_v.csv.bz2') if scenario_destination_path is not None else None,
+            sep=';',
+            index=False,
+            float_format=cst.FLOATING_POINT_PRECISION_FORMAT
+        )
 
     return prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted

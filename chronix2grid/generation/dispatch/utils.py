@@ -1,3 +1,11 @@
+# Copyright (c) 2019-2022, RTE (https://www.rte-france.com)
+# See AUTHORS.txt
+# This Source Code Form is subject to the terms of the Mozilla Public License, version 2.0.
+# If a copy of the Mozilla Public License, version 2.0 was not distributed with this file,
+# you can obtain one at http://mozilla.org/MPL/2.0/.
+# SPDX-License-Identifier: MPL-2.0
+# This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
+
 import os
 from enum import Enum
 import copy
@@ -40,7 +48,7 @@ def modify_slack_characs(env_df, slack_name, p_max_reduction=0, ramp_reduction=0
                                                                                  decimals)
     return env_df
 
-def add_noise_gen(dispatch, gen_cap, noise_factor):
+def add_noise_gen(prng, dispatch, gen_cap, noise_factor):
     """ Add noise to opf dispatch to have more
     realistic real-time data
 
@@ -68,6 +76,6 @@ def add_noise_gen(dispatch, gen_cap, noise_factor):
         # only_dispatched_steps = dispatch_new[col][dispatch_new[col] > 0]
         # print(only_dispatched_steps)
 
-        noise = np.random.lognormal(mean=0.0, sigma=noise_factor, size=dispatch_new.shape[0])
+        noise = prng.lognormal(mean=0.0, sigma=noise_factor, size=dispatch_new.shape[0])
         dispatch_new[col] = dispatch[col] * noise
     return dispatch_new.round(2)

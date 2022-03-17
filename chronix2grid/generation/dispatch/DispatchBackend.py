@@ -1,3 +1,11 @@
+# Copyright (c) 2019-2022, RTE (https://www.rte-france.com)
+# See AUTHORS.txt
+# This Source Code Form is subject to the terms of the Mozilla Public License, version 2.0.
+# If a copy of the Mozilla Public License, version 2.0 was not distributed with this file,
+# you can obtain one at http://mozilla.org/MPL/2.0/.
+# SPDX-License-Identifier: MPL-2.0
+# This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
+
 from .generate_dispatch import main
 
 
@@ -22,9 +30,13 @@ class DispatchBackend: # TODO - PypsaDispatchBackend - devra créer un PypsaDisp
     params_opf: ``dict``
         dictionnary with specific parameters concerning the dispatch optimization (Optimal Power Flow computation)
     """
-    def __init__(self, dispatcher, scenario_folder_path,
-                         grid_folder,
-                        seed_disp, params, params_opf):
+    def __init__(self,
+                 dispatcher,
+                 scenario_folder_path,
+                 grid_folder,
+                 seed_disp,
+                 params,
+                 params_opf):
         self.dispatcher = dispatcher
         self.params = params
         self.params_opf = params_opf

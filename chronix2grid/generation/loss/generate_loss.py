@@ -1,6 +1,15 @@
+# Copyright (c) 2019-2022, RTE (https://www.rte-france.com)
+# See AUTHORS.txt
+# This Source Code Form is subject to the terms of the Mozilla Public License, version 2.0.
+# If a copy of the Mozilla Public License, version 2.0 was not distributed with this file,
+# you can obtain one at http://mozilla.org/MPL/2.0/.
+# SPDX-License-Identifier: MPL-2.0
+# This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
+
 import os
 import datetime as dt
 import pandas as pd
+import copy
 
 def main(input_folder, output_folder, load, prod_solar, prod_wind, params, params_loss, write_results = True):
     """
@@ -23,15 +32,19 @@ def main(input_folder, output_folder, load, prod_solar, prod_wind, params, param
 
 def generate_valid_loss(loss_pattern_path, params):
     # It is assumed that provided loss_pattern contains the requested time period and time step
-
+    params = copy.deepcopy(params)
+    
     # Reading and parsing dates
     dateparse = lambda x: dt.datetime.strptime(x, '%d/%m/%Y %H:%M')
-    loss_pattern = pd.read_csv(loss_pattern_path, usecols=[0, 1],
-                                parse_dates=[0], date_parser=dateparse, sep = ';')
+    loss_pattern = pd.read_csv(loss_pattern_path,
+                               usecols=[0, 1],
+                               parse_dates=[0],
+                               date_parser=dateparse,
+                               sep = ';')
     loss_pattern.set_index(loss_pattern.columns[0], inplace=True)
 
     # Extract subset of loss-pattern corresponding to the period studied
-    loss_pattern.index = loss_pattern.index.map(lambda t: t.replace(year=params['year']))
+    loss_pattern.index = loss_pattern.index.map(lambda t: t.replace(year=params['year']))  # does not work in some un indentified cases
     datetime_index = pd.date_range(
         start=params['start_date'],
         end=params['end_date'],
