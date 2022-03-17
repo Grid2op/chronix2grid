@@ -24,7 +24,6 @@ setup(name='Chronix2Grid',
       include_package_data=True,
       install_requires=[
                         "click>=7.1.1",
-                        "pypsa",
                         "cufflinks>=0.17.3",
                         "decorator>=4.4.2",
                         "folium>=0.10.1",
