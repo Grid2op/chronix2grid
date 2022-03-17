@@ -37,6 +37,7 @@ jobs:
       - run: sudo apt-get install -y coinor-cbc
       - run: pip install .
       - run: pip install pypsa==0.17.0
+      - run: pip install numpy==1.18.3
       - run: pip freeze
       - run:
           name: Run tests
