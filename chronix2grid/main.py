@@ -103,7 +103,7 @@ def generate_mp_core(prng, case, start_date, weeks, by_n_weeks, n_scenarios, mod
 
     if n_scenarios >= 2:
         seeds_for_loads, seeds_for_res, seeds_for_disp = gu.generate_seeds(
-            n_scenarios, seed_for_loads, seed_for_res, seed_for_dispatch
+            prng, n_scenarios, seed_for_loads, seed_for_res, seed_for_dispatch
         )
     else:
         # in case uou want to reproduce a specific scenario already generated
