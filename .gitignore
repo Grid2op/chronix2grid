@@ -165,3 +165,6 @@ getting_started/experiments/example/custom/output/generation/case118_l2rpn_wcci/
 getting_started/experiments/optimization
 getting_started/example/input/generation/case118_l2rpn_wcci_benjamin.7z
 getting_started/experiments/pypsa_loss.py
+output/generation/case118_l2rpn_neurips_1x/2012-01-01
+chronix2grid/generation/output/
+chronix2grid/GetGridGenLoadRenewables.ipynb.orig
