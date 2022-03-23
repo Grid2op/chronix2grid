@@ -40,6 +40,7 @@ def main(scenario_destination_path, seed, params, loads_charac, load_weekly_patt
 
     # Set random seed of scenario
     prng = default_rng(seed)
+    np.random.seed(seed)
 
     # Define reference datetime indices
     datetime_index = pd.date_range(
@@ -56,6 +57,7 @@ def main(scenario_destination_path, seed, params, loads_charac, load_weekly_patt
         y_plus = int(y // dy_corr + 1)
         add_dim = max(y_plus, add_dim)
         add_dim = max(x_plus, add_dim)
+        add_dim=0
     
     # Generate GLOBAL temperature noise
     print('Computing global auto-correlated spatio-temporal noise for thermosensible demand...') ## temperature is simply to reflect the fact that loads is correlated spatially, and so is the real "temperature". It is not the real temperature.

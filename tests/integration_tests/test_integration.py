@@ -13,6 +13,10 @@ import chronix2grid.generation.generation_utils as gu
 
 from chronix2grid.config import ResConfigManager
 from chronix2grid.generation.renewable.RenewableBackend import RenewableBackend
+from numpy.random import default_rng
+
+#from numpy.random import Generator, MT19937
+#from numpy.random import MT19937 as default_rng
 
 cst.RENEWABLE_GENERATION_CONFIG = ResConfigManager
 cst.RENEWABLE_GENERATION_BACKEND = RenewableBackend
@@ -41,10 +45,16 @@ class TestIntegration(unittest.TestCase):
         seed_for_disp = 1180859679
         self.ignore_warnings = True
 
+        ###########
+        ## Bypassing this to recover same seeds as before
+        prng = default_rng()
+
         # Generated seeds from the first three seeds (but we only generate one scenario)
         seeds_for_loads, seeds_for_res, seeds_for_disp = gu.generate_seeds(
-            2, seed_for_loads, seed_for_res, seed_for_disp
+            prng, 2, seed_for_loads, seed_for_res, seed_for_disp
         )
+        ########
+
         self.seed_for_load = [seeds_for_loads[0]]
         self.seed_for_res = [seeds_for_res[0]]
         self.seed_for_disp = [seeds_for_disp[0]]
@@ -122,6 +132,28 @@ class TestIntegration(unittest.TestCase):
 
     # def tearDown(self) -> None:
     #     shutil.rmtree(self.output_folder, ignore_errors=False, onerror=None)
+
+    def test_integration_l(self):
+        self.modify_gen_prices(self.mu, self.sigma, self.seed_price_noise_noloss, self.gen_types, self.case_noloss)
+
+        # Launch module
+        main.generate_per_scenario(
+            case=self.case_noloss, start_date=self.start_date, weeks=self.nweeks, by_n_weeks=4,
+            mode='L', input_folder=self.input_folder,
+            kpi_output_folder=self.kpi_output_folder_noloss,
+            generation_output_folder=self.generation_output_folder_noloss,
+            scen_names=self.scenario_names,
+            seeds_for_loads=self.seed_for_load,
+            seeds_for_res=self.seed_for_res,
+            seeds_for_dispatch=self.seed_for_disp,
+            ignore_warnings=self.ignore_warnings,
+            scenario_id=0)
+        # Check
+        path_out = os.path.join(self.generation_output_folder_noloss, "Scenario_0")
+        path_ref = self.expected_folder_noloss
+        files_to_check=['load_p']
+        bool = self.check_frames_equal(path_out, path_ref, files_to_check)
+        self.assertTrue(bool)
 
     def test_integration_lrt_nolosscorrection(self):
         self.modify_gen_prices(self.mu, self.sigma, self.seed_price_noise_noloss, self.gen_types, self.case_noloss)
