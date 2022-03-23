@@ -411,8 +411,8 @@ class ChroniXScenario:
             load_minus_losses = self.loads.sum(axis=1) * (1 + losses_pct / 100)
         else:
             load_minus_losses = self.loads.sum(axis=1) + self.loss
-        # return (load_minus_losses - self.total_res).to_frame(name=name)
-        return (load_minus_losses).to_frame(name=name)
+        return (load_minus_losses - self.total_res).to_frame(name=name)
+        #return (load_minus_losses).to_frame(name=name)
 
     def simplify_chronix(self):
         simplified_chronix = deepcopy(self)

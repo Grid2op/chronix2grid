@@ -42,10 +42,12 @@ def main(dispatcher, input_folder, output_folder, grid_folder, seed, params, par
     hydro_constraints = dispatcher.make_hydro_constraints_from_res_load_scenario()
     load_with_losses = dispatcher.net_load(params_opf['losses_pct'],
                                            name=dispatcher.loads.index[0])
+    ##########
+    #Bypass solar and wind for now
     dispatch_results = dispatcher.run(
         load=load_with_losses,
-        total_solar=dispatcher.solar_p.sum(axis=1),
-        total_wind=dispatcher.wind_p.sum(axis=1),
+        total_solar=None,#dispatcher.solar_p.sum(axis=1),
+        total_wind=None,#dispatcher.wind_p.sum(axis=1),
         params=params_opf,
         gen_constraints=hydro_constraints,
         ramp_mode=parse_ramp_mode(params_opf['ramp_mode']),
@@ -53,6 +55,7 @@ def main(dispatcher, input_folder, output_folder, grid_folder, seed, params, par
         pyomo=params_opf['pyomo'],
         solver_name=params_opf['solver_name']
     )
+    dispatch_results.chronix.prods_dispatch=dispatch_results.chronix.prods_dispatch.drop(["agg_wind", "agg_solar"], axis=1)
     dispatcher.save_results(params, output_folder)
 
     is_dispatch_successful=(dispatcher.chronix_scenario.prods_dispatch is not None) and (len(dispatcher.chronix_scenario.prods_dispatch.columns)>=1)
