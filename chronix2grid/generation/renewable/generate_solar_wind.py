@@ -44,6 +44,7 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
     """
 
     prng = default_rng(seed)
+    np.random.seed(seed)
     smoothdist = params['smoothdist']
 
     # Define datetime indices
@@ -79,6 +80,11 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
         y_plus = int(y // dy_corr + 1)
         add_dim = max(y_plus, add_dim)
         add_dim = max(x_plus, add_dim)
+
+        ##########
+        #Getting back to old model
+        add_dim=0
+        ##########
     solar_noise = utils.generate_coarse_noise(prng, params, 'solar', add_dim=add_dim)
     long_scale_wind_noise = utils.generate_coarse_noise(prng, params, 'long_wind', add_dim=add_dim)
     medium_scale_wind_noise = utils.generate_coarse_noise(prng, params, 'medium_wind', add_dim=add_dim)

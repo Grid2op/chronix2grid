@@ -155,6 +155,28 @@ class TestIntegration(unittest.TestCase):
         bool = self.check_frames_equal(path_out, path_ref, files_to_check)
         self.assertTrue(bool)
 
+    def test_integration_r(self):
+        self.modify_gen_prices(self.mu, self.sigma, self.seed_price_noise_noloss, self.gen_types, self.case_noloss)
+
+        # Launch module
+        main.generate_per_scenario(
+            case=self.case_noloss, start_date=self.start_date, weeks=self.nweeks, by_n_weeks=4,
+            mode='R', input_folder=self.input_folder,
+            kpi_output_folder=self.kpi_output_folder_noloss,
+            generation_output_folder=self.generation_output_folder_noloss,
+            scen_names=self.scenario_names,
+            seeds_for_loads=self.seed_for_load,
+            seeds_for_res=self.seed_for_res,
+            seeds_for_dispatch=self.seed_for_disp,
+            ignore_warnings=self.ignore_warnings,
+            scenario_id=0)
+        # Check
+        path_out = os.path.join(self.generation_output_folder_noloss, "Scenario_0")
+        path_ref = self.expected_folder_noloss
+        files_to_check=['solar_p','wind_p']
+        bool = self.check_frames_equal(path_out, path_ref, files_to_check)
+        self.assertTrue(bool)
+
     def test_integration_lrt_nolosscorrection(self):
         self.modify_gen_prices(self.mu, self.sigma, self.seed_price_noise_noloss, self.gen_types, self.case_noloss)
 
