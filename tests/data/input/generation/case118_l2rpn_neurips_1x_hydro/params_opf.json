@@ -7,5 +7,6 @@
 "hydro_ramp_reduction_factor":2,
 "slack_p_max_reduction":150,
 "slack_ramp_max_reduction":6,
-"agent_type": "reco"
+"agent_type": "reco",
+  "renewable_in_opf": false
 }

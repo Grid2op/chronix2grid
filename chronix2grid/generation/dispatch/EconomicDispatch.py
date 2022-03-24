@@ -148,7 +148,7 @@ class Dispatcher(ABC):
                             'ChronixScenario.')
         self._chronix_scenario = chronix_scenario
 
-    def net_load(self, losses_pct, name):
+    def net_load(self, losses_pct, name,include_renewable=True):
         if self._chronix_scenario is None:
             raise Exception('Cannot compute net load before instantiated the Load and'
                             'renewables scenario.')
@@ -406,13 +406,15 @@ class ChroniXScenario:
         prods.index = datetime_index[:len(prods)]
         return cls(loads, prods, res_names, scenario_name, loss)
 
-    def net_load(self, losses_pct, name):
+    def net_load(self, losses_pct, name,include_renewable=True):
         if self.loss is None:
             load_minus_losses = self.loads.sum(axis=1) * (1 + losses_pct / 100)
         else:
             load_minus_losses = self.loads.sum(axis=1) + self.loss
-        return (load_minus_losses - self.total_res).to_frame(name=name)
-        #return (load_minus_losses).to_frame(name=name)
+        if include_renewable:
+            return (load_minus_losses - self.total_res).to_frame(name=name)
+        else:
+            return (load_minus_losses).to_frame(name=name)
 
     def simplify_chronix(self):
         simplified_chronix = deepcopy(self)

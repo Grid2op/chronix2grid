@@ -14,7 +14,7 @@ import os
 import pathlib
 
 
-def main(dispatcher, input_folder, output_folder, grid_folder, seed, params, params_opf):
+def main(dispatcher, input_folder, output_folder, grid_folder, seed, params, params_opf,renewable_in_OPF=False):
     """
 
     Parameters
@@ -39,29 +39,57 @@ def main(dispatcher, input_folder, output_folder, grid_folder, seed, params, par
     """
 
     #np.random.seed(seed) # already done before
+    if ("renewable_in_opf" in params.keys()):
+        renewable_in_OPF=params["renewable_in_opf"]
+    else:
+        renewable_in_OPF=False
     hydro_constraints = dispatcher.make_hydro_constraints_from_res_load_scenario()
-    load_with_losses = dispatcher.net_load(params_opf['losses_pct'],
-                                           name=dispatcher.loads.index[0])
-    ##########
-    #Bypass solar and wind for now
-    dispatch_results = dispatcher.run(
-        load=load_with_losses,
-        total_solar=None,#dispatcher.solar_p.sum(axis=1),
-        total_wind=None,#dispatcher.wind_p.sum(axis=1),
-        params=params_opf,
-        gen_constraints=hydro_constraints,
-        ramp_mode=parse_ramp_mode(params_opf['ramp_mode']),
-        by_carrier=params_opf['dispatch_by_carrier'],
-        pyomo=params_opf['pyomo'],
-        solver_name=params_opf['solver_name']
-    )
-    dispatch_results.chronix.prods_dispatch=dispatch_results.chronix.prods_dispatch.drop(["agg_wind", "agg_solar"], axis=1)
+
+    if renewable_in_OPF:
+        load_with_losses = dispatcher.net_load(params_opf['losses_pct'],
+                                               name=dispatcher.loads.index[0],include_renewable=False)
+        ##########
+        #Bypass solar and wind for now
+        dispatch_results = dispatcher.run(
+            load=load_with_losses,
+            total_solar=dispatcher.solar_p.sum(axis=1),
+            total_wind=dispatcher.wind_p.sum(axis=1),
+            params=params_opf,
+            gen_constraints=hydro_constraints,
+            ramp_mode=parse_ramp_mode(params_opf['ramp_mode']),
+            by_carrier=params_opf['dispatch_by_carrier'],
+            pyomo=params_opf['pyomo'],
+            solver_name=params_opf['solver_name']
+        )
+        #dispatch_results.chronix.prods_dispatch=dispatch_results.chronix.prods_dispatch.drop(["agg_wind", "agg_solar"], axis=1)
+    else:
+        load_with_losses = dispatcher.net_load(params_opf['losses_pct'],
+                                               name=dispatcher.loads.index[0], include_renewable=True)
+        ##########
+        # Bypass solar and wind for now
+        dispatch_results = dispatcher.run(
+            load=load_with_losses,
+            total_solar=None,
+            total_wind=None,
+            params=params_opf,
+            gen_constraints=hydro_constraints,
+            ramp_mode=parse_ramp_mode(params_opf['ramp_mode']),
+            by_carrier=params_opf['dispatch_by_carrier'],
+            pyomo=params_opf['pyomo'],
+            solver_name=params_opf['solver_name']
+        )
+        #####
+        # These column should be removed as wind and solar were not considered in the opf here
+        dispatch_results.chronix.prods_dispatch = dispatch_results.chronix.prods_dispatch.drop(
+            ["agg_wind", "agg_solar"], axis=1)
+
     dispatcher.save_results(params, output_folder)
 
     is_dispatch_successful=(dispatcher.chronix_scenario.prods_dispatch is not None) and (len(dispatcher.chronix_scenario.prods_dispatch.columns)>=1)
     if params_opf["loss_grid2op_simulation"] and is_dispatch_successful:
         new_prod_p, new_prod_forecasted_p = simulate_loss(grid_folder, output_folder, params_opf, write_results = True)
         dispatch_results = update_results_loss(dispatch_results, new_prod_p, params_opf)
+
     return dispatch_results
 
 def update_results_loss(dispatch_results, new_prod_p, params_opf):
