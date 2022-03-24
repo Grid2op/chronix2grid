@@ -890,7 +890,7 @@ def generate_a_scenario(path_env,
     for el in name_gen:
         if el in final_gen_p:
             continue
-        final_gen_p[el] = np.NaN
+        final_gen_p[str(el)] = np.NaN
     final_gen_p = final_gen_p[name_gen]
     
     # generate economic dispatch
