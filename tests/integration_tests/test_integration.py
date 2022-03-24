@@ -74,11 +74,11 @@ class TestIntegration(unittest.TestCase):
         self.generation_output_folder_loss = generation_output_folder
         self.kpi_output_folder_loss = kpi_output_folder
 
-        self.case_all = 'case118_l2rpn_neurips_1x_hydro_loss'
+        self.case_hydro = 'case118_l2rpn_neurips_1x_hydro'
         generation_output_folder, kpi_output_folder = main.create_directory_tree(
-            self.case_all, self.start_date, self.output_folder, cst.SCENARIO_FOLDER_BASE_NAME,
+            self.case_hydro, self.start_date, self.output_folder, cst.SCENARIO_FOLDER_BASE_NAME,
             self.n_scenarios, 'LRT', warn_user=False)
-        self.generation_output_folder_all = generation_output_folder
+        self.generation_output_folder_hydro = generation_output_folder
         self.kpi_output_folder_loss = kpi_output_folder
 
         # Expected outputs
@@ -92,10 +92,10 @@ class TestIntegration(unittest.TestCase):
             'data', 'output',"generation",
             "expected_case118_l2rpn_neurips_1x_modifySlackBeforeChronixGeneration",
             "Scenario_january_0")
-        self.expected_folder_all = os.path.join(
+        self.expected_folder_hydro = os.path.join(
             pathlib.Path(__file__).parent.parent.absolute(),
             'data', 'output',"generation",
-            'expected_case118_l2rpn_neurips_1x_hydro_loss',#"case118_l2rpn_neurips_1x_hyrdo_loss_modifySlackBeforeChronixGeneration",
+            'expected_case118_l2rpn_neurips_1x_hydro',#"case118_l2rpn_neurips_1x_hyrdo_loss_modifySlackBeforeChronixGeneration",
             "Scenario_january_0")
         self.files_tocheck = ['prod_p']
 
@@ -228,23 +228,23 @@ class TestIntegration(unittest.TestCase):
             boolvec_msg = ["Ramp up" in str(w_.message) for w_ in w]
             self.assertTrue(np.any(boolvec_msg))
 
-    def test_integration_all(self):
-        self.modify_gen_prices(self.mu, self.sigma, self.seed_price_noise_all, self.gen_types, self.case_all)
+    def test_integration_hydro_reduction(self):
+        self.modify_gen_prices(self.mu, self.sigma, self.seed_price_noise_all, self.gen_types, self.case_hydro)
 
         with warnings.catch_warnings(record=True) as w:
             main.generate_per_scenario(
-                case=self.case_all, start_date=self.start_date, weeks=self.nweeks, by_n_weeks=4,
+                case=self.case_hydro, start_date=self.start_date, weeks=self.nweeks, by_n_weeks=4,
                 mode='LRT', input_folder=self.input_folder,
                 kpi_output_folder=self.kpi_output_folder_loss,
-                generation_output_folder=self.generation_output_folder_all,
+                generation_output_folder=self.generation_output_folder_hydro,
                 scen_names=self.scenario_names,
                 seeds_for_loads=self.seed_for_load,
                 seeds_for_res=self.seed_for_res,
                 seeds_for_dispatch=self.seed_for_disp,
                 ignore_warnings=self.ignore_warnings,
                 scenario_id=0)
-            path_out = os.path.join(self.generation_output_folder_all, "Scenario_0")
-            path_ref = self.expected_folder_all
+            path_out = os.path.join(self.generation_output_folder_hydro, "Scenario_0")
+            path_ref = self.expected_folder_hydro
 
             ###
             if self.id_min == 0:#somehow there is a weird difference at timestep 0 (dispatch between generator 32 and 37 exchange 5MW between reference run and test run...)
