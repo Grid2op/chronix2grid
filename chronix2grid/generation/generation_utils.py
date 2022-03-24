@@ -14,9 +14,7 @@ import re
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
-#from numpy.random import default_rng
-#from numpy.random import MT19937 as default_rng
-from numpy.random import Generator, MT19937
+from numpy.random import default_rng
 
 from ..config import DispatchConfigManager, LoadsConfigManager, ResConfigManager
 
@@ -170,30 +168,26 @@ def updated_time_parameters_with_timestep(time_parameters, timestep):
     return time_parameters
 
 
-def generate_seeds(prng,n_seeds, seed_for_loads=None, seed_for_res=None, seed_for_disp=None):
-
-    default_seed = np.random.randint(low=0, high=2 ** 31)
+def generate_seeds(prng, n_seeds, seed_for_loads=None, seed_for_res=None, seed_for_disp=None):
+    default_seed = prng.integers(low=0, high=2 ** 31, dtype=int)
     if seed_for_loads is not None:
-        np.random.seed(seed_for_loads)
+        prng_load = default_rng(seed_for_loads)
     else:
-        np.random.seed(default_seed)
-    seeds_for_loads = [np.random.randint(low=0, high=2 ** 31) for _ in
-                       range(n_seeds)]
+        prng_load = default_rng(default_seed)
+    seeds_for_loads = [prng_load.integers(low=0, high=2 ** 31, dtype=int) for _ in range(n_seeds)]
+
     if seed_for_res is not None:
-        np.random.seed(seed_for_res)
+        prng_res = default_rng(seed_for_res)
     else:
-        np.random.seed(default_seed)
-    seeds_for_res = [np.random.randint(low=0, high=2 ** 31) for _ in
-                       range(n_seeds)]
+        prng_res = default_rng(default_seed)
+    seeds_for_res = [prng_res.integers(low=0, high=2 ** 31, dtype=int) for _ in range(n_seeds)]
     if seed_for_disp is not None:
-        np.random.seed(seed_for_disp)
+        prng_disp = default_rng(seed_for_disp)
     else:
-        np.random.seed(default_seed)
-    seeds_for_disp = [np.random.randint(low=0, high=2 ** 31) for _ in
-                       range(n_seeds)]
+        prng_disp = default_rng(default_seed)
+    seeds_for_disp = [prng_disp.integers(low=0, high=2 ** 31, dtype=int) for _ in range(n_seeds)]
 
     return seeds_for_loads, seeds_for_res, seeds_for_disp
-
 
 
 def read_all_configurations(weeks, start_date, case, input_folder, output_folder):
