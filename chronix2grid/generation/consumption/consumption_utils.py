@@ -63,8 +63,8 @@ def compute_residential(locations, Pmax, temperature_noise, params, weekly_patte
     nb_sec_per_day =  24. * 60. * 60.
     nb_sec_per_year = (365. * nb_sec_per_day)
     year_pattern = 2. * np.pi / nb_sec_per_year
-    #seasonal_pattern = 1.5 / 7. * np.cos(year_pattern * (t + start_min - 45 * nb_sec_per_day))  # min of the load is 15 of February so 45 days after beginning of year
-    seasonal_pattern = 1.5 / 7. * np.cos(year_pattern * (t - start_min - 30 * nb_sec_per_day))
+    seasonal_pattern = 1.5 / 7. * np.cos(year_pattern * (t + start_min - 45 * nb_sec_per_day))  # min of the load is 15 of February so 45 days after beginning of year
+    #seasonal_pattern = 1.5 / 7. * np.cos(year_pattern * (t - start_min - 30 * nb_sec_per_day)) #older version to be removed
     seasonal_pattern += 5.5 / 7.
 
     # Get weekly pattern
@@ -142,11 +142,11 @@ def create_csv(prng, dict_, path, forecasted=False, reordering=True, noise=None,
 
     df_reactive_power = 0.7 * df
     if noise is not None:
-        #df *= prng.lognormal(mean=0.0,sigma=noise, size=df.shape)
-        df *= np.random.lognormal(mean=0.0, sigma=noise, size=df.shape)
-        #df_reactive_power *= prng.lognormal(mean=0.0, sigma=noise, size=df.shape)
-        df_reactive_power *= np.random.lognormal(mean=0.0, sigma=noise,
-                                                 size=df.shape)
+        df *= prng.lognormal(mean=0.0,sigma=noise, size=df.shape)
+        #df *= np.random.lognormal(mean=0.0, sigma=noise, size=df.shape) #older version to be removed
+        df_reactive_power *= prng.lognormal(mean=0.0, sigma=noise, size=df.shape)
+        #df_reactive_power *= np.random.lognormal(mean=0.0, sigma=noise,
+        #                                         size=df.shape) #older version to be removed
 
     if write_results:
         file_extension = '_forecasted' if forecasted else ''

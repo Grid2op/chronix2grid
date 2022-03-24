@@ -50,9 +50,9 @@ def compute_wind_series(prng, locations, Pmax, long_noise, medium_noise, short_n
     signal = (0.7 + 0.3 * seasonal_pattern) * (0.3 + std_medium_wind_noise * medium_scale_signal + std_long_wind_noise * long_scale_signal)
     signal += std_short_wind_noise * short_scale_signal
     signal = 1e-1 * np.exp(4 * signal)
-    # signal += prng.uniform(0, SMOOTHDIST/Pmax, signal.shape)
-    #signal += prng.uniform(0, smoothdist, signal.shape)
-    signal += np.random.uniform(0, smoothdist, signal.shape)
+    #signal += prng.uniform(0, SMOOTHDIST/Pmax, signal.shape)
+    signal += prng.uniform(0, smoothdist, signal.shape)
+    #signal += np.random.uniform(0, smoothdist, signal.shape) #older version - to be removed
 
     # signal *= 0.95
     signal[signal < 0.] = 0.
@@ -80,14 +80,14 @@ def compute_solar_series(prng, locations, Pmax, solar_noise, params, solar_patte
         mean_solar_pattern = 0.75
         
     signal = solar_pattern * (mean_solar_pattern + std_solar_noise * final_noise)
-    # signal += prng.uniform(0, smoothdist/Pmax, signal.shape)
-    signal += np.random.uniform(0, smoothdist / Pmax, signal.shape)
+    #signal += prng.uniform(0, smoothdist/Pmax, signal.shape) #to be revised: since smmothdist/PMax is very small, the added noise compared to the previous sinal was unsignificant
+    #signal += np.random.uniform(0, smoothdist / Pmax, signal.shape) #older version - to be removed
     # signal[signal > 1] = 1
     signal[signal < 0.] = 0.
     signal = smooth(signal)
     solar_series = Pmax * signal
     # solar_series[np.isclose(solar_series, 0.)] = 0
-    #solar_series[solar_series > 0.95 * Pmax] = 0.95 * Pmax
+    solar_series[solar_series > 0.95 * Pmax] = 0.95 * Pmax
     return solar_series
 
 def compute_solar_pattern(params, solar_pattern):
@@ -178,8 +178,8 @@ def create_csv(prng, dict_, path, reordering=True, noise=None, shift=False,
         new_ordering = [x for _ ,x in sorted(zip(value ,list(df)))]
         df = df[new_ordering]
     if noise is not None:
-        #df *= ( 1 +noise * prng.normal(0, 1, df.shape))
-        df *= (1 + noise * np.random.normal(0, 1, df.shape))
+        df *= ( 1 +noise * prng.normal(0, 1, df.shape))
+        #df *= (1 + noise * np.random.normal(0, 1, df.shape)) #older version - to be removed
     if shift:
         df = df.shift(-1)
         df = df.fillna(0)

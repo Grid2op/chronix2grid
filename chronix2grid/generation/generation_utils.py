@@ -65,8 +65,8 @@ def generate_coarse_noise(prng, params, data_type, add_dim):
     Nt_comp = int(T // dt_corr + 1) + add_dim
 
     # Generate gaussian noise input·
-    output = np.random.normal(0, 1, (Nx_comp, Ny_comp, Nt_comp))
-    #output = prng.normal(0, 1, (Nx_comp, Ny_comp, Nt_comp))
+    #output = np.random.normal(0, 1, (Nx_comp, Ny_comp, Nt_comp))
+    output = prng.normal(0, 1, (Nx_comp, Ny_comp, Nt_comp))
 
     return output
 
