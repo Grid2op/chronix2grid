@@ -266,36 +266,39 @@ def generate_economic_dispatch(path_env, start_date_dt, end_date_dt, dt, number_
             final_gen_p.iloc[:, gen_id] = 1.0 * res_dispatch.chronix.prods_dispatch[gen_nm].values
     
     #handle curtailment
-    wind_curt = (res_dispatch.chronix.prods_dispatch['agg_wind'].values / total_wind.values).reshape(-1,1)
-    final_gen_p.iloc[:, gen_type == "wind"] *= wind_curt
+    mask_wind = total_wind.values > 0.001
+    wind_curt = (res_dispatch.chronix.prods_dispatch['agg_wind'].values[mask_wind] / total_wind.values[mask_wind]).reshape(-1,1)
+    final_gen_p.iloc[mask_wind, gen_type == "wind"] *= wind_curt
+    
     mask_solar = total_solar.values > 0.001  # be carefull not to divide by 0 in case of solar !
     solar_curt = (res_dispatch.chronix.prods_dispatch['agg_solar'].values[mask_solar] / total_solar.values[mask_solar]).reshape(-1,1)
     final_gen_p.iloc[mask_solar, gen_type == "solar"] *= solar_curt
+    
     total_wind_curt = total_wind.values.sum() - res_dispatch.chronix.prods_dispatch['agg_wind'].values.sum()
     total_solar_curt = total_solar.values[mask_solar].sum() - res_dispatch.chronix.prods_dispatch['agg_solar'].values[mask_solar].sum()
     return final_gen_p, total_wind_curt, total_solar_curt, None
 
 
 def _adjust_gens(all_loss_orig,
-                env_for_loss,
-                datetimes,
-                total_solar,
-                total_wind,
-                params,
-                env_path,
-                env_param,
-                load_without_loss,
-                load_p, 
-                load_q,
-                gen_p,
-                gen_v,
-                economic_dispatch,
-                diff_,
-                threshold_stop=0.1,  # stop when all generators move less that this
-                max_iter=100,  # declare a failure after this number of iteration
-                iter_quality_decrease=50,  # acept a reduction of the quality after this number of iteration
-                percentile_quality_decrease=99,
-                ):
+                 env_for_loss,
+                 datetimes,
+                 total_solar,
+                 total_wind,
+                 params,
+                 env_path,
+                 env_param,
+                 load_without_loss,
+                 load_p, 
+                 load_q,
+                 gen_p,
+                 gen_v,
+                 economic_dispatch,
+                 diff_,
+                 threshold_stop=0.1,  # stop when all generators move less that this
+                 max_iter=100,  # declare a failure after this number of iteration
+                 iter_quality_decrease=50,  # acept a reduction of the quality after this number of iteration
+                 percentile_quality_decrease=99,
+                 ):
     """This function is an auxilliary function.
     
     Like its main one (see handle_losses) it is here to make sure that if you run an AC model with the data generated, 
@@ -342,12 +345,15 @@ def _adjust_gens(all_loss_orig,
     _type_
         _description_
     """
+    quality_ = None
+    error_ = None
+    if np.any(~np.isfinite(gen_p)):
+        error_ = RuntimeError("Input data contained Nans !")
+        return None, error_, quality_
     all_loss = all_loss_orig
     res_gen_p = 1.0 * gen_p
-    error_ = None
     iter_num = 0
     hydro_constraints = economic_dispatch.make_hydro_constraints_from_res_load_scenario()
-    quality_ = None
     while True:
         iter_num += 1
         load = load_without_loss + all_loss
@@ -374,20 +380,18 @@ def _adjust_gens(all_loss_orig,
                                              )
         
         if dispatch_res is None:     
-            error_ = RuntimeError("Pypsa failed to find a solution")
+            error_ = RuntimeError(f"Pypsa failed to find a solution at iteration {iter_num}")
             break
 
         # assign the generators
         for gen_id, gen_nm in enumerate(env_for_loss.name_gen):
             if gen_nm in dispatch_res.chronix.prods_dispatch:
                 res_gen_p[:, gen_id] = 1.0 * dispatch_res.chronix.prods_dispatch[gen_nm].values
-                
-        sum_wind_tmp = total_wind.sum()
-        sum_diff = sum_wind_tmp - dispatch_res.chronix.prods_dispatch['agg_wind'].sum()        
+                  
         #handle wind curtailment
-        res_gen_p[:, env_for_loss.gen_type == "wind"] *= (dispatch_res.chronix.prods_dispatch['agg_wind'].values / total_wind.values).reshape(-1,1)
-        
-        total_wind[:] = 1.0 * dispatch_res.chronix.prods_dispatch["agg_wind"].values
+        mask_winds = total_wind.values > 0.001
+        res_gen_p[mask_winds, :][:,env_for_loss.gen_type == "wind"] *= (dispatch_res.chronix.prods_dispatch['agg_wind'].values[mask_winds] / total_wind.values[mask_winds]).reshape(-1,1)
+        total_wind.loc[mask_winds] = 1.0 * dispatch_res.chronix.prods_dispatch["agg_wind"].values[mask_winds]
         
         # re evaluate the losses
         with warnings.catch_warnings():
@@ -425,7 +429,7 @@ def _adjust_gens(all_loss_orig,
         
         max_diff_ = np.abs(diff_).max()
         if not np.isfinite(max_diff_):
-            error_ = RuntimeError("Some nans were found in the generated data.")
+            error_ = RuntimeError(f"Some nans were found in the generated data at iteration {iter_num}")
             res_gen_p = None
             quality_ = None
             break
@@ -532,6 +536,7 @@ def _fix_losses_one_scenario(env_for_loss,
         gen_p_orig[i] = env_for_loss.chronics_handler.real_data._prod_p[i]  # 1.0 * obs.gen_p
         datetimes[i] = obs.get_time_stamp()
         max_diff_orig[i] = np.max(np.abs(obs.gen_p -  env_for_loss.chronics_handler.real_data._prod_p[i]))
+        
     total_solar = np.sum(gen_p_orig[:, env_for_loss.gen_type == "solar"], axis=1)
     total_wind = np.sum(gen_p_orig[:, env_for_loss.gen_type == "wind"], axis=1)
     load_without_loss = np.sum(final_load_p, axis=1) #  - total_solar - total_wind
@@ -885,8 +890,16 @@ def generate_a_scenario(path_env,
     res_renew = generate_renewable_energy_sources(path_env,renew_seed, start_date_dt, end_date_dt, dt, number_of_minutes, generic_params, gens_charac)
     prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = res_renew
     
+    if prod_solar.isna().any().any():
+        error_ = RuntimeError("Nan generated in solar data")
+        return error_, None, None, None, None, None, None, None
+    if prod_wind.isna().any().any():
+        error_ = RuntimeError("Nan generated in wind data")
+        return error_, None, None, None, None, None, None, None
+    
     # create the result data frame for the generators
     final_gen_p = pd.merge(prod_solar, prod_wind, left_index=True, right_index=True)
+    
     for el in name_gen:
         if el in final_gen_p:
             continue
