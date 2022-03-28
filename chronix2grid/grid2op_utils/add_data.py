@@ -119,4 +119,4 @@ def add_data(env: grid2op.Environment.Environment,
                     json.dump(errors, fp=f)
     else:
         with Pool(nb_core) as p:
-            p.map(generate_a_scenario, argss)
+            p.starmap(generate_a_scenario, argss)
