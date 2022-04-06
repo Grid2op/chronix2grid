@@ -127,7 +127,6 @@ def adjust_gens(all_loss_orig,
                             options={'verbose': 1}
                             )
         print(f"end optimization at {datetime.now():%Y-%m-%d %H:%M:%S}")
-        pdb.set_trace()
         if dispatch_res is None:     
             error_ = RuntimeError("Pypsa failed to find a solution")
             break
