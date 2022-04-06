@@ -186,8 +186,8 @@ class EconomicDispatchValidator:
 
         # Distribution of prod
         fig, axes = plt.subplots(1, 2, figsize=(17, 5))
-        axes[0].pie(ref_prod_per_gen, labels=labels, autopct='%1.1f%%')
-        axes[1].pie(syn_prod_per_gen, labels=labels, autopct='%1.1f%%')
+        axes[0].pie(ref_prod_per_gen["Prod"], labels=labels, autopct='%1.1f%%')
+        axes[1].pie(syn_prod_per_gen["Prod"], labels=labels, autopct='%1.1f%%')
         axes[0].set_title('Reference Energy Mix')
         axes[1].set_title('Synthetic Energy Mix')
         if save_plots:
