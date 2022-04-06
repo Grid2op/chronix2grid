@@ -167,8 +167,8 @@ class TestChronixScenario(unittest.TestCase):
 
     def test_net_load(self):
         net_load = self.chronix_scenario.net_load(50., 'net_load')
-        # self.assertEqual(float(net_load.iloc[0]), 21.5)  # change in the net_load stuff to only count the loads
-        self.assertEqual(float(net_load.iloc[0]), 28.5)
+        self.assertEqual(float(net_load.iloc[0]), 21.5)  # change in the net_load stuff to only count the loads
+        #self.assertEqual(float(net_load.iloc[0]), 28.5)
 
     def test_simplify_chronix(self):
         simplified_chronix = self.chronix_scenario.simplify_chronix()

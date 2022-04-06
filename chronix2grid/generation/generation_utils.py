@@ -63,6 +63,7 @@ def generate_coarse_noise(prng, params, data_type, add_dim):
     Nt_comp = int(T // dt_corr + 1) + add_dim
 
     # Generate gaussian noise input·
+    #output = np.random.normal(0, 1, (Nx_comp, Ny_comp, Nt_comp))
     output = prng.normal(0, 1, (Nx_comp, Ny_comp, Nt_comp))
 
     return output
@@ -168,14 +169,13 @@ def updated_time_parameters_with_timestep(time_parameters, timestep):
 
 
 def generate_seeds(prng, n_seeds, seed_for_loads=None, seed_for_res=None, seed_for_disp=None):
-
     default_seed = prng.integers(low=0, high=2 ** 31, dtype=int)
     if seed_for_loads is not None:
         prng_load = default_rng(seed_for_loads)
     else:
         prng_load = default_rng(default_seed)
     seeds_for_loads = [prng_load.integers(low=0, high=2 ** 31, dtype=int) for _ in range(n_seeds)]
-    
+
     if seed_for_res is not None:
         prng_res = default_rng(seed_for_res)
     else:

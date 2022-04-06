@@ -4,5 +4,6 @@
 "idxSlack":37,
 "nameSlack": "gen_68_37",
 "early_stopping_mode": false,
-"agent_type": "reco"
+"agent_type": "reco",
+  "renewable_in_opf": false
 }

@@ -78,7 +78,8 @@ def get_last_scenario_id(env_chronics_dir):
             
     
 def generate_loads(path_env, load_seed, start_date_dt, end_date_dt, dt, number_of_minutes, generic_params,
-                   load_q_from_p_coeff=0.7):
+                   load_q_from_p_coeff=0.7,
+                   day_lag=6):
     """
     This function generates the load for each consumption on a grid
 
@@ -120,7 +121,8 @@ def generate_loads(path_env, load_seed, start_date_dt, end_date_dt, dt, number_o
                                                  params=load_params,
                                                  loads_charac=loads_charac,
                                                  write_results=False,
-                                                 load_config_manager=None)
+                                                 load_config_manager=None,
+                                                 day_lag=day_lag)
     
     load_p, load_p_forecasted = load_generator.run(load_weekly_pattern=load_weekly_pattern)
     load_q = load_p * load_q_from_p_coeff
@@ -832,7 +834,8 @@ def generate_a_scenario(path_env,
                         load_seed,
                         renew_seed,
                         gen_p_forecast_seed,
-                        handle_loss=True):
+                        handle_loss=True,
+                        nb_steps=None):
     """This function generates and save the data for a scenario.
     
     Generation includes:
@@ -876,7 +879,10 @@ def generate_a_scenario(path_env,
     scenario_id = f"{start_date}_{scen_id}"
     dt_dt = timedelta(minutes=int(dt))
     start_date_dt = datetime.strptime(start_date, "%Y-%m-%d") - dt_dt
-    end_date_dt = start_date_dt + timedelta(days=7) + 2 * dt_dt
+    if nb_steps is None:
+        end_date_dt = start_date_dt + timedelta(days=7) + 2 * dt_dt
+    else:
+        end_date_dt = start_date_dt + (int(nb_steps) + 2) * dt_dt
     end_date = datetime.strftime(end_date_dt,  "%Y-%m-%d %H:%M:%S")
     with open(os.path.join(path_env, "params.json"), "r") as f:
         generic_params = json.load(f)
@@ -884,12 +890,20 @@ def generate_a_scenario(path_env,
     gens_charac = pd.read_csv(os.path.join(path_env, "prods_charac.csv"), sep=",")
     
     # conso generation
-    load_p, load_q, load_p_forecasted, load_q_forecasted = generate_loads(path_env, load_seed, start_date_dt, end_date_dt, dt, number_of_minutes, generic_params)
+    load_p, load_q, load_p_forecasted, load_q_forecasted = generate_loads(path_env,
+                                                                          load_seed,
+                                                                          start_date_dt,
+                                                                          end_date_dt,
+                                                                          dt,
+                                                                          number_of_minutes,
+                                                                          generic_params,
+                                                                          day_lag=6  # TODO 6 because it's 2050
+                                                                          )
     
     # renewable energy sources generation
     res_renew = generate_renewable_energy_sources(path_env,renew_seed, start_date_dt, end_date_dt, dt, number_of_minutes, generic_params, gens_charac)
     prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = res_renew
-    
+
     if prod_solar.isna().any().any():
         error_ = RuntimeError("Nan generated in solar data")
         return error_, None, None, None, None, None, None, None
@@ -914,7 +928,7 @@ def generate_a_scenario(path_env,
     if error_ is not None:
         # TODO log that !
         return error_, None, None, None, None, None, None, None
-
+    
     # now try to move the generators so that when I run an AC powerflow, the setpoint of generators does not change "too much"
     if handle_loss:
         n_gen = len(name_gen)
@@ -936,7 +950,7 @@ def generate_a_scenario(path_env,
             # TODO log that !
             return error_, None, None, None, None, None, None, None
     else:
-        res_gen_p_df = 1.0 * final_gen_p
+        res_gen_p_df = 1.0 * gen_p_after_dispatch
         quality_ = (-1, float("Nan"), float("Nan"), float("Nan"), float("Nan"))
     
     prng = default_rng(gen_p_forecast_seed)

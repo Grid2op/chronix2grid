@@ -16,16 +16,17 @@ from scipy.interpolate import interp1d
 from .. import generation_utils as utils
 import chronix2grid.constants as cst
 
-def compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern, start_day, add_dim):
+def compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern, start_day, add_dim, day_lag=0):
+    #6  # this is only TRUE if you simulate 2050 !!! formula does not really work
+    
     # Compute active part of loads
     weekly_pattern = load_weekly_pattern['test'].values
     
-    start_day_of_week = start_day.weekday()
-    first_dow_chronics = datetime.strptime(load_weekly_pattern["datetime"].iloc[1], "%Y-%m-%d %H:%M:%S").weekday()
+    # start_day_of_week = start_day.weekday()
+    # first_dow_chronics = datetime.strptime(load_weekly_pattern["datetime"].iloc[1], "%Y-%m-%d %H:%M:%S").weekday()
     # + (calendar.isleap(start_day.year) if start_day.month >= 3 else 0)
-    day_lag = (first_dow_chronics - start_day_of_week) % 7
-    day_lag = 6  # this is only TRUE if you simulate 2050 !!!
-    
+    # day_lag = (first_dow_chronics - start_day_of_week) % 7
+    # day_lag = 0
     loads_series = {}
     for i, name in enumerate(loads_charac['name']):
         mask = (loads_charac['name'] == name)
@@ -64,6 +65,7 @@ def compute_residential(locations, Pmax, temperature_noise, params, weekly_patte
     nb_sec_per_year = (365. * nb_sec_per_day)
     year_pattern = 2. * np.pi / nb_sec_per_year
     seasonal_pattern = 1.5 / 7. * np.cos(year_pattern * (t + start_min - 45 * nb_sec_per_day))  # min of the load is 15 of February so 45 days after beginning of year
+    #seasonal_pattern = 1.5 / 7. * np.cos(year_pattern * (t - start_min - 30 * nb_sec_per_day)) #older version to be removed
     seasonal_pattern += 5.5 / 7.
 
     # Get weekly pattern
@@ -142,7 +144,10 @@ def create_csv(prng, dict_, path, forecasted=False, reordering=True, noise=None,
     df_reactive_power = 0.7 * df
     if noise is not None:
         df *= prng.lognormal(mean=0.0,sigma=noise, size=df.shape)
+        #df *= np.random.lognormal(mean=0.0, sigma=noise, size=df.shape) #older version to be removed
         df_reactive_power *= prng.lognormal(mean=0.0, sigma=noise, size=df.shape)
+        #df_reactive_power *= np.random.lognormal(mean=0.0, sigma=noise,
+        #                                         size=df.shape) #older version to be removed
 
     if write_results:
         file_extension = '_forecasted' if forecasted else ''

@@ -294,6 +294,8 @@ Standard inputs for the dispatch step are the following:
     * **hydro_ramp_reduction_factor** - optional factor which will divide max ramp up and down to all hydro generators
     * **slack_p_max_reduction** - before dispatch, reduce Pmax of slack generator temporary to anticipate loss correction that will be a posteriori
     * **slack_ramp_max_reduction** - before dispatch, reduce ramp max (up and down) of slack generator temporary to anticipate loss correction that will be a posteriori
+    * **renewable_in_opf - True if you want to consider the renewable as part of the opf dipstach and be able to curtail the input renewable time-series
+
 
 The object :class:`chronix2grid.generation.dispatch.EconomicDispatch:Dispatch` is an abstract class that facilitates the configuration.
 It is agnostic to the technology used for dispatch computation, so some methods have to be implemented in inheriting classes.

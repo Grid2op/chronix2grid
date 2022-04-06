@@ -19,7 +19,7 @@ from . import consumption_utils as conso
 from .. import generation_utils as utils
 
 
-def main(scenario_destination_path, seed, params, loads_charac, load_weekly_pattern, write_results = True):
+def main(scenario_destination_path, seed, params, loads_charac, load_weekly_pattern, write_results = True, day_lag=0):
     """
     This is the load generation function, it allows you to generate consumption chronics based on demand nodes characteristics and on weekly demand patterns.
 
@@ -40,6 +40,7 @@ def main(scenario_destination_path, seed, params, loads_charac, load_weekly_patt
 
     # Set random seed of scenario
     prng = default_rng(seed)
+    #np.random.seed(seed) #older version - to be removed
 
     # Define reference datetime indices
     datetime_index = pd.date_range(
@@ -56,6 +57,7 @@ def main(scenario_destination_path, seed, params, loads_charac, load_weekly_patt
         y_plus = int(y // dy_corr + 1)
         add_dim = max(y_plus, add_dim)
         add_dim = max(x_plus, add_dim)
+        #add_dim=0 #to get back to when this parameter did not exist - to be removed
     
     # Generate GLOBAL temperature noise
     print('Computing global auto-correlated spatio-temporal noise for thermosensible demand...') ## temperature is simply to reflect the fact that loads is correlated spatially, and so is the real "temperature". It is not the real temperature.
@@ -68,7 +70,8 @@ def main(scenario_destination_path, seed, params, loads_charac, load_weekly_patt
                                        params,
                                        load_weekly_pattern,
                                        start_day=start_day,
-                                       add_dim=add_dim)
+                                       add_dim=add_dim,
+                                       day_lag=day_lag)
     loads_series['datetime'] = datetime_index
 
     # Save files
