@@ -595,8 +595,14 @@ def _adjust_gens(all_loss_orig,
                       ]
         cost = cp.sum_squares(p_t - target_vector) + cp.norm1(cp.multiply(p_t, turned_off_orig))
         prob = cp.Problem(cp.Minimize(cost), constraints)
-        prob.solve()
-        
+        try:
+            prob.solve()
+        except cp.error.SolverError as exc_:
+            error_ = RuntimeError(f"Pypsa failed to find a solution at iteration {iter_num}, error {exc_}")
+            res_gen_p = None
+            quality_ = None
+            break
+            
         # assign the generators
         gen_p_after_optim = real_p.value
         id_redisp = 0

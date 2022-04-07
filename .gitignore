@@ -168,5 +168,6 @@ getting_started/experiments/pypsa_loss.py
 output/generation/case118_l2rpn_neurips_1x/2012-01-01
 chronix2grid/generation/output/
 chronix2grid/GetGridGenLoadRenewables.ipynb.orig
+!tests/data/output/generation/case118_l2rpn_wcci
 tests/output/
 tests/data/output/
