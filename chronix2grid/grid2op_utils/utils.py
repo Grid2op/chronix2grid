@@ -15,6 +15,7 @@ import shutil
 import time
 import pandas as pd
 import os
+import cvxpy as cp
 import grid2op
 from grid2op.Parameters import Parameters
 from grid2op.Chronics import ChangeNothing, FromNPY
@@ -27,7 +28,6 @@ from chronix2grid.generation.renewable import RenewableBackend
 from chronix2grid.generation.dispatch.PypsaDispatchBackend import PypsaDispatcher
 from chronix2grid.getting_started.example.input.generation.patterns import ref_pattern_path
 from chronix2grid.generation.dispatch.EconomicDispatch import ChroniXScenario
-import cvxpy as cp
 
 import warnings
 
