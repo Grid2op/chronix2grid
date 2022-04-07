@@ -48,7 +48,9 @@ setup(name='Chronix2Grid',
                         "seaborn>=0.10.0",
                         "scipy>=1.4.1",
                         "widgetsnbextension>=3.5.1",
-                        "lightsim2grid"
+                        "lightsim2grid",
+                        "pypsa",
+                        "cvxpy"
                         ],
       extras_require = {
                         "optional": [

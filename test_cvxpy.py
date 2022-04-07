@@ -9,7 +9,6 @@
 
 # this generates some chronics for a given environment, provided that all necessary files are present in its repo
 import copy
-from copyreg import constructor
 import pdb
 from datetime import datetime, timedelta
 import json
@@ -1201,15 +1200,25 @@ if __name__ == "__main__":
     res_gen_p = 1.0 * gen_p
     iter_num = 0
     hydro_constraints = economic_dispatch.make_hydro_constraints_from_res_load_scenario()
+    turned_off_orig = 1.0 * (gen_p_orig[:, env_for_loss.gen_redispatchable] == 0.)
+    
+    ids_hyrdo = []
+    total_gen = np.sum(env_for_loss.gen_redispatchable)
+    total_step = total_solar.shape[0]
+    gen_id = 0
+    for i in range(env_for_loss.n_gen):
+        if env_for_loss.gen_redispatchable[i]:
+            if env_for_loss.gen_type[i] == "hydro":
+                ids_hyrdo.append(gen_id)
+            gen_id += 1
+    ids_hyrdo = np.array(ids_hyrdo)
+    
     while True:
         iter_num += 1
         load = load_without_loss + all_loss
         load = pd.DataFrame(load.ravel(), index=datetimes)
         
-        
         #### cvxpy
-        total_gen = np.sum(env_for_loss.gen_redispatchable)
-        total_step = total_solar.shape[0]
         p_t = cp.Variable(shape=(total_step,total_gen), pos=True)
         
         scaling_factor = env_for_loss.gen_pmax[env_for_loss.gen_redispatchable]
@@ -1227,6 +1236,7 @@ if __name__ == "__main__":
                              total_step - 1,
                              axis=0)
         
+        p_max[:, ids_hyrdo] = 1.0 * hydro_constraints["p_max_pu"].values
         load = load_without_loss + all_loss - np.sum(res_gen_p[:,~env_for_loss.gen_redispatchable], axis=1)
         scale_for_loads =  np.repeat(scaling_factor.reshape(1,-1), total_step, axis=0)
         target_vector = res_gen_p[:,env_for_loss.gen_redispatchable] / scaling_factor 
@@ -1238,9 +1248,11 @@ if __name__ == "__main__":
                        p_t[1:,:] - p_t[:-1,:] <= ramp_max,
                        cp.sum(real_p, axis=1) == load.reshape(-1),
                       ]
-        cost = cp.sum_squares(p_t - target_vector)
+        cost = cp.sum_squares(p_t - target_vector) + cp.norm1(cp.multiply(p_t, turned_off_orig))
+        # cost = cp.norm1(p_t - target_vector)
         prob = cp.Problem(cp.Minimize(cost), constraints)
         prob.solve()
+        print(f"status: {prob.status}")
         # TODO Penalize more the increase of generation of the turned off generator in the cost
         # TODO compute the cost in MW and not in "pu"
         
@@ -1353,3 +1365,5 @@ if __name__ == "__main__":
             res_gen_p = None
             quality_ = None
             break    
+    pdb.set_trace()
+    res_gen_p[:, env_for_loss.gen_redispatchable][turned_off_orig == 1.0]
