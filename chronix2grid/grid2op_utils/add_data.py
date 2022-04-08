@@ -109,13 +109,15 @@ def add_data(env: grid2op.Environment.Environment,
                 errors[f'{start_date}_{scen_id}'] = f"{error_}"
                 
                 # load previous data
-                with open(os.path.join(output_dir, "errors.json"), "r", encoding="utf-8") as f:
-                    err_tmp = json.load(f)
-                for k in err_tmp:
-                    errors[k] = err_tmp[k]
+                path_json_error = os.path.join(output_dir, "errors.json")
+                if os.path.exists(path_json_error):
+                    with open(path_json_error, "r", encoding="utf-8") as f:
+                        err_tmp = json.load(f)
+                    for k in err_tmp:
+                        errors[k] = err_tmp[k]
                     
                 # write the log
-                with open(os.path.join(output_dir, "errors.json"), "w", encoding="utf-8") as f:
+                with open(path_json_error, "w", encoding="utf-8") as f:
                     json.dump(errors, fp=f)
     else:
         with Pool(nb_core) as p:
