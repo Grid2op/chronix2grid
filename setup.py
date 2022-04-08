@@ -36,7 +36,6 @@ setup(name='Chronix2Grid',
                         "numpy>=1.18.3",
                         "pandas>=1.0.5",
                         "pandocfilters>=1.4.2",
-                        "pathlib>=1.0.1",
                         "plotly>=4.5.2",
                         "Pyomo>=5.6.8",
                         "pytest>=6.2.2",
@@ -48,7 +47,9 @@ setup(name='Chronix2Grid',
                         "seaborn>=0.10.0",
                         "scipy>=1.4.1",
                         "widgetsnbextension>=3.5.1",
-                        "lightsim2grid"
+                        "lightsim2grid",
+                        "pypsa",
+                        "cvxpy"
                         ],
       extras_require = {
                         "optional": [

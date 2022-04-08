@@ -29,13 +29,14 @@ class ConsumptionGeneratorBackend:
         config manager used to load specific patterns used for the model (load weekly pattern for residential power consumption)
     write_results: ``bool``
     """
-    def __init__(self, out_path, seed, params, loads_charac, load_config_manager, write_results):
+    def __init__(self, out_path, seed, params, loads_charac, load_config_manager, write_results, day_lag=0):
         self.write_results = write_results
         self.load_config_manager = load_config_manager
         self.loads_charac = loads_charac
         self.params = params
         self.seed = seed
         self.out_path = out_path
+        self.day_lag = day_lag
 
     def run(self, load_weekly_pattern=None):
         """
@@ -43,4 +44,5 @@ class ConsumptionGeneratorBackend:
         """
         if load_weekly_pattern is None:
             load_weekly_pattern = self.load_config_manager.read_specific()
-        return main(self.out_path, self.seed, self.params, self.loads_charac, load_weekly_pattern, self.write_results)
+        return main(self.out_path, self.seed, self.params, self.loads_charac, load_weekly_pattern, self.write_results,
+                    day_lag=self.day_lag)

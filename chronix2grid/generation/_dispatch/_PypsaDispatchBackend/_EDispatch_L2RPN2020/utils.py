@@ -393,17 +393,17 @@ def run_opf(net,
         # addition contraint on the max_pu, used for example when splitting the loss
         for gen_nm, max_val in gen_max_pu_t.items():
             if gen_nm in gen_max:
-                gen_max[gen_nm] = np.minimum(gen_max[gen_nm], max_val)
+                gen_max[str(gen_nm)] = np.minimum(gen_max[str(gen_nm)], max_val)
             else:
-                gen_max[gen_nm] = max_val
+                gen_max[str(gen_nm)] = max_val
     
     if gen_min_pu_t is not None:
         # addition contraint on the min_pu, used for example when splitting the loss
         for gen_nm, min_val in gen_min_pu_t.items():
             if gen_nm in gen_min:
-                gen_min[gen_nm] = np.maximum(gen_min[gen_nm], min_val)
+                gen_min[str(gen_nm)] = np.maximum(gen_min[str(gen_nm)], min_val)
             else:
-                gen_min[gen_nm] = min_val
+                gen_min[str(gen_nm)] = min_val
     
     net.loads_t.p_set = pd.concat([demand])
     net.generators_t.p_max_pu = pd.concat([gen_max], axis=1)
