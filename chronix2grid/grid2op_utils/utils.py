@@ -19,6 +19,8 @@ import cvxpy as cp
 import grid2op
 from grid2op.Parameters import Parameters
 from grid2op.Chronics import ChangeNothing, FromNPY
+from grid2op.Action import DontAct
+from grid2op.Opponent import NeverAttackBudget, BaseOpponent
 from lightsim2grid import LightSimBackend
 import numpy as np
 from numpy.random import default_rng
@@ -625,7 +627,12 @@ def _adjust_gens(all_loss_orig,
                 data_feeding_kwargs={"load_p": load_p,
                                      "load_q": load_q,
                                      "prod_p": 1.0 * res_gen_p,
-                                     "prod_v": gen_v}
+                                     "prod_v": gen_v},
+                opponent_budget_per_ts=0.,
+                opponent_init_budget=0.,
+                opponent_class=BaseOpponent,
+                opponent_budget_class=NeverAttackBudget,
+                opponent_action_class=DontAct,
                 )
         diff_ = np.full((env_fixed.max_episode_duration(), env_fixed.n_gen), fill_value=np.NaN)
         all_loss[:] = np.NaN
