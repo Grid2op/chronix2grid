@@ -600,13 +600,19 @@ def _adjust_gens(all_loss_orig,
         try:
             prob.solve()
         except cp.error.SolverError as exc_:
-            error_ = RuntimeError(f"Pypsa failed to find a solution at iteration {iter_num}, error {exc_}")
+            error_ = RuntimeError(f"cvxpy failed to find a solution at iteration {iter_num}, error {exc_}")
             res_gen_p = None
             quality_ = None
             break
             
         # assign the generators
         gen_p_after_optim = real_p.value
+        if gen_p_after_optim is None:
+            error_ = RuntimeError(f"cvxpy failed to find a solution at iteration {iter_num}, and returned None.")
+            res_gen_p = None
+            quality_ = None
+            break
+            
         id_redisp = 0
         for gen_id, gen_nm in enumerate(env_for_loss.name_gen):
             if env_for_loss.gen_redispatchable[gen_id]:
