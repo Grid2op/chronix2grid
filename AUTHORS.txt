@@ -12,8 +12,8 @@ Main Contributors:
     - Mario Jothy
     - Nicolas Megel
     - Vincent Renault
+    - Benjamin Donnot  
 
 Further Contributions by:
     - Camilo Romero
     - Baltazar Donon
-    - Benjamin Donnot  

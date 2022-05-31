@@ -1,14 +1,30 @@
+# Copyright (c) 2019-2022, RTE (https://www.rte-france.com)
+# See AUTHORS.txt
+# This Source Code Form is subject to the terms of the Mozilla Public License, version 2.0.
+# If a copy of the Mozilla Public License, version 2.0 was not distributed with this file,
+# you can obtain one at http://mozilla.org/MPL/2.0/.
+# SPDX-License-Identifier: MPL-2.0
+# This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
+
+import os
 from setuptools import setup, find_packages
 
-
+this_directory = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
+    
+    
 setup(name='Chronix2Grid',
-      version='1.0.2',
+      version='1.1.0',
       description='A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)',
-      long_description='Chronix2Grid is a python package, providing a command-line application as well, that allows to generate synthetic but realistic consumption, renewable production, electricity loss (dissipation) and economic dispatched productions chronics given a power grid. Reference data that you provide will serve to calibrate the parameters so that the synthetic data reproduce some realistic criteria (KPIs) from the reference data.',
+      long_description=long_description,
+      long_description_content_type='text/markdown',
       classifiers=[
-          'Development Status :: 3 - Alpha',
-          'Programming Language :: Python :: 3.6',
+          'Development Status :: 4 - Beta',
           'Programming Language :: Python :: 3.7',
+          'Programming Language :: Python :: 3.8',
+          'Programming Language :: Python :: 3.9',
+          'Programming Language :: Python :: 3.10',
           "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
           "Intended Audience :: Developers",
           "Intended Audience :: Education",
@@ -16,12 +32,13 @@ setup(name='Chronix2Grid',
           "Natural Language :: English"
       ],
       keywords='ML powergrid optmization RL power-systems chronics generation production load network',
-      author='Mario Jothy, Nicolas Megel, Vincent Renault',
+      author='Mario Jothy, Nicolas Megel, Vincent Renault, Benjamin Donnot',
       author_email=' mario.jothy@artelys.com',
       url="https://github.com/BDonnot/ChroniX2Grid",
       license='Mozilla Public License 2.0 (MPL 2.0)',
       packages=find_packages(),
       include_package_data=True,
+      platforms=["Windows", "Linux", "Mac OS-X", "Unix"],
       install_requires=[
                         "click>=7.1.1",
                         "cufflinks>=0.17.3",
