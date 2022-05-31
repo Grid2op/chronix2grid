@@ -1,0 +1,3 @@
+include chronix2grid/getting_started/example/input/generation/patterns/hydro_french.csv
+include chronix2grid/getting_started/example/input/generation/patterns/load_weekly_pattern.csv
+include chronix2grid/getting_started/example/input/generation/patterns/solar_pattern.npy
