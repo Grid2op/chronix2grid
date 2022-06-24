@@ -250,13 +250,21 @@ class Dispatcher(ABC):
                 raise
 
     def plot_ramps(self):
-        caract_gen = self.generators[['p_nom', 'carrier', 'ramp_limit_up']].reset_index()
+        caract_gen = self.generators[['p_nom', 'carrier', 'ramp_limit_up']]
         caract_gen = caract_gen.rename(columns={'index': 'name'})
-
-        fig = px.scatter(
-            caract_gen, x='p_nom', y='ramp_limit_up', color='carrier',
-            hover_data=['name']
-        )
+        caract_gen = caract_gen.reset_index()
+        try:
+            # column "name" might have change of label depending on the versions
+            fig = px.scatter(
+                caract_gen, x='p_nom', y='ramp_limit_up', color='carrier',
+                hover_data=['name']
+            )
+        except ValueError:
+            fig = px.scatter(
+                caract_gen, x='p_nom', y='ramp_limit_up', color='carrier',
+                hover_data=['Generator']
+            )
+            
         return fig
 
     def save_results(self, params, output_folder, prng=None):
