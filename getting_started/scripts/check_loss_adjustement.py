@@ -18,12 +18,12 @@ import shutil
 import os
 
 try:
-    from lightsim2grid.LightSimBackend import LightSimBackend
+    from lightsim2grid import LightSimBackend
     backend = LightSimBackend()
 except:
     from grid2op.Backend import PandaPowerBackend
     backend = PandaPowerBackend()
-    print("You might need to install the LightSimBackend (provisory name) to gain massive speed up")
+    print("You might need to install the LightSimBackend to gain massive speed up")
 
 #we will check that losses were properly adjusted by rerunning grid2op one more time on the chronic 
 #and checking that the slack production is not modified much more compare to original one

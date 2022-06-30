@@ -91,12 +91,12 @@ def run_grid2op_simulation_donothing(grid_path, agent_result_path,  nb_core = 1,
     print('Grid2op simulation for loss')
 
     try:
-        from lightsim2grid.LightSimBackend import LightSimBackend
+        from lightsim2grid import LightSimBackend
         backend = LightSimBackend()
     except:
         from grid2op.Backend import PandaPowerBackend
         backend = PandaPowerBackend()
-        print("You might need to install the LightSimBackend (provisory name) to gain massive speed up")
+        print("You might need to install the LightSimBackend) to gain massive speed up")
     # don't disconnect powerline on overflow, the thermal limit are not set for now, it would not make sens
     param = Parameters()
     param.init_from_dict({"NO_OVERFLOW_DISCONNECTION": True})

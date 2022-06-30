@@ -46,12 +46,12 @@ if __name__ == "__main__":
     print('the number of cores used is: '+str(NB_CORE))
     print('the number of scenarios we consider is: '+str(nb_episode))
     try:
-        from lightsim2grid.LightSimBackend import LightSimBackend
+        from lightsim2grid import LightSimBackend
         backend = LightSimBackend()
     except:
         from grid2op.Backend import PandaPowerBackend
         backend = PandaPowerBackend()
-        print("You might need to install the LightSimBackend (provisory name) to gain massive speed up")
+        print("You might need to install the LightSimBackend to gain massive speed up")
     # don't disconnect powerline on overflow, the thermal limit are not set for now, it would not make sens
     param = Parameters()
     param.init_from_dict({"NO_OVERFLOW_DISCONNECTION": True})
