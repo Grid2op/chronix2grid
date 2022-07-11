@@ -162,7 +162,6 @@ getting_started/experiments/check_loss.py
 getting_started/experiments/debug_split_loss.py
 getting_started/experiments/generate_all.py
 getting_started/experiments/example/custom/output/generation/case118_l2rpn_wcci/2012-01-01*
-getting_started/experiments/optimization
 getting_started/example/input/generation/case118_l2rpn_wcci_benjamin.7z
 getting_started/experiments/pypsa_loss.py
 output/generation/case118_l2rpn_neurips_1x/2012-01-01
