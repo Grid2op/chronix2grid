@@ -10,6 +10,7 @@
 import warnings
 import os
 import json
+import pandas as pd
 
 # Chronix2grid modules
 from .preprocessing.pivot_KPI import pivot_format
@@ -20,7 +21,7 @@ from .. import utils as ut
 
 
 def main(kpi_input_folder, generation_output_folder, scenario_names,
-         kpi_output_folder, year, case, n_scenarios, wind_solar_only, params,
+         kpi_output_folder, year, case, n_scenarios, params,
          loads_charac, prods_charac, scenario_id=None):
     """
         This is the main function for KPI computation. It formats synthetic and reference chronics and then computes KPIs on it with 2 modes (wind solar and load only or full energy mix). It saves plots in png and html files. It writes a json output
@@ -49,6 +50,41 @@ def main(kpi_input_folder, generation_output_folder, scenario_names,
 
     warnings.filterwarnings("ignore")
 
+    # check there is load, solar and wind:
+    has_solar = False
+    has_wind = False
+    has_load = False
+
+    #check if other prod_p: there should be more generator names than the ones in solar and wind
+    has_thermal=False
+    all_prod_names=[]
+    solar_names=[]
+    wind_names=[]
+    for root, dirs, filenames in os.walk(generation_output_folder):
+        if 'prods' in str(filenames) and len(all_prod_names)==0:
+            all_prod_names=pd.read_csv(os.path.join(root, 'prod_p.csv.bz2'),
+                        sep=';', decimal='.', index_col=0, nrows=0).columns.tolist()
+        if 'solar' in str(filenames) and len(solar_names)==0:
+            solar_names=pd.read_csv(os.path.join(root, 'solar_p.csv.bz2'),
+                        sep=';', decimal='.', index_col=0, nrows=0).columns.tolist()
+            has_solar = True
+        if 'wind' in str(filenames) and len(wind_names)==0:
+            wind_names=pd.read_csv(os.path.join(root, 'solar_p.csv.bz2'),
+                        sep=';', decimal='.', index_col=0, nrows=0).columns.tolist()
+            has_wind = True
+        if 'load' in str(filenames):
+            has_load = True
+
+    wind_solar_only=has_solar or has_wind
+    n_prods=len(all_prod_names)
+    n_solar_winds=len(solar_names)+len(wind_names)
+    if n_prods>=1 and n_prods>n_solar_winds:
+        has_thermal=True
+        wind_solar_only=False
+
+    if not (has_load and has_wind and has_solar):
+        print("missing load or solar or wind generated timeseries in output folder: " + generation_output_folder)
+        return
 
     # Create single zone if no zone is given
     if 'zone' not in prods_charac.columns:
