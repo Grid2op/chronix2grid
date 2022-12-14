@@ -111,21 +111,26 @@ def generate_mp_core(prng, case, start_date, weeks, by_n_weeks, n_scenarios, mod
         seeds_for_loads = [seed_for_loads]
         seeds_for_res = [seed_for_res]
         seeds_for_disp = [seed_for_dispatch]
-
+    if nb_core==1:
+        for i in range(n_scenarios):
+            generate_per_scenario(case, start_date, weeks, by_n_weeks, mode, input_folder,
+            kpi_output_folder, generation_output_folder, scen_names,
+            seeds_for_loads, seeds_for_res, seeds_for_disp, ignore_warnings,i)
+    else:
     # multi-processing
-    pool = multiprocessing.Pool(nb_core)
-    iterable = [i for i in range(n_scenarios)]
-    multiprocessing_func = partial(
-        generate_per_scenario,
-        case, start_date, weeks, by_n_weeks, mode, input_folder,
-        kpi_output_folder, generation_output_folder, scen_names,
-        seeds_for_loads, seeds_for_res, seeds_for_disp, ignore_warnings)
+        pool = multiprocessing.Pool(nb_core)
+        iterable = [i for i in range(n_scenarios)]
+        multiprocessing_func = partial(
+            generate_per_scenario,
+            case, start_date, weeks, by_n_weeks, mode, input_folder,
+            kpi_output_folder, generation_output_folder, scen_names,
+            seeds_for_loads, seeds_for_res, seeds_for_disp, ignore_warnings)
 
-    pool.map(multiprocessing_func, iterable)
-    pool.close()
-    print('multiprocessing done')
-    print('Time taken = {} seconds'.format(time.time() - start_time))
-    print('removing temporary folders if exist:')
+        pool.map(multiprocessing_func, iterable)
+        pool.close()
+        print('multiprocessing done')
+        print('Time taken = {} seconds'.format(time.time() - start_time))
+        print('removing temporary folders if exist:')
     rm_temporary_folders(input_folder, case)
 
 def rm_temporary_folders(input_folder, case):
@@ -188,13 +193,14 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
 
     year = time_parameters['year']
 
+
     # Chronic generation
     if 'L' in mode or 'R' in mode:
         generator = GeneratorBackend()
-        params, loads_charac, prods_charac = gen.main(generator,
-            case, n_scenarios, generation_input_folder,
-            generation_output_folder, scen_names, time_parameters,
-            mode, scenario_id, seed_for_loads, seed_for_res, seed_for_dispatch)
+        params, _, _ = gen.main(generator,case, n_scenarios, generation_input_folder,
+                                 generation_output_folder, scen_names, time_parameters,
+                                 mode, scenario_id, seed_for_loads, seed_for_res,
+                                 seed_for_dispatch)
         scenario_name = scen_names(scenario_id)
         if by_n_weeks is not None and 'T' in mode:
             output_processor_to_chunks(
@@ -205,19 +211,17 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
                 n_scenarios, start_date, int(params['dt']))
 
     # KPI formatting and computing
-    if 'R' in mode and 'K' in mode and 'T' not in mode:
-        # Get and format solar and wind on all timescale, then compute KPI and save plots
-        wind_solar_only = True
-        kpis.main(kpi_input_folder, generation_output_folder, scen_names,
-                  kpi_output_folder, year, case, n_scenarios, wind_solar_only,
-                  params, loads_charac, prods_charac, scenario_id)
+    if 'K' in mode :
+        #get params, prods_charac and loads_charac from Generator config
+        generator = GeneratorBackend()
+        config_manager_dict = generator.get_config_managers(generation_input_folder, case, generation_output_folder, mode)
+        params_dict, prods_charac, loads_charac = generator.get_params_charact(time_parameters, config_manager_dict)
 
-    elif 'T' in mode and 'K' in mode:
-        # Get and format dispatched chronics, then compute KPI and save plots
-        wind_solar_only = False
+        #compute KPIs
         kpis.main(kpi_input_folder, generation_output_folder, scen_names,
-                  kpi_output_folder, year, case, n_scenarios, wind_solar_only,
-                  params, loads_charac, prods_charac, scenario_id)
+                  kpi_output_folder, year, case, n_scenarios,
+                  params_dict['G'], loads_charac, prods_charac, scenario_id)
+
 
 
 def create_directory_tree(case, start_date, output_directory, scenario_name,
