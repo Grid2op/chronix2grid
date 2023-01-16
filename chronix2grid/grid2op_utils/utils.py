@@ -280,193 +280,7 @@ def generate_economic_dispatch(path_env, start_date_dt, end_date_dt, dt, number_
     
     total_wind_curt = total_wind.values.sum() - res_dispatch.chronix.prods_dispatch['agg_wind'].values.sum()
     total_solar_curt = total_solar.values[mask_solar].sum() - res_dispatch.chronix.prods_dispatch['agg_solar'].values[mask_solar].sum()
-    return final_gen_p, total_wind_curt, total_solar_curt, None
-
-
-def _adjust_gens_old(all_loss_orig,
-                 env_for_loss,
-                 datetimes,
-                 total_solar,
-                 total_wind,
-                 params,
-                 env_path,
-                 env_param,
-                 load_without_loss,
-                 load_p, 
-                 load_q,
-                 gen_p,
-                 gen_v,
-                 economic_dispatch,
-                 diff_,
-                 threshold_stop=0.1,  # stop when all generators move less that this
-                 max_iter=100,  # declare a failure after this number of iteration
-                 iter_quality_decrease=50,  # acept a reduction of the quality after this number of iteration
-                 percentile_quality_decrease=99,
-                 ):
-    """This function is an auxilliary function.
-    
-    Like its main one (see handle_losses) it is here to make sure that if you run an AC model with the data generated, 
-    then the generator setpoints will not change too much 
-    (less than `threshold_stop` MW)
-
-    Parameters
-    ----------
-    all_loss_orig : _type_
-        _description_
-    env_for_loss : _type_
-        _description_
-    datetimes : _type_
-        _description_
-    total_solar : _type_
-        _description_
-    total_wind : _type_
-        _description_
-    params : _type_
-        _description_
-    env_path : _type_
-        _description_
-    env_param : _type_
-        _description_
-    load_without_loss : _type_
-        _description_
-    load_p : _type_
-        _description_
-    load_q : _type_
-        _description_
-    gen_p : _type_
-        _description_
-    gen_v : _type_
-        _description_
-    economic_dispatch : _type_
-        _description_
-    diff_ : _type_
-        _description_
-    threshold_stop : float, optional
-        _description_, by default 0.1
-
-    Returns
-    -------
-    _type_
-        _description_
-    """
-    quality_ = None
-    error_ = None
-    if np.any(~np.isfinite(gen_p)):
-        error_ = RuntimeError("Input data contained Nans !")
-        return None, error_, quality_
-    all_loss = all_loss_orig
-    res_gen_p = 1.0 * gen_p
-    iter_num = 0
-    hydro_constraints = economic_dispatch.make_hydro_constraints_from_res_load_scenario()
-    while True:
-        iter_num += 1
-        load = load_without_loss + all_loss
-        load = pd.DataFrame(load.ravel(), index=datetimes)
-        
-        # "never" decrease (during iteration) some generators
-        min__ = diff_.min()  # this is negative
-        gen_max_pu_t = None
-        gen_min_pu_t = {gen_nm: np.maximum((res_gen_p[:,gen_id] + min__) / economic_dispatch.generators.loc[gen_nm].p_nom,
-                                            env_for_loss.gen_pmin[gen_id] / economic_dispatch.generators.loc[gen_nm].p_nom
-                                            )
-                        for gen_id, gen_nm in enumerate(env_for_loss.name_gen) if env_for_loss.gen_redispatchable[gen_id]}
-        
-        ### run the dispatch with the loss
-        dispatch_res = economic_dispatch.run(load,
-                                             total_solar=total_solar,
-                                             total_wind=total_wind,
-                                             params=params,
-                                             pyomo=False,
-                                             solver_name="cbc",
-                                             gen_constraints=copy.deepcopy(hydro_constraints),
-                                             gen_max_pu_t=gen_max_pu_t,
-                                             gen_min_pu_t=gen_min_pu_t,
-                                             )
-        
-        if dispatch_res is None:     
-            error_ = RuntimeError(f"Pypsa failed to find a solution at iteration {iter_num}")
-            break
-        
-        # assign the generators
-        for gen_id, gen_nm in enumerate(env_for_loss.name_gen):
-            if gen_nm in dispatch_res.chronix.prods_dispatch:
-                res_gen_p[:, gen_id] = 1.0 * dispatch_res.chronix.prods_dispatch[gen_nm].values
-                  
-        #handle wind curtailment
-        mask_winds = total_wind.values > 0.001
-        res_gen_p[mask_winds, :][:,env_for_loss.gen_type == "wind"] *= (dispatch_res.chronix.prods_dispatch['agg_wind'].values[mask_winds] / total_wind.values[mask_winds]).reshape(-1,1)
-        total_wind.loc[mask_winds] = 1.0 * dispatch_res.chronix.prods_dispatch["agg_wind"].values[mask_winds]
-        
-        # re evaluate the losses
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore")
-            env_fixed = grid2op.make(
-                env_path,
-                test=True,
-                # grid_path=grid_path, # assign it the 118 grid
-                param=env_param,
-                backend=LightSimBackend(),
-                chronics_class=FromNPY,
-                # chronics_path=path_chronix2grid,
-                data_feeding_kwargs={"load_p": load_p,
-                                     "load_q": load_q,
-                                     "prod_p": 1.0 * res_gen_p,
-                                     "prod_v": gen_v}
-                )
-        diff_ = np.full((env_fixed.max_episode_duration(), env_fixed.n_gen), fill_value=np.NaN)
-        all_loss[:] = np.NaN
-        
-        i = 0
-        obs = env_fixed.reset()
-        all_loss[i] = np.sum(obs.gen_p) - np.sum(obs.load_p)
-        diff_[i] = obs.gen_p - res_gen_p[i]
-
-        
-        done = False
-        while not done:
-            obs, reward, done, info = env_fixed.step(env_fixed.action_space())
-            i += 1
-            if done:
-                break
-            all_loss[i] = np.sum(obs.gen_p) - np.sum(obs.load_p)
-            diff_[i] = obs.gen_p - res_gen_p[i]
-        
-        max_diff_ = np.abs(diff_).max()
-        if not np.isfinite(max_diff_):
-            error_ = RuntimeError(f"Some nans were found in the generated data at iteration {iter_num}")
-            res_gen_p = None
-            quality_ = None
-            break
-            
-            
-        if max_diff_ <= threshold_stop:
-            quality_ = (iter_num,
-                        float(np.mean(np.abs(diff_))),
-                        float(np.percentile(np.abs(diff_), 95)),
-                        float(np.percentile(np.abs(diff_), 99)),
-                        float(max_diff_)
-            )
-            break
-        
-        if iter_num >= iter_quality_decrease:
-            quantile = np.percentile(np.abs(diff_), percentile_quality_decrease)
-            if quantile <= threshold_stop:
-                quality_ = (iter_num,
-                            float(np.mean(np.abs(diff_))),
-                            float(np.percentile(np.abs(diff_), 95)),
-                            float(np.percentile(np.abs(diff_), 99)),
-                            float(np.max(np.abs(diff_)))
-                )
-                break
-                    
-        if iter_num >= max_iter:
-            error_ = RuntimeError("Too much iterations performed when adjusting for the losses")
-            res_gen_p = None
-            quality_ = None
-            break
-        
-    return res_gen_p, error_, quality_
-
+    return final_gen_p, total_wind_curt, total_solar_curt, hydro_constraints, None
 
 def _adjust_gens(all_loss_orig,
                  env_for_loss,
@@ -576,11 +390,6 @@ def _adjust_gens(all_loss_orig,
      
     while True:
         iter_num += 1
-        load = load_without_loss + all_loss
-        load = pd.DataFrame(load.ravel(), index=datetimes)
-        
-        # "never" decrease (during iteration) some generators
-        min__ = diff_.min()  # this is negative
         load = load_without_loss + all_loss - np.sum(res_gen_p[:,~env_for_loss.gen_redispatchable], axis=1)
         scale_for_loads =  np.repeat(scaling_factor.reshape(1,-1), total_step, axis=0)
         target_vector = res_gen_p[:,env_for_loss.gen_redispatchable] / scaling_factor         
@@ -932,7 +741,7 @@ def handle_losses(path_env,
     # reformat the generators
     res_gen_p_df = pd.DataFrame(res_gen_p, index=final_gen_p.index, columns=env_for_loss.name_gen)
     
-    return res_gen_p_df, error_, quality_
+    return res_gen_p_df, error_, quality_, env_for_loss
 
 def save_generated_data(this_scen_path,
                         load_p,
@@ -985,6 +794,108 @@ def save_generated_data(this_scen_path,
                   header=True,
                   index=False)       
 
+def fix_forecast_ramps(load_p,
+                       load_p_forecasted,
+                       res_gen_p_df,
+                       res_gen_p_forecasted_df,
+                       env_for_loss,
+                       hydro_constraints):
+    
+    #### cvxpy
+    total_step = 1 # for now
+    total_gen = np.sum(env_for_loss.gen_redispatchable)
+    load_f = load_p_forecasted.sum(axis=1)
+    scaling_factor = env_for_loss.gen_pmax[env_for_loss.gen_redispatchable]
+    scale_for_loads =  np.repeat(scaling_factor.reshape(1,-1), total_step, axis=0)
+    
+    p_min = np.repeat(env_for_loss.gen_pmin[env_for_loss.gen_redispatchable].reshape(1,-1)  / scaling_factor,
+                      total_step+1,
+                      axis=0)
+    p_max = np.repeat(env_for_loss.gen_pmax[env_for_loss.gen_redispatchable].reshape(1,-1) / scaling_factor,
+                      total_step+1,
+                      axis=0)
+    
+    ramp_min = np.repeat(-env_for_loss.gen_max_ramp_down[env_for_loss.gen_redispatchable].reshape(1,-1) / scaling_factor,
+                         total_step,
+                            axis=0)
+    ramp_max = np.repeat(env_for_loss.gen_max_ramp_up[env_for_loss.gen_redispatchable].reshape(1,-1) / scaling_factor,
+                         total_step,
+                         axis=0)
+    
+    res_gen_p = np.zeros((res_gen_p_forecasted_df.shape[0], total_gen))
+    has_error = np.zeros(res_gen_p_forecasted_df.shape[0], dtype=bool)
+    t0_errors = []
+    errors = []
+    for t0 in range(res_gen_p_df.shape[0] - 1):
+        # forecast are "consistent from a power system point of view" batch by batch
+        # losses are not handled here !
+        loss_scale = res_gen_p_df.iloc[t0].sum() / load_p.iloc[t0].sum()
+        
+        p_t = cp.Variable(shape=(total_step + 1, total_gen), pos=True)
+        real_p = cp.multiply(p_t, scale_for_loads)
+        load = np.array([res_gen_p_df.iloc[t0, env_for_loss.gen_redispatchable].sum(),  # value in the env
+                         load_f.iloc[t0] * loss_scale - res_gen_p_forecasted_df.iloc[t0, ~env_for_loss.gen_redispatchable].sum() # forecast 5 mins later
+                        ]
+                        )
+        target_vector = 1.0 * np.concatenate((res_gen_p_df.iloc[t0, env_for_loss.gen_redispatchable],
+                                                res_gen_p_forecasted_df.iloc[t0, env_for_loss.gen_redispatchable]),
+                                               axis=0).reshape(2, total_gen)
+        
+        turned_off_orig = 1.0 * (target_vector == 0.)
+        target_vector /= scale_for_loads
+        
+        constraints = [real_p[0,:] == res_gen_p_df.iloc[t0, env_for_loss.gen_redispatchable].values,
+                       p_t >= p_min,
+                       p_t <= p_max,
+                       p_t[1:,:] - p_t[:-1,:] >= ramp_min,
+                       p_t[1:,:] - p_t[:-1,:] <= ramp_max,
+                       cp.sum(real_p, axis=1) == load.reshape(-1),
+                       ]
+        cost = cp.sum_squares(p_t - target_vector) + cp.norm1(cp.multiply(p_t, turned_off_orig))
+        prob = cp.Problem(cp.Minimize(cost), constraints)
+        try:
+            prob.solve()
+        except cp.error.SolverError as exc_:
+            t0_errors.append(t0)
+            errors.append(RuntimeError(f"cvxpy failed to find a solution for t0 {t0}, error {exc_}"))
+            has_error[t0] = True
+        
+        # assign the generators
+        gen_p_after_optim = real_p.value
+        if gen_p_after_optim is None:
+            t0_errors.append(t0)
+            errors.append(f"cvxpy failed to find a solution for t0 {t0}, and returned None")
+            has_error[t0] = True
+            
+        if not has_error[t0]:
+            res_gen_p[t0] = 1.0 * gen_p_after_optim[1,:]
+            
+    # last value is not used anyway
+    # res_gen_p[-1, :] = 1.0 * gen_p_after_optim[1,:]
+    has_error[-1] = True
+        
+    res_gen_p_forecasted_df_res = 1.0 * res_gen_p_forecasted_df
+    return res_gen_p_forecasted_df_res, t0_errors, errors
+
+
+def generate_forecasts(prng,
+                       load_p,
+                       load_p_forecasted, 
+                       res_gen_p_df,
+                       sigma,
+                       env_for_loss,
+                       hydro_constraints):
+    res_gen_p_forecasted_df = res_gen_p_df * prng.lognormal(mean=0.0, sigma=sigma, size=res_gen_p_df.shape)
+    res_gen_p_forecasted_df = res_gen_p_forecasted_df.shift(-1)
+    res_gen_p_forecasted_df.iloc[-1] = 1.0 * res_gen_p_forecasted_df.iloc[-2]
+    res_gen_p_forecasted_df_res, t0_errors, errors = fix_forecast_ramps(load_p,
+                                                                        load_p_forecasted,
+                                                                        res_gen_p_df,
+                                                                        res_gen_p_forecasted_df,
+                                                                        env_for_loss,
+                                                                        hydro_constraints)
+    return res_gen_p_forecasted_df_res, t0_errors, errors
+
 
 def save_meta_data(this_scen_path,
                    path_env,
@@ -1003,6 +914,9 @@ def save_meta_data(this_scen_path,
                    solar_curtailed_opf,
                    generation_time,
                    saving_time,
+                   forecast_generation_time,
+                   forca_t0_errors,
+                   forca_errors,
                    files_to_copy=("maintenance_meta.json",)):
     """This function saves the "meta data" required for a succesful grid2op run !
 
@@ -1065,6 +979,8 @@ def save_meta_data(this_scen_path,
                        "solar_curtailed_opf": float(solar_curtailed_opf),
                        "generation_time": float(generation_time),
                        "saving_time": float(saving_time),
+                       "forecast_generation_time": float(forecast_generation_time),
+                       "forecasts_t0_errors": {f"{t0}": f"{error_msg}" for t0, error_msg in zip(forca_t0_errors, forca_errors)}
                        },
                   fp=f,
                   sort_keys=True,
@@ -1182,7 +1098,7 @@ def generate_a_scenario(path_env,
     # generate economic dispatch
     res_disp = generate_economic_dispatch(path_env, start_date_dt, end_date_dt, dt, number_of_minutes, generic_params,
                                           load_p, prod_solar, prod_wind, name_gen, gen_type, scenario_id, final_gen_p, gens_charac)
-    gen_p_after_dispatch, total_wind_curt_opf, total_solar_curt_opf, error_ = res_disp
+    gen_p_after_dispatch, total_wind_curt_opf, total_solar_curt_opf, hydro_constraints, error_ = res_disp
     
     if error_ is not None:
         # TODO log that !
@@ -1191,31 +1107,38 @@ def generate_a_scenario(path_env,
     # now try to move the generators so that when I run an AC powerflow, the setpoint of generators does not change "too much"
     if handle_loss:
         n_gen = len(name_gen)
-        res_gen_p_df, error_, quality_ = handle_losses(path_env,
-                                                       n_gen,
-                                                       name_gen,
-                                                       gens_charac,
-                                                       load_p,
-                                                       load_q,
-                                                       gen_p_after_dispatch,
-                                                       start_date_dt,
-                                                       dt_dt,
-                                                       scenario_id, 
-                                                       PmaxErrorCorrRatio=PmaxErrorCorrRatio,
-                                                       RampErrorCorrRatio=RampErrorCorrRatio,
-                                                       threshold_stop=threshold_stop,
-                                                       max_iter=max_iter)
+        res_gen_p_df, error_, quality_, env_for_loss = handle_losses(path_env,
+                                                                     n_gen,
+                                                                     name_gen,
+                                                                     gens_charac,
+                                                                     load_p,
+                                                                     load_q,
+                                                                     gen_p_after_dispatch,
+                                                                     start_date_dt,
+                                                                     dt_dt,
+                                                                     scenario_id, 
+                                                                     PmaxErrorCorrRatio=PmaxErrorCorrRatio,
+                                                                     RampErrorCorrRatio=RampErrorCorrRatio,
+                                                                     threshold_stop=threshold_stop,
+                                                                     max_iter=max_iter)
         if error_ is not None:
             # TODO log that !
             return error_, None, None, None, None, None, None, None
     else:
         res_gen_p_df = 1.0 * gen_p_after_dispatch
         quality_ = (-1, float("Nan"), float("Nan"), float("Nan"), float("Nan"))
-    
+        
     prng = default_rng(gen_p_forecast_seed)
-    res_gen_p_forecasted_df = res_gen_p_df * prng.lognormal(mean=0.0, sigma=float(generic_params["planned_std"]), size=res_gen_p_df.shape)
-    res_gen_p_forecasted_df = res_gen_p_forecasted_df.shift(-1)
-    res_gen_p_forecasted_df.iloc[-1] = 1.0 * res_gen_p_forecasted_df.iloc[-2]
+    beg_forca = time.perf_counter()
+    res_gen_p_forecasted_df_res, t0_errors, errors = generate_forecasts(prng,
+                                                                        load_p,
+                                                                        load_p_forecasted,
+                                                                        res_gen_p_df,
+                                                                        float(generic_params["planned_std"]),
+                                                                        env_for_loss,
+                                                                        hydro_constraints
+                                                                        )
+    end_forca = time.perf_counter()
     end_ = time.perf_counter()
     if output_dir is not None:
         beg_save = time.perf_counter()
@@ -1230,7 +1153,7 @@ def generate_a_scenario(path_env,
                             final_gen_p,  # generated, before economic dispatch
                             gen_p_after_dispatch,  # generated, after economic dispatch (and possibly curtailment)
                             res_gen_p_df,
-                            res_gen_p_forecasted_df,
+                            res_gen_p_forecasted_df_res,
                             debug=debug)
         total_load = float(load_p.sum().sum())
         total_gen = float(res_gen_p_df.sum().sum())
@@ -1254,7 +1177,11 @@ def generate_a_scenario(path_env,
                        wind_curtailed_losses=float(wind_curtailed_losses * proper_MWh_unit),
                        solar_curtailed_opf=float(total_solar_curt_opf * proper_MWh_unit),
                        generation_time=end_ - beg_,
-                       saving_time=end_save - beg_save
+                       saving_time=end_save - beg_save,
+                       # forecasts information
+                       forecast_generation_time=end_forca - beg_forca,
+                       forca_t0_errors=t0_errors,
+                       forca_errors=errors
                        )
         
-    return error_, quality_, load_p, load_p_forecasted, load_q, load_q_forecasted, res_gen_p_df, res_gen_p_forecasted_df
+    return error_, quality_, load_p, load_p_forecasted, load_q, load_q_forecasted, res_gen_p_df, res_gen_p_forecasted_df_res
