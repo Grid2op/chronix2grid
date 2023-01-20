@@ -105,7 +105,7 @@ class EconomicDispatchValidator:
             self.regions = prods_charac['zone'].unique()
         self.prod_charac = prods_charac
         self.load_charac = loads_charac
-        if syn_prices is not None:# and ref_prices is not None:
+        if syn_prices is not None and ref_prices is not None:
             self.quantile_mode = 'prices'
         else:
             self.quantile_mode = 'load'
@@ -502,7 +502,7 @@ class EconomicDispatchValidator:
         ref_agg_mw_per_month_sum = 0
         if not self.kpi_on_syn_data_only:
             ref_agg_mw_per_month=self.__hydro_seasonal(hydro_ref)
-            ref_agg_mw_per_month_sum=ref_agg_mw_per_month.sum(axis = 1),
+            ref_agg_mw_per_month_sum=ref_agg_mw_per_month.sum(axis = 1)
 
         # Seasonal for synthetic data
         syn_agg_mw_per_month = self.__hydro_seasonal(hydro_syn)
