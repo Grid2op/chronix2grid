@@ -13,7 +13,7 @@ import json
 from .pivot_utils import chronics_to_kpi, renewableninja_to_kpi, eco2mix_to_kpi_regional, nrel_to_kpi, usa_gan_trainingset_to_kpi
 
 def ref_syn_data(chronics_folder, kpi_input_folder, year, prods_charac, loads_charac, params, case,wind_solar_only):
-    paramsKPI=read_params_kpi_config(kpi_input_folder, case)
+    paramsKPI,_=read_params_kpi_config(kpi_input_folder, case)
 
     ref_prod=None
     ref_load=None
@@ -153,6 +153,6 @@ def read_params_kpi_config(kpi_input_folder,case):
         json_filepath = os.path.join(kpi_case_input_folder, 'paramsKPI.json')
         with open(json_filepath, 'r') as json_file:
             paramsKPI = json.load(json_file)
-        return paramsKPI
+        return paramsKPI,json_filepath
 
 
