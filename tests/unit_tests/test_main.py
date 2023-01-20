@@ -63,7 +63,7 @@ class TestMain(unittest.TestCase):
 
     def tearDown(self) -> None:
         if self.mode!='K':
-            shutil.rmtree(self.output_folder, ignore_errors=False, onerror=None)
+            shutil.rmtree(self.generation_output_folder, ignore_errors=False, onerror=None)
 
 
     # def test_size_chunks(self):
