@@ -12,18 +12,24 @@ import json
 
 from .pivot_utils import chronics_to_kpi, renewableninja_to_kpi, eco2mix_to_kpi_regional, nrel_to_kpi, usa_gan_trainingset_to_kpi
 
-def ref_syn_data(chronics_folder, kpi_input_folder, year, prods_charac, loads_charac, params, case,wind_solar_only,only_synthetic_data):
+def ref_syn_data(chronics_folder, kpi_input_folder, year, prods_charac, loads_charac, params, case,wind_solar_only):
     paramsKPI=read_params_kpi_config(kpi_input_folder, case)
 
     ref_prod=None
     ref_load=None
     ref_prices=None
-    if not only_synthetic_data:
+
+    kpi_case_input_folder = os.path.join(kpi_input_folder, case)
+    only_synthetic_data=True
+    if os.path.exists(kpi_case_input_folder) and paramsKPI['comparison']:
         ref_prod,ref_load,ref_prices=pivot_format_ref_data(paramsKPI, kpi_input_folder, year, prods_charac, loads_charac, wind_solar_only, params,
                           case)
+        only_synthetic_data=False
+    else:
+        print("WARNING: no reference data was provided to generate reference KPIS. Only synthetic data KPIs will be computed")
     syn_prod, syn_load, prices=kpi_synthetic_data(chronics_folder, paramsKPI, wind_solar_only, params)
 
-    return ref_prod, ref_load, syn_prod, syn_load,ref_prices, prices, paramsKPI
+    return ref_prod, ref_load, syn_prod, syn_load,ref_prices, prices, paramsKPI, only_synthetic_data
 
 def pivot_format_ref_data(paramsKPI, kpi_input_folder, year, prods_charac, loads_charac, wind_solar_only, params, case):
     """
