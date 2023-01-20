@@ -13,7 +13,7 @@ import json
 import pandas as pd
 
 # Chronix2grid modules
-from .preprocessing.pivot_KPI import pivot_format
+from .preprocessing.pivot_KPI import ref_syn_data#pivot_format_ref_data#pivot_format
 from .deterministic.kpis import EconomicDispatchValidator
 from ..generation import generation_utils as gu
 from .. import constants as cst
@@ -61,17 +61,20 @@ def main(kpi_input_folder, generation_output_folder, scenario_names,
     solar_names=[]
     wind_names=[]
     for root, dirs, filenames in os.walk(generation_output_folder):
-        if 'prods' in str(filenames) and len(all_prod_names)==0:
-            all_prod_names=pd.read_csv(os.path.join(root, 'prod_p.csv.bz2'),
-                        sep=';', decimal='.', index_col=0, nrows=0).columns.tolist()
+        if 'prod' in str(filenames) and len(all_prod_names)==0:
+            if len(all_prod_names)==0:
+                all_prod_names=pd.read_csv(os.path.join(root, 'prod_p.csv.bz2'),
+                            sep=';', decimal='.', index_col=0, nrows=0).columns.tolist()
         if 'solar' in str(filenames) and len(solar_names)==0:
-            solar_names=pd.read_csv(os.path.join(root, 'solar_p.csv.bz2'),
+            if len(solar_names) == 0:
+                solar_names=pd.read_csv(os.path.join(root, 'solar_p.csv.bz2'),
                         sep=';', decimal='.', index_col=0, nrows=0).columns.tolist()
-            has_solar = True
+                has_solar = True
         if 'wind' in str(filenames) and len(wind_names)==0:
-            wind_names=pd.read_csv(os.path.join(root, 'solar_p.csv.bz2'),
+            if len(wind_names) == 0:
+                wind_names=pd.read_csv(os.path.join(root, 'solar_p.csv.bz2'),
                         sep=';', decimal='.', index_col=0, nrows=0).columns.tolist()
-            has_wind = True
+                has_wind = True
         if 'load' in str(filenames):
             has_load = True
 
@@ -109,28 +112,33 @@ def main(kpi_input_folder, generation_output_folder, scenario_names,
             print('Warning: KPI are incomplete. Computation has been made on '+str(params['weeks'])+' weeks, but are meant to be computed on 52 weeks')
 
         # Read reference and synthetic chronics, but also KPI configuration, in pivot format. 2 modes: with or without full dispatch
-        if wind_solar_only:
-            # Get reference and synthetic dispatch and loads
-            (ref_dispatch, ref_consumption, syn_dispatch, syn_consumption,
-             paramsKPI) = pivot_format(
-                scenario_generation_output_folder, kpi_input_folder, year,
-                prods_charac, loads_charac, wind_solar_only,
-                params, case)
-            ref_prices = None
-            prices = None
-        else:
-            # Get reference and synthetic dispatch and loads
-            (ref_dispatch, ref_consumption, syn_dispatch, syn_consumption,
-             ref_prices, prices, paramsKPI) = pivot_format(
-                scenario_generation_output_folder, kpi_input_folder, year,
-                prods_charac, loads_charac, wind_solar_only,
-                params, case)
+        #if wind_solar_only:
+        #    # Get reference and synthetic dispatch and loads
+        #    (ref_dispatch, ref_consumption, syn_dispatch, syn_consumption,
+        #     paramsKPI) = pivot_format(
+        #        scenario_generation_output_folder, kpi_input_folder, year,
+        #        prods_charac, loads_charac,
+        #        params, case,wind_solar_only,kpi_on_syn_data_only)
+        #    ref_prices = None
+        #    prices = None
+        #
+        ref_dispatch, ref_load, syn_dispatch, syn_load,ref_prices, prices, paramsKPI,kpi_on_syn_data_only=ref_syn_data(scenario_generation_output_folder,
+                                                                                          kpi_input_folder, year,
+                                                                                          prods_charac, loads_charac, params, case,
+                                                                                          wind_solar_only)
+        #else:
+        #    # Get reference and synthetic dispatch and loads
+        #    (ref_dispatch, ref_consumption, syn_dispatch, syn_consumption,
+        #     ref_prices, prices, paramsKPI) = pivot_format(
+        #        scenario_generation_output_folder, kpi_input_folder, year,
+        #        prods_charac, loads_charac,
+        #        params, case,wind_solar_only,kpi_on_syn_data_only)
 
         ## Start and Run Economic dispatch validator
         # -- + -- + -- + -- + -- + -- + --
         print ('(1) Computing KPI\'s...')
-        dispatch_validator = EconomicDispatchValidator(ref_consumption,
-                                                       syn_consumption,
+        dispatch_validator = EconomicDispatchValidator(ref_load,
+                                                       syn_load,
                                                        ref_dispatch,
                                                        syn_dispatch,
                                                        year,
@@ -138,7 +146,8 @@ def main(kpi_input_folder, generation_output_folder, scenario_names,
                                                        prods_charac=prods_charac,
                                                        loads_charac=loads_charac,
                                                        ref_prices=ref_prices,
-                                                       syn_prices=prices)
+                                                       syn_prices=prices,
+                                                       kpi_on_syn_data_only=kpi_on_syn_data_only)
 
 
         # Compute dispatch temporal view
@@ -146,13 +155,14 @@ def main(kpi_input_folder, generation_output_folder, scenario_names,
             max_col = 1
         else:
             max_col = 2
-        dispatch_validator.plot_carriers_pw(curve='reference', stacked=True, max_col_splot=max_col, save_html=True,
-                                            wind_solar_only=wind_solar_only)
+        if not kpi_on_syn_data_only:
+            dispatch_validator.plot_carriers_pw(curve='reference', stacked=True, max_col_splot=max_col, save_html=True,
+                                                wind_solar_only=wind_solar_only)
         dispatch_validator.plot_carriers_pw(curve='synthetic', stacked=True, max_col_splot=max_col, save_html=True,
                                             wind_solar_only=wind_solar_only)
-
-        dispatch_validator.plot_carriers_pw(curve='reference', stacked=False, max_col_splot=max_col, save_html=True,
-                                            wind_solar_only=wind_solar_only)
+        if not kpi_on_syn_data_only:
+            dispatch_validator.plot_carriers_pw(curve='reference', stacked=False, max_col_splot=max_col, save_html=True,
+                                                wind_solar_only=wind_solar_only)
         dispatch_validator.plot_carriers_pw(curve='synthetic', stacked=False, max_col_splot=max_col, save_html=True,
                                             wind_solar_only=wind_solar_only)
 

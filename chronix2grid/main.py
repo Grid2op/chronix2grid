@@ -217,6 +217,8 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
         config_manager_dict = generator.get_config_managers(generation_input_folder, case, generation_output_folder, mode)
         params_dict, prods_charac, loads_charac = generator.get_params_charact(time_parameters, config_manager_dict)
 
+        print("WARNING: make sure that your generated data is in folder: "+generation_input_folder)
+
         #compute KPIs
         kpis.main(kpi_input_folder, generation_output_folder, scen_names,
                   kpi_output_folder, year, case, n_scenarios,
