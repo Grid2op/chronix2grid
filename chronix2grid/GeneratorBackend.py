@@ -312,13 +312,14 @@ class GeneratorBackend:
               params for each activated mode 'L','R','T','D' and general params at 'G'
           """
         params_dict=dict()
-        params = config_manager_dict['G'].read_configuration()
+        params,prods_charac,loads_charac = config_manager_dict['G'].read_configuration()
+        #params = config_manager_dict['G'].read_configuration()
 
         params.update(time_params)
         params = generation_utils.updated_time_parameters_with_timestep(params, params['dt'])
 
-        loads_charac=None
-        prods_charac=None
+        #loads_charac=None
+        #prods_charac=None
 
         if('L' in config_manager_dict.keys()):
             params_load, loads_charac = config_manager_dict['L'].read_configuration()
@@ -367,7 +368,7 @@ class GeneratorBackend:
             name="Global Generation",
             root_directory=input_folder,
             input_directories=dict(case=case),
-            required_input_files=dict(case=['params.json']),
+            required_input_files=dict(case=['loads_charac.csv','prods_charac.csv','params.json']),
             output_directory=output_folder
         )
         general_config_manager.validate_configuration()
@@ -401,7 +402,7 @@ class GeneratorBackend:
                 root_directory=input_folder,
                 output_directory=output_folder,
                 input_directories=dict(params=case),
-                required_input_files=dict(params=['params_opf.json'])
+                required_input_files=dict(case=['prods_charac.csv', 'params_res.json'],params=['params_opf.json'])
             )
             dispath_config_manager.validate_configuration()
             config_manager_dict['T']=dispath_config_manager
