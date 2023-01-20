@@ -59,9 +59,11 @@ class TestMain(unittest.TestCase):
         self.seeds_for_res = seeds_for_res
         self.seeds_for_disp = seeds_for_disp
         self.ignore_warnings = True
+        self.mode='LR'
 
-    #def tearDown(self) -> None:
-    #    shutil.rmtree(self.output_folder, ignore_errors=False, onerror=None)
+    def tearDown(self) -> None:
+        if self.mode!='K':
+            shutil.rmtree(self.output_folder, ignore_errors=False, onerror=None)
 
 
     # def test_size_chunks(self):
@@ -84,9 +86,10 @@ class TestMain(unittest.TestCase):
     #     ))
 
     def test_l(self):
+        self.mode = 'L'
         main.generate_per_scenario(
             case=self.case, start_date=self.start_date, weeks=1, by_n_weeks=4,
-            mode='L', input_folder=self.input_folder,
+            mode=self.mode, input_folder=self.input_folder,
             kpi_output_folder=self.kpi_output_folder,
             generation_output_folder=self.generation_output_folder,
             scen_names=self.scenario_names,
@@ -97,9 +100,10 @@ class TestMain(unittest.TestCase):
             scenario_id=0)
 
     def test_r(self):
+        self.mode = 'R'
         main.generate_per_scenario(
             case=self.case, start_date=self.start_date, weeks=1, by_n_weeks=4,
-            mode='R', input_folder=self.input_folder,
+            mode=self.mode, input_folder=self.input_folder,
             kpi_output_folder=self.kpi_output_folder,
             generation_output_folder=self.generation_output_folder,
             scen_names=self.scenario_names,
@@ -110,9 +114,10 @@ class TestMain(unittest.TestCase):
             scenario_id=1)
 
     def test_lr(self):
+        self.mode='LR'
         main.generate_per_scenario(
             case=self.case, start_date=self.start_date, weeks=1, by_n_weeks=4,
-            mode='RL', input_folder=self.input_folder,
+            mode=self.mode, input_folder=self.input_folder,
             kpi_output_folder=self.kpi_output_folder,
             generation_output_folder=self.generation_output_folder,
             scen_names=self.scenario_names,
@@ -123,9 +128,10 @@ class TestMain(unittest.TestCase):
             scenario_id=0)
 
     def test_lrk(self):
+        self.mode='LRK'
         main.generate_per_scenario(
             case=self.case, start_date=self.start_date, weeks=1, by_n_weeks=4,
-            mode='LRK', input_folder=self.input_folder,
+            mode=self.mode, input_folder=self.input_folder,
             kpi_output_folder=self.kpi_output_folder,
             generation_output_folder=self.generation_output_folder,
             scen_names=self.scenario_names,
@@ -136,9 +142,10 @@ class TestMain(unittest.TestCase):
             scenario_id=1)
 
     def test_lrtk(self):
+        self.mode='LRTK'
         main.generate_per_scenario(
             case=self.case, start_date=self.start_date, weeks=1, by_n_weeks=4,
-            mode='LRTK', input_folder=self.input_folder,
+            mode=self.mode, input_folder=self.input_folder,
             kpi_output_folder=self.kpi_output_folder,
             generation_output_folder=self.generation_output_folder,
             scen_names=self.scenario_names,
@@ -149,9 +156,10 @@ class TestMain(unittest.TestCase):
             scenario_id=0)
 
     def test_lrdk(self):
+        self.mode='LRDK'
         main.generate_per_scenario(
             case=self.case, start_date=self.start_date, weeks=1, by_n_weeks=4,
-            mode='LRDK', input_folder=self.input_folder,
+            mode=self.mode, input_folder=self.input_folder,
             kpi_output_folder=self.kpi_output_folder,
             generation_output_folder=self.generation_output_folder,
             scen_names=self.scenario_names,
@@ -162,9 +170,10 @@ class TestMain(unittest.TestCase):
             scenario_id=0)
 
     def test_lrdtk(self):
+        self.mode='LRDTK'
         main.generate_per_scenario(
             case=self.case, start_date=self.start_date, weeks=1, by_n_weeks=4,
-            mode='LRDTK', input_folder=self.input_folder,
+            mode=self.mode, input_folder=self.input_folder,
             kpi_output_folder=self.kpi_output_folder,
             generation_output_folder=self.generation_output_folder,
             scen_names=self.scenario_names,
@@ -175,9 +184,10 @@ class TestMain(unittest.TestCase):
             scenario_id=0)
 
     def test_k(self):
+        self.mode='K'
         main.generate_per_scenario(
             case=self.case, start_date=self.start_date, weeks=1, by_n_weeks=4,
-            mode='K', input_folder=self.input_folder,
+            mode=self.mode, input_folder=self.input_folder,
             kpi_output_folder=self.kpi_output_folder,
             generation_output_folder=self.generation_output_folder,
             scen_names=self.scenario_names,
@@ -188,7 +198,7 @@ class TestMain(unittest.TestCase):
             scenario_id=0)
 
     def test_k_no_ref(self):
-
+        self.mode='K'
         from chronix2grid.kpi.preprocessing.pivot_KPI import read_params_kpi_config
         import json
 
@@ -206,7 +216,7 @@ class TestMain(unittest.TestCase):
 
         main.generate_per_scenario(
             case=self.case, start_date=self.start_date, weeks=1, by_n_weeks=4,
-            mode='K', input_folder=self.input_folder,
+            mode=self.mode, input_folder=self.input_folder,
             kpi_output_folder=self.kpi_output_folder,
             generation_output_folder=self.generation_output_folder,
             scen_names=self.scenario_names,
