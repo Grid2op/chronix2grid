@@ -18,6 +18,8 @@ from .deterministic.kpis import EconomicDispatchValidator
 from ..generation import generation_utils as gu
 from .. import constants as cst
 from .. import utils as ut
+from datetime import datetime, timedelta
+
 
 
 def main(kpi_input_folder, generation_output_folder, scenario_names,
@@ -42,6 +44,7 @@ def main(kpi_input_folder, generation_output_folder, scenario_names,
 
     """
 
+
     ut.check_scenario(n_scenarios, scenario_id)
 
     print('=====================================================================================================================================')
@@ -51,43 +54,12 @@ def main(kpi_input_folder, generation_output_folder, scenario_names,
     warnings.filterwarnings("ignore")
 
     # check there is load, solar and wind:
-    has_solar = False
-    has_wind = False
-    has_load = False
+    has_load,has_solar,has_wind,has_thermal=check_solar_wind_prod_data(generation_output_folder, prods_charac)
 
-    #check if other prod_p: there should be more generator names than the ones in solar and wind
-    has_thermal=False
-    all_prod_names=[]
-    solar_names=[]
-    wind_names=[]
-    for root, dirs, filenames in os.walk(generation_output_folder):
-        if 'prod' in str(filenames) and len(all_prod_names)==0:
-            if len(all_prod_names)==0:
-                all_prod_names=pd.read_csv(os.path.join(root, 'prod_p.csv.bz2'),
-                            sep=';', decimal='.', index_col=0, nrows=0).columns.tolist()
-        if 'solar' in str(filenames) and len(solar_names)==0:
-            if len(solar_names) == 0:
-                solar_names=pd.read_csv(os.path.join(root, 'solar_p.csv.bz2'),
-                        sep=';', decimal='.', index_col=0, nrows=0).columns.tolist()
-                has_solar = True
-        if 'wind' in str(filenames) and len(wind_names)==0:
-            if len(wind_names) == 0:
-                wind_names=pd.read_csv(os.path.join(root, 'solar_p.csv.bz2'),
-                        sep=';', decimal='.', index_col=0, nrows=0).columns.tolist()
-                has_wind = True
-        if 'load' in str(filenames):
-            has_load = True
-
-    wind_solar_only=has_solar or has_wind
-    n_prods=len(all_prod_names)
-    n_solar_winds=len(solar_names)+len(wind_names)
-    if n_prods>=1 and n_prods>n_solar_winds:
-        has_thermal=True
-        wind_solar_only=False
+    wind_solar_only=(has_solar or has_wind) and not has_thermal
 
     if not (has_load and has_wind and has_solar):
         print("missing load or solar or wind generated timeseries in output folder: " + generation_output_folder)
-        return
 
     # Create single zone if no zone is given
     if 'zone' not in prods_charac.columns:
@@ -95,18 +67,36 @@ def main(kpi_input_folder, generation_output_folder, scenario_names,
         loads_charac['zone'] = 'R1'
 
     # Format and compute KPI for each scenario
+    chronic_dirs=list_dirs_with_chronics(generation_output_folder)
     for scenario_num in range(n_scenarios):
+        #if n_scenarios > 1:
+        #    scenario_name = scenario_names(scenario_num)
+        #else:
+        #    scenario_name = scenario_names(scenario_id)
+
+        #################
+        # here go for some existing scenarios if that is the case
+
+
+        #scenario_generation_output_folder = os.path.join(
+        #    generation_output_folder, scenario_name
+        #)
         if n_scenarios > 1:
-            scenario_name = scenario_names(scenario_num)
+            scenario_generation_output_folder = chronic_dirs[scenario_num]
         else:
-            scenario_name = scenario_names(scenario_id)
-        print(scenario_name+'...')
-        scenario_generation_output_folder = os.path.join(
-            generation_output_folder, scenario_name
-        )
+            scenario_generation_output_folder=chronic_dirs[scenario_id]
+        scenario_name = os.path.basename(scenario_generation_output_folder)
+        print(scenario_name + '...')#need to change start date to chronic date if already generated
+
+        params=update_time_params_scenario(scenario_generation_output_folder,params)
+
         scenario_image_folder = os.path.join(
             kpi_output_folder, scenario_name, cst.KPI_IMAGES_FOLDER_NAME
         )
+        os.makedirs(scenario_image_folder, exist_ok=True)
+
+        ######################
+
         # Return Warning if KPIs are not computed on full year. Yet, the computation will work
         if params['weeks'] != 52:
             print('Warning: KPI are incomplete. Computation has been made on '+str(params['weeks'])+' weeks, but are meant to be computed on 52 weeks')
@@ -211,3 +201,167 @@ def main(kpi_input_folder, generation_output_folder, scenario_names,
             json.dump(dispatch_validator.output, json_f)
 
         print ('-Done-\n')
+
+def list_dirs_with_chronics(generation_output_folder):
+    """
+    Get start_date and time resolution for a given generated scenario
+
+    Parameters
+    ----------
+    generation_output_folder: ``str``
+        path to folder which contains generated scenario
+
+    Returns
+    -------
+    chronic_dirs: :class:`list`
+        list of scenarios
+    """
+    chronic_dirs = set()
+    for item in os.listdir(generation_output_folder):
+        subfolder = os.path.join(generation_output_folder, item)
+        if os.path.isfile(os.path.join(subfolder, 'prod_p.csv.bz2')):
+            chronic_dirs.add(subfolder)
+
+        if os.path.isfile(os.path.join(subfolder, 'load_p.csv.bz2')):
+            chronic_dirs.add(subfolder)
+
+    return list(chronic_dirs)
+
+def init_date_time(scenario_folder):
+
+    """
+    Get start_date and time resolution for a given generated scenario
+
+    Parameters
+    ----------
+    scenario_folder: ``str``
+        path to folder which contains generated scenario
+
+    Returns
+    -------
+    start_datetime: :class:`Timestamps`
+        start date of scenario
+    time_interval: :class:`int`
+        time resolution in minutes
+    """
+    if os.path.exists(os.path.join(scenario_folder, "start_datetime.info")):
+        with open(os.path.join(scenario_folder, "start_datetime.info"), "r") as f:
+            a = f.read().rstrip().lstrip()
+        try:
+            tmp=pd.to_datetime(a, format='%Y-%m-%d')
+        except Exception:
+            raise Exception(
+                'Impossible to understand the content of "start_datetime.info". Make sure '
+                'it\'s composed of only one line with a datetime in the "%Y-%m-%d %H:%M"'
+                "format."
+            )
+        start_datetime = tmp
+
+    if os.path.exists(os.path.join(scenario_folder, "time_interval.info")):
+        with open(os.path.join(scenario_folder, "time_interval.info"), "r") as f:
+            a = f.read().rstrip().lstrip()
+        try:
+            tmp = datetime.strptime(a, "%H:%M")
+        except ValueError:
+            tmp = datetime.strptime(a, "%M")
+        except Exception:
+            raise Exception(
+                'Impossible to understand the content of "time_interval.info". Make sure '
+                'it\'s composed of only one line with a datetime in the "%H:%M"'
+                "format."
+            )
+        time_interval = timedelta(hours=tmp.hour, minutes=tmp.minute).total_seconds()/60
+    return start_datetime,time_interval
+
+def update_time_params_scenario(scenario_generation_output_folder,params):
+
+    start_datetime, time_interval = init_date_time(scenario_generation_output_folder)
+    params['end_date'] += start_datetime - params['start_date']
+    params['start_date'] = start_datetime
+    params['dt'] = time_interval
+    return params
+
+def check_solar_wind_prod_data(generation_output_folder,prods_charac):
+    """
+    For given generated scenarios, check which type of timeseries have been generated
+
+    Parameters
+    ----------
+    generation_output_folder: ``str``
+        path to folder which contains subfolders of generated scenarios
+     prods_charac: :class:`pandas.DataFrame`
+        dataframe with exepcted productions on the related grid with names and types (wind,solar,hydro,nuclear,thermal)
+
+    Returns
+    -------
+    has_load: :class:`bool`
+        Boolean if load timeseries exist
+
+    has_solar: :class:`bool`
+        Boolean if solar timeseries exist
+
+    has_wind: :class:`bool`
+        Boolean if wind timeseries exist
+
+    has_thermal: :class:`bool`
+        Boolean if thermal timeseries exist
+
+    """
+    # check there is load, solar and wind:
+    has_solar = False
+    has_wind = False
+    has_load = False
+
+    # check if other prod_p: there should be more generator names than the ones in solar and wind
+    has_thermal = False
+    all_prod_names = []
+    solar_names = []
+    wind_names = []
+    for root, dirs, filenames in os.walk(generation_output_folder):
+        if 'prod' in str(filenames) and len(all_prod_names) == 0:
+            if len(all_prod_names) == 0:
+                all_prod_names = pd.read_csv(os.path.join(root, 'prod_p.csv.bz2'),
+                                             sep=';', decimal='.', index_col=0, nrows=0).columns.tolist()
+        if 'solar_p' in str(filenames) and len(solar_names) == 0:
+            if len(solar_names) == 0:
+                solar_names = pd.read_csv(os.path.join(root, 'solar_p.csv.bz2'),
+                                          sep=';', decimal='.', index_col=0, nrows=0).columns.tolist()
+                has_solar = True
+        if 'wind_p' in str(filenames) and len(wind_names) == 0:
+            if len(wind_names) == 0:
+                wind_names = pd.read_csv(os.path.join(root, 'solar_p.csv.bz2'),
+                                         sep=';', decimal='.', index_col=0, nrows=0).columns.tolist()
+                has_wind = True
+        if 'load_p' in str(filenames):
+            has_load = True
+
+    if not has_solar:
+        # check that solar generator names and wind generator names are in prods_p
+        possible_solar_names = set(prods_charac["name"][prods_charac.type == "solar"].values)
+        solar_names=possible_solar_names.intersection(all_prod_names)
+        if len(solar_names) != 0:
+            has_solar = True
+            if len(solar_names)!=len(possible_solar_names):
+                print("these solar farms are not in data: "+str(possible_solar_names-solar_names))
+
+    if not has_wind:
+        # check that solar generator names and wind generator names are in prods_p
+        possible_wind_names = set(prods_charac["name"][prods_charac.type == "wind"].values)
+        wind_names = possible_wind_names.intersection(all_prod_names)
+        if len(wind_names) != 0:
+            has_wind = True
+            if len(wind_names)!=len(possible_wind_names):
+                print("these wind farms are not in data: "+str(possible_wind_names-wind_names))
+
+    wind_solar_only = has_solar or has_wind
+    n_prods = len(all_prod_names)
+    n_solar_winds = len(solar_names) + len(wind_names)
+    if n_prods >= 1 and n_prods > n_solar_winds:
+        has_thermal = True
+        wind_solar_only = False
+
+    if not (has_load and has_wind and has_solar):
+        print("missing load or solar or wind generated timeseries in output folder: " + generation_output_folder)
+
+    return has_load,has_solar,has_wind,has_thermal
+
