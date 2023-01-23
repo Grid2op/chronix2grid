@@ -82,6 +82,18 @@ def generate_mp_core(prng, case, start_date, weeks, by_n_weeks, n_scenarios, mod
         case, start_date, output_folder, scenario_base_name, n_scenarios, mode,
         warn_user=not ignore_warnings)
 
+    ###if only 'K' mode, the genreation output folder can already be the output folder, check that. but inform that it is not the conventional one
+    if mode=='K':
+        print("as the time series as already been generated, checking if they are located in "+generation_output_folder+" or in root folder "
+              +output_folder)
+        if os.path.exists(generation_output_folder) and len(os.listdir(generation_output_folder))!=0:
+            print("the data time series folder is identified as "+generation_output_folder)
+        else:
+            generation_output_folder=output_folder
+            kpi_output_folder = os.path.join(output_folder, cst.KPI_FOLDER_NAME)
+    ##########
+
+
     # seeds
     default_seed = generate_default_seed(prng)
     seed_for_loads = parse_seed_arg(seed_for_loads, '--seed-for-loads',
@@ -99,7 +111,8 @@ def generate_mp_core(prng, case, start_date, weeks, by_n_weeks, n_scenarios, mod
 
     print('initial_seeds')
     print(initial_seeds)
-    dump_seeds(generation_output_folder, initial_seeds, scenario_name)
+    if mode!='K':#if data is generated
+        dump_seeds(generation_output_folder, initial_seeds, scenario_name)
 
     if n_scenarios >= 2:
         seeds_for_loads, seeds_for_res, seeds_for_disp = gu.generate_seeds(
@@ -167,7 +180,9 @@ def generate_per_scenario(case, start_date, weeks, by_n_weeks, mode,
 
     scenario_path = os.path.join(generation_output_folder, scenario_name)
     print('scenario_path: '+scenario_path)
-    dump_seeds(scenario_path, scenario_seeds)
+
+    if mode != 'K':  # if data is generated
+        dump_seeds(scenario_path, scenario_seeds)
 
     # go to generate chronics
     generate_inner(
@@ -225,14 +240,14 @@ def generate_inner(case, start_date, weeks, by_n_weeks, n_scenarios, mode,
                   params_dict['G'], loads_charac, prods_charac, scenario_id)
 
 
-
 def create_directory_tree(case, start_date, output_directory, scenario_name,
                           n_scenarios, mode, warn_user=True):
     gen_path_to_create = os.path.join(
         output_directory, cst.GENERATION_FOLDER_NAME, case, start_date)
     if warn_user and os.path.isdir(gen_path_to_create):
         gu.warn_if_output_folder_not_empty(gen_path_to_create)
-    os.makedirs(gen_path_to_create, exist_ok=True)
+    if(mode!='K'):#if time series have not already been generated
+        os.makedirs(gen_path_to_create, exist_ok=True)
 
     kpi_path_to_create = None
     if 'K' in mode:
@@ -247,13 +262,14 @@ def create_directory_tree(case, start_date, output_directory, scenario_name,
     for i in range(n_scenarios):
         s_name = scen_name_generator(i)
         scenario_path_to_create = os.path.join(gen_path_to_create, s_name)
-        os.makedirs(scenario_path_to_create, exist_ok=True)
+        if (mode != 'K'):  # if time series have not already been generated
+            os.makedirs(scenario_path_to_create, exist_ok=True)
 
-        if 'K' in mode:
-            scenario_kpi_path_to_create = os.path.join(
-                kpi_path_to_create, s_name, cst.KPI_IMAGES_FOLDER_NAME
-            )
-            os.makedirs(scenario_kpi_path_to_create, exist_ok=True)
+            if 'K' in mode:
+                scenario_kpi_path_to_create = os.path.join(
+                    kpi_path_to_create, s_name, cst.KPI_IMAGES_FOLDER_NAME
+                )
+                os.makedirs(scenario_kpi_path_to_create, exist_ok=True)
 
     return gen_path_to_create, kpi_path_to_create
 
