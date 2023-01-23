@@ -21,6 +21,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import seaborn as sns
 
+plt.ioff() #to not launch windows with plot in os
 
 
 # Class definition
@@ -157,6 +158,7 @@ class EconomicDispatchValidator:
                 df_ref = df_ref/df_ref.max()
             df_syn = df_syn / df_syn.max()
 
+        plt.ioff()  # to not launch windows with plot in os
         if self.kpi_on_syn_data_only:
             fig, axes = plt.subplots(1, 1, figsize=(17, 5))
             sns.barplot(df_syn.index, df_syn)
@@ -207,6 +209,7 @@ class EconomicDispatchValidator:
         labels = syn_prod_per_gen.index.unique()
 
         # Distribution of prod
+        plt.ioff()  # to not launch windows with plot in os
         if self.kpi_on_syn_data_only:
             fig, axes = plt.subplots(1, 1, figsize=(17, 5))
             axes.pie(syn_prod_per_gen["Prod"], labels=labels, autopct='%1.1f%%')
@@ -637,6 +640,7 @@ class EconomicDispatchValidator:
 
         # Plot results
         # Correlation heatmaps
+        plt.ioff()  # to not launch windows with plot in os
         if self.kpi_on_syn_data_only:
             fig, axes = plt.subplots(1, 1, figsize=(17,5))
             sns.heatmap(syn_corr_wind, annot = True, linewidths=.5)
@@ -885,6 +889,7 @@ class EconomicDispatchValidator:
         # -- + -- +
 
         # Distribution of prod
+        plt.ioff()  # to not launch windows with plot in os
         if self.kpi_on_syn_data_only:
             fig, axes = plt.subplots(1, 1, figsize=(17, 5))
             sns.distplot(agg_syn_solar)
@@ -1049,6 +1054,7 @@ class EconomicDispatchValidator:
 
         # Plot results
         # Correlation heatmaps
+        plt.ioff()  # to not launch windows with plot in os
         for i, region in enumerate(self.regions):
             if self.kpi_on_syn_data_only:
                 fig, axes = plt.subplots(1, 1, figsize=(18, 8))
@@ -1088,6 +1094,7 @@ class EconomicDispatchValidator:
 
 
         # Distribution of prod
+        plt.ioff()  # to not launch windows with plot in os
         if self.kpi_on_syn_data_only:
             fig, axes = plt.subplots(1, 1, figsize=(17, 5))
             axes.hist(agg_nuclear_syn, bins=100, alpha=1)
@@ -1297,6 +1304,7 @@ class EconomicDispatchValidator:
 
         # Plot results
         # Correlation heatmaps
+        plt.ioff()  # to not launch windows with plot in os
         for i, region in enumerate(self.regions):
             if self.kpi_on_syn_data_only:
                 fig, axes = plt.subplots(1, 1, figsize=(18, 8))
@@ -1354,6 +1362,7 @@ class EconomicDispatchValidator:
 
         ## Plot results
         # By day
+        plt.ioff()  # to not launch windows with plot in os
         if self.kpi_on_syn_data_only:
             fig, axes = plt.subplots(1, 1, figsize=(17, 5))
             sns.barplot(conso_day.index, conso_day)
