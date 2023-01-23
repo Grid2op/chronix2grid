@@ -387,7 +387,7 @@ def chronics_to_kpi(chronics_repo, timestep, params, thermal = True):
     if not thermal:
         return prod_p, load_p
     else:#if thermal:
-        if(price):
+        if(price is not None):
             price['Time'] = pd.to_datetime(price['Time'])
             price.set_index('Time', drop=True, inplace=True)
             price = price.resample(timestep).first()
