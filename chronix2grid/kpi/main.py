@@ -53,13 +53,6 @@ def main(kpi_input_folder, generation_output_folder, scenario_names,
 
     warnings.filterwarnings("ignore")
 
-    # check there is load, solar and wind:
-    has_load,has_solar,has_wind,has_thermal=check_solar_wind_prod_data(generation_output_folder, prods_charac)
-
-    wind_solar_only=(has_solar or has_wind) and not has_thermal
-
-    if not (has_load and has_wind and has_solar):
-        print("missing load or solar or wind generated timeseries in output folder: " + generation_output_folder)
 
     # Create single zone if no zone is given
     if 'zone' not in prods_charac.columns:
@@ -81,10 +74,22 @@ def main(kpi_input_folder, generation_output_folder, scenario_names,
         #scenario_generation_output_folder = os.path.join(
         #    generation_output_folder, scenario_name
         #)
+
         if n_scenarios > 1:
             scenario_generation_output_folder = chronic_dirs[scenario_num]
         else:
             scenario_generation_output_folder=chronic_dirs[scenario_id]
+
+        # check there is load, solar and wind:
+        has_load, has_solar, has_wind, has_thermal = check_solar_wind_prod_data(scenario_generation_output_folder,
+                                                                                prods_charac)
+
+        wind_solar_only = (has_solar or has_wind) and not has_thermal
+
+        if not (has_load and has_wind and has_solar):
+            print(
+                "missing load or solar or wind generated timeseries in output folder: " + scenario_generation_output_folder)
+
         scenario_name = os.path.basename(scenario_generation_output_folder)
         print(scenario_name + '...')#need to change start date to chronic date if already generated
 
