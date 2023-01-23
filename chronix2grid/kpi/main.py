@@ -224,8 +224,10 @@ def list_dirs_with_chronics(generation_output_folder):
 
         if os.path.isfile(os.path.join(subfolder, 'load_p.csv.bz2')):
             chronic_dirs.add(subfolder)
+    l_chronic_dirs=list(chronic_dirs)
+    chronic_dirs=sorted(l_chronic_dirs, key=lambda i: os.path.splitext(os.path.basename(i))[0])
 
-    return list(chronic_dirs)
+    return chronic_dirs
 
 def init_date_time(scenario_folder,start_datetime_ref,time_interval_ref):
 
