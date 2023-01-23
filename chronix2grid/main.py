@@ -144,11 +144,11 @@ def generate_mp_core(prng, case, start_date, weeks, by_n_weeks, n_scenarios, mod
         print('multiprocessing done')
         print('Time taken = {} seconds'.format(time.time() - start_time))
         print('removing temporary folders if exist:')
-    rm_temporary_folders(input_folder, case)
+    rm_temporary_folders(input_folder,output_folder, case)
 
-def rm_temporary_folders(input_folder, case):
+def rm_temporary_folders(input_folder,output_folder, case):
     grid2op_tempo = os.path.join(input_folder, cst.GENERATION_FOLDER_NAME, case, 'chronics')
-    if os.path.exists(grid2op_tempo):
+    if os.path.exists(grid2op_tempo) and grid2op_tempo!=output_folder:
         shutil.rmtree(grid2op_tempo)
         print("--"+str(grid2op_tempo)+" deleted")
 

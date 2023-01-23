@@ -68,7 +68,7 @@ def main(kpi_input_folder, generation_output_folder, scenario_names,
 
     # Format and compute KPI for each scenario
     chronic_dirs=list_dirs_with_chronics(generation_output_folder)
-    for scenario_num in range(n_scenarios):
+    for scenario_num in range(min(n_scenarios,len(chronic_dirs))):
         #if n_scenarios > 1:
         #    scenario_name = scenario_names(scenario_num)
         #else:

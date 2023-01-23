@@ -197,23 +197,19 @@ class TestMain(unittest.TestCase):
             ignore_warnings=self.ignore_warnings,
             scenario_id=0)
 
-    def test_k_no_ref(self):
+    def test_k_grid2op_env(self):
         self.mode='K'
-        from chronix2grid.kpi.preprocessing.pivot_KPI import read_params_kpi_config
-        import json
-
-        #####
-        #Change params_KPI to set reference_comparison to null, to test synthetic data KPIs generation only
-        kpi_input_folder = os.path.join(
-            self.input_folder, cst.KPI_FOLDER_NAME
-        )
-        params_KPI,json_file_path=read_params_kpi_config(kpi_input_folder, self.case)
-        params_KPI_new=params_KPI.copy()
-        params_KPI_new["comparison"]=None
-
-        with open(json_file_path, "w") as outfile:
-            json.dump(params_KPI_new, outfile)
-
+        self.case = 'case118_l2rpn_wcci_2022'
+        self.input_folder = os.path.join(
+            pathlib.Path(__file__).parent.parent.absolute(),
+            'data', 'input')
+        self.generation_output_folder = os.path.join(
+            pathlib.Path(__file__).parent.parent.absolute(), 'data',
+            'input', 'generation', self.case, 'chronics')
+        self.kpi_output_folder = os.path.join(
+            pathlib.Path(__file__).parent.parent.absolute(), 'data',
+            'output', 'kpi', self.case)
+        os.makedirs(self.kpi_output_folder,exist_ok=True)
         main.generate_per_scenario(
             case=self.case, start_date=self.start_date, weeks=1, by_n_weeks=4,
             mode=self.mode, input_folder=self.input_folder,
@@ -225,7 +221,4 @@ class TestMain(unittest.TestCase):
             seeds_for_dispatch=self.seeds_for_disp,
             ignore_warnings=self.ignore_warnings,
             scenario_id=0)
-
-        with open(json_file_path, "w") as outfile:
-            json.dump(params_KPI, outfile)
 
