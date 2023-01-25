@@ -78,7 +78,12 @@ def main(kpi_input_folder, generation_output_folder, scenario_names,
         if n_scenarios > 1:
             scenario_generation_output_folder = chronic_dirs[scenario_num]
         else:
-            scenario_generation_output_folder=chronic_dirs[scenario_id]
+            possible_scenario_name=scenario_names(scenario_id)
+            dir_id=[i for i in range(len(chronic_dirs)) if possible_scenario_name in chronic_dirs[i]]
+            if len(dir_id)!=0:#if time series are being generated and not all chronics folders have been populated
+                scenario_generation_output_folder=chronic_dirs[dir_id[0]]
+            else:#if from an existing env with populated chronics folders
+                scenario_generation_output_folder=chronic_dirs[scenario_id]
 
         # check there is load, solar and wind:
         has_load, has_solar, has_wind, has_thermal = check_solar_wind_prod_data(scenario_generation_output_folder,
