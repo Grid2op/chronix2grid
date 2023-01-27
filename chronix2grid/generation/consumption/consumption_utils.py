@@ -41,6 +41,20 @@ def compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern, 
             loads_series[name] = compute_industrial(Pmax, params)
     return loads_series
 
+
+def get_seasonal_pattern(params):
+    Nt_inter = int(params['T'] // params['dt'] + 1)
+    t = np.linspace(0., (params['end_date'] - params["start_date"]).total_seconds(), Nt_inter, endpoint=True, dtype=float)
+    start_year = pd.to_datetime(str(params['start_date'].year) + '/01/01', format='%Y-%m-%d')
+    start_min = float(pd.Timedelta(params['start_date'] - start_year).total_seconds())
+    nb_sec_per_day =  24. * 60. * 60.
+    nb_sec_per_year = (365. * nb_sec_per_day)
+    year_pattern = 2. * np.pi / nb_sec_per_year
+    seasonal_pattern = 1.5 / 7. * np.cos(year_pattern * (t + start_min - 45 * nb_sec_per_day))  # min of the load is 15 of February so 45 days after beginning of year
+    seasonal_pattern += 5.5 / 7.
+    return seasonal_pattern
+
+
 def compute_residential(locations, Pmax, temperature_noise, params, weekly_pattern, index, day_lag=None, add_dim=0):
 
 
@@ -54,22 +68,11 @@ def compute_residential(locations, Pmax, temperature_noise, params, weekly_patte
     temperature_signal = temperature_signal.astype(float)
     
     # Compute seasonal pattern
-    Nt_inter = int(params['T'] // params['dt'] + 1)
-    
-    # t = np.linspace(0, params['T'], Nt_inter, endpoint=True)
-    t = np.linspace(0., (params['end_date'] - params["start_date"]).total_seconds(), Nt_inter, endpoint=True, dtype=float)
-    
-    start_year = pd.to_datetime(str(params['start_date'].year) + '/01/01', format='%Y-%m-%d')
-    start_min = float(pd.Timedelta(params['start_date'] - start_year).total_seconds())
-    nb_sec_per_day =  24. * 60. * 60.
-    nb_sec_per_year = (365. * nb_sec_per_day)
-    year_pattern = 2. * np.pi / nb_sec_per_year
-    seasonal_pattern = 1.5 / 7. * np.cos(year_pattern * (t + start_min - 45 * nb_sec_per_day))  # min of the load is 15 of February so 45 days after beginning of year
-    #seasonal_pattern = 1.5 / 7. * np.cos(year_pattern * (t - start_min - 30 * nb_sec_per_day)) #older version to be removed
-    seasonal_pattern += 5.5 / 7.
+    seasonal_pattern = get_seasonal_pattern(params)
 
     # Get weekly pattern
     weekly_pattern = compute_load_pattern(params, weekly_pattern, index, day_lag)
+    
     std_temperature_noise = params['std_temperature_noise']
     residential_series = Pmax * weekly_pattern * (std_temperature_noise * temperature_signal + seasonal_pattern)
 

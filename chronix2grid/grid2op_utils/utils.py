@@ -25,11 +25,12 @@ from lightsim2grid import LightSimBackend
 import numpy as np
 from numpy.random import default_rng
 
-from chronix2grid.generation.consumption import ConsumptionGeneratorBackend
+
 from chronix2grid.generation.renewable import RenewableBackend
 from chronix2grid.generation.dispatch.PypsaDispatchBackend import PypsaDispatcher
 from chronix2grid.getting_started.example.input.generation.patterns import ref_pattern_path
 from chronix2grid.generation.dispatch.EconomicDispatch import ChroniXScenario
+from chronix2grid.grid2op_utils.loads_utils import generate_loads
 
 import warnings
 
@@ -77,60 +78,6 @@ def get_last_scenario_id(env_chronics_dir):
     if max_ is None:
         max_ = -1
     return max_
-            
-    
-def generate_loads(path_env, load_seed, start_date_dt, end_date_dt, dt, number_of_minutes, generic_params,
-                   load_q_from_p_coeff=0.7,
-                   day_lag=6):
-    """
-    This function generates the load for each consumption on a grid
-
-    Parameters
-    ----------
-    path_env : _type_
-        _description_
-    load_seed : _type_
-        _description_
-    start_date_dt : _type_
-        _description_
-    end_date_dt : _type_
-        _description_
-    dt : _type_
-        _description_
-    number_of_minutes : _type_
-        _description_
-    generic_params : _type_
-        _description_
-
-    Returns
-    -------
-    _type_
-        _description_
-    """
-    with open(os.path.join(path_env, "params_load.json"), "r") as f:
-        load_params = json.load(f)
-    load_params["start_date"] = start_date_dt
-    load_params["end_date"] = end_date_dt
-    load_params["dt"] = int(dt)
-    load_params["T"] = number_of_minutes
-    load_params["planned_std"] = float(generic_params["planned_std"])
-    
-    loads_charac = pd.read_csv(os.path.join(path_env, "loads_charac.csv"), sep=",")
-    load_weekly_pattern = pd.read_csv(os.path.join(ref_pattern_path, "load_weekly_pattern.csv"), sep=",")
-    
-    load_generator = ConsumptionGeneratorBackend(out_path=None,
-                                                 seed=load_seed, 
-                                                 params=load_params,
-                                                 loads_charac=loads_charac,
-                                                 write_results=False,
-                                                 load_config_manager=None,
-                                                 day_lag=day_lag)
-    
-    load_p, load_p_forecasted = load_generator.run(load_weekly_pattern=load_weekly_pattern)
-    load_q = load_p * load_q_from_p_coeff
-    load_q_forecasted = load_p_forecasted * load_q_from_p_coeff
-    return load_p, load_q, load_p_forecasted, load_q_forecasted
-
 
 def generate_renewable_energy_sources(path_env, renew_seed, start_date_dt, end_date_dt, dt, number_of_minutes, generic_params, gens_charac):
     """This function generates the amount of power produced by renewable energy sources (res). 
@@ -1064,19 +1011,29 @@ def generate_a_scenario(path_env,
     number_of_minutes = int((end_date_dt - start_date_dt).total_seconds() // 60)
     gens_charac = pd.read_csv(os.path.join(path_env, "prods_charac.csv"), sep=",")
     
+    forecast_prng = default_rng(gen_p_forecast_seed)
     # conso generation
-    load_p, load_q, load_p_forecasted, load_q_forecasted = generate_loads(path_env,
-                                                                          load_seed,
-                                                                          start_date_dt,
-                                                                          end_date_dt,
-                                                                          dt,
-                                                                          number_of_minutes,
-                                                                          generic_params,
-                                                                          day_lag=6  # TODO 6 because it's 2050
-                                                                          )
+    tmp_ = generate_loads(path_env,
+                          load_seed,
+                          forecast_prng,
+                          start_date_dt,
+                          end_date_dt,
+                          dt,
+                          number_of_minutes,
+                          generic_params,
+                          day_lag=6  # TODO 6 because it's 2050
+                          )
+    new_forecasts, load_p, load_q, load_p_forecasted, load_q_forecasted = tmp_
     
     # renewable energy sources generation
-    res_renew = generate_renewable_energy_sources(path_env,renew_seed, start_date_dt, end_date_dt, dt, number_of_minutes, generic_params, gens_charac)
+    res_renew = generate_renewable_energy_sources(path_env,
+                                                  renew_seed,
+                                                  start_date_dt,
+                                                  end_date_dt,
+                                                  dt,
+                                                  number_of_minutes,
+                                                  generic_params,
+                                                  gens_charac)
     prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = res_renew
 
     if prod_solar.isna().any().any():
