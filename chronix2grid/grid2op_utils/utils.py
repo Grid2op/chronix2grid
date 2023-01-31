@@ -16,14 +16,14 @@ import time
 import pandas as pd
 import os
 import cvxpy as cp
+import numpy as np
+from numpy.random import default_rng
 import grid2op
 from grid2op.Parameters import Parameters
 from grid2op.Chronics import ChangeNothing, FromNPY
 from grid2op.Action import DontAct
 from grid2op.Opponent import NeverAttackBudget, BaseOpponent
 from lightsim2grid import LightSimBackend
-import numpy as np
-from numpy.random import default_rng
 
 
 from chronix2grid.generation.renewable import RenewableBackend
@@ -31,6 +31,7 @@ from chronix2grid.generation.dispatch.PypsaDispatchBackend import PypsaDispatche
 from chronix2grid.getting_started.example.input.generation.patterns import ref_pattern_path
 from chronix2grid.generation.dispatch.EconomicDispatch import ChroniXScenario
 from chronix2grid.grid2op_utils.loads_utils import generate_loads
+from chronix2grid.grid2op_utils.forecasts_utils import generate_forecasts_gen
 
 import warnings
 
@@ -741,108 +742,6 @@ def save_generated_data(this_scen_path,
                   header=True,
                   index=False)       
 
-def fix_forecast_ramps(load_p,
-                       load_p_forecasted,
-                       res_gen_p_df,
-                       res_gen_p_forecasted_df,
-                       env_for_loss,
-                       hydro_constraints):
-    
-    #### cvxpy
-    total_step = 1 # for now
-    total_gen = np.sum(env_for_loss.gen_redispatchable)
-    load_f = load_p_forecasted.sum(axis=1)
-    scaling_factor = env_for_loss.gen_pmax[env_for_loss.gen_redispatchable]
-    scale_for_loads =  np.repeat(scaling_factor.reshape(1,-1), total_step, axis=0)
-    
-    p_min = np.repeat(env_for_loss.gen_pmin[env_for_loss.gen_redispatchable].reshape(1,-1)  / scaling_factor,
-                      total_step+1,
-                      axis=0)
-    p_max = np.repeat(env_for_loss.gen_pmax[env_for_loss.gen_redispatchable].reshape(1,-1) / scaling_factor,
-                      total_step+1,
-                      axis=0)
-    
-    ramp_min = np.repeat(-env_for_loss.gen_max_ramp_down[env_for_loss.gen_redispatchable].reshape(1,-1) / scaling_factor,
-                         total_step,
-                            axis=0)
-    ramp_max = np.repeat(env_for_loss.gen_max_ramp_up[env_for_loss.gen_redispatchable].reshape(1,-1) / scaling_factor,
-                         total_step,
-                         axis=0)
-    
-    res_gen_p = np.zeros((res_gen_p_forecasted_df.shape[0], total_gen))
-    has_error = np.zeros(res_gen_p_forecasted_df.shape[0], dtype=bool)
-    t0_errors = []
-    errors = []
-    for t0 in range(res_gen_p_df.shape[0] - 1):
-        # forecast are "consistent from a power system point of view" batch by batch
-        # losses are not handled here !
-        loss_scale = res_gen_p_df.iloc[t0].sum() / load_p.iloc[t0].sum()
-        
-        p_t = cp.Variable(shape=(total_step + 1, total_gen), pos=True)
-        real_p = cp.multiply(p_t, scale_for_loads)
-        load = np.array([res_gen_p_df.iloc[t0, env_for_loss.gen_redispatchable].sum(),  # value in the env
-                         load_f.iloc[t0] * loss_scale - res_gen_p_forecasted_df.iloc[t0, ~env_for_loss.gen_redispatchable].sum() # forecast 5 mins later
-                        ]
-                        )
-        target_vector = 1.0 * np.concatenate((res_gen_p_df.iloc[t0, env_for_loss.gen_redispatchable],
-                                                res_gen_p_forecasted_df.iloc[t0, env_for_loss.gen_redispatchable]),
-                                               axis=0).reshape(2, total_gen)
-        
-        turned_off_orig = 1.0 * (target_vector == 0.)
-        target_vector /= scale_for_loads
-        
-        constraints = [real_p[0,:] == res_gen_p_df.iloc[t0, env_for_loss.gen_redispatchable].values,
-                       p_t >= p_min,
-                       p_t <= p_max,
-                       p_t[1:,:] - p_t[:-1,:] >= ramp_min,
-                       p_t[1:,:] - p_t[:-1,:] <= ramp_max,
-                       cp.sum(real_p, axis=1) == load.reshape(-1),
-                       ]
-        cost = cp.sum_squares(p_t - target_vector) + cp.norm1(cp.multiply(p_t, turned_off_orig))
-        prob = cp.Problem(cp.Minimize(cost), constraints)
-        try:
-            prob.solve()
-        except cp.error.SolverError as exc_:
-            t0_errors.append(t0)
-            errors.append(RuntimeError(f"cvxpy failed to find a solution for t0 {t0}, error {exc_}"))
-            has_error[t0] = True
-        
-        # assign the generators
-        gen_p_after_optim = real_p.value
-        if gen_p_after_optim is None:
-            t0_errors.append(t0)
-            errors.append(f"cvxpy failed to find a solution for t0 {t0}, and returned None")
-            has_error[t0] = True
-            
-        if not has_error[t0]:
-            res_gen_p[t0] = 1.0 * gen_p_after_optim[1,:]
-            
-    # last value is not used anyway
-    # res_gen_p[-1, :] = 1.0 * gen_p_after_optim[1,:]
-    has_error[-1] = True
-        
-    res_gen_p_forecasted_df_res = 1.0 * res_gen_p_forecasted_df
-    return res_gen_p_forecasted_df_res, t0_errors, errors
-
-
-def generate_forecasts(prng,
-                       load_p,
-                       load_p_forecasted, 
-                       res_gen_p_df,
-                       sigma,
-                       env_for_loss,
-                       hydro_constraints):
-    res_gen_p_forecasted_df = res_gen_p_df * prng.lognormal(mean=0.0, sigma=sigma, size=res_gen_p_df.shape)
-    res_gen_p_forecasted_df = res_gen_p_forecasted_df.shift(-1)
-    res_gen_p_forecasted_df.iloc[-1] = 1.0 * res_gen_p_forecasted_df.iloc[-2]
-    res_gen_p_forecasted_df_res, t0_errors, errors = fix_forecast_ramps(load_p,
-                                                                        load_p_forecasted,
-                                                                        res_gen_p_df,
-                                                                        res_gen_p_forecasted_df,
-                                                                        env_for_loss,
-                                                                        hydro_constraints)
-    return res_gen_p_forecasted_df_res, t0_errors, errors
-
 
 def save_meta_data(this_scen_path,
                    path_env,
@@ -1023,7 +922,8 @@ def generate_a_scenario(path_env,
                           generic_params,
                           day_lag=6  # TODO 6 because it's 2050
                           )
-    new_forecasts, load_p, load_q, load_p_forecasted, load_q_forecasted = tmp_
+    (new_forecasts, forecasts_params, load_params, loads_charac,
+     load_p, load_q, load_p_forecasted, load_q_forecasted) = tmp_
     
     # renewable energy sources generation
     res_renew = generate_renewable_energy_sources(path_env,
@@ -1087,14 +987,21 @@ def generate_a_scenario(path_env,
         
     prng = default_rng(gen_p_forecast_seed)
     beg_forca = time.perf_counter()
-    res_gen_p_forecasted_df_res, t0_errors, errors = generate_forecasts(prng,
-                                                                        load_p,
-                                                                        load_p_forecasted,
-                                                                        res_gen_p_df,
-                                                                        float(generic_params["planned_std"]),
-                                                                        env_for_loss,
-                                                                        hydro_constraints
-                                                                        )
+    tmp_ = generate_forecasts_gen(new_forecasts,
+                                  prng,
+                                  load_p,
+                                  load_p_forecasted,
+                                  res_gen_p_df,
+                                  float(generic_params["planned_std"]),
+                                  env_for_loss,
+                                  hydro_constraints,
+                                  forecasts_params,
+                                  load_params,
+                                  loads_charac,
+                                  gens_charac,
+                                  path_env
+                                  )
+    res_gen_p_forecasted_df_res, t0_errors, errors = tmp_
     end_forca = time.perf_counter()
     end_ = time.perf_counter()
     if output_dir is not None:

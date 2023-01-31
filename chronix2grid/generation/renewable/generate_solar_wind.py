@@ -20,6 +20,21 @@ from .. import generation_utils as utils
 import chronix2grid.constants as cst
 
 
+def get_add_dim(params, prods_charac):
+    scale_solar_coord_for_correlation = float(params["scale_solar_coord_for_correlation"]) if "scale_solar_coord_for_correlation" in params else None
+    add_dim = 0
+    dx_corr = int(params['dx_corr'])
+    dy_corr = int(params['dy_corr'])
+    for x, y, type_gen  in zip(prods_charac["x"], prods_charac["y"], prods_charac["type"]):
+        if type_gen == "solar" and scale_solar_coord_for_correlation is not None:
+            x = scale_solar_coord_for_correlation * x
+            y = scale_solar_coord_for_correlation * y
+        x_plus = int(x // dx_corr + 1)
+        y_plus = int(y // dy_corr + 1)
+        add_dim = max(y_plus, add_dim)
+        add_dim = max(x_plus, add_dim)
+
+
 def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, write_results = True):
     """
     This is the solar and wind production generation function, it allows you to generate consumption chronics based on
@@ -68,18 +83,7 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
 
     # Generate GLOBAL temperature noise
     print('Computing global auto-correlated spatio-temporal noise for sun and wind...')
-    scale_solar_coord_for_correlation = float(params["scale_solar_coord_for_correlation"]) if "scale_solar_coord_for_correlation" in params else None
-    add_dim = 0
-    dx_corr = int(params['dx_corr'])
-    dy_corr = int(params['dy_corr'])
-    for x, y, type_gen  in zip(prods_charac["x"], prods_charac["y"], prods_charac["type"]):
-        if type_gen == "solar" and scale_solar_coord_for_correlation is not None:
-            x = scale_solar_coord_for_correlation * x
-            y = scale_solar_coord_for_correlation * y
-        x_plus = int(x // dx_corr + 1)
-        y_plus = int(y // dy_corr + 1)
-        add_dim = max(y_plus, add_dim)
-        add_dim = max(x_plus, add_dim)
+    add_dim = get_add_dim(params, prods_charac)
 
     solar_noise = utils.generate_coarse_noise(prng, params, 'solar', add_dim=add_dim)
     long_scale_wind_noise = utils.generate_coarse_noise(prng, params, 'long_wind', add_dim=add_dim)
