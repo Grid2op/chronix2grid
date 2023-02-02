@@ -33,6 +33,7 @@ def get_add_dim(params, prods_charac):
         y_plus = int(y // dy_corr + 1)
         add_dim = max(y_plus, add_dim)
         add_dim = max(x_plus, add_dim)
+    return add_dim
 
 
 def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, write_results = True):
@@ -83,6 +84,7 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
 
     # Generate GLOBAL temperature noise
     print('Computing global auto-correlated spatio-temporal noise for sun and wind...')
+    scale_solar_coord_for_correlation = float(params["scale_solar_coord_for_correlation"]) if "scale_solar_coord_for_correlation" in params else None
     add_dim = get_add_dim(params, prods_charac)
 
     solar_noise = utils.generate_coarse_noise(prng, params, 'solar', add_dim=add_dim)

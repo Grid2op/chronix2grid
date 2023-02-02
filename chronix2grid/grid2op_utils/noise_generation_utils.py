@@ -51,14 +51,16 @@ def get_load_mesh_tmp(nb_t, hs_, hs_mins, rho_mesh_t, rho_mesh_h):
     return load_mesh_tmp
 
 
-def compute_noise(load_mesh_tmp, loads_charac, model,
+def compute_noise(load_mesh_tmp,
+                  loads_charac,
+                  model,
                   range_x, range_y,
                   delta_x, delta_y,
                   rho_mesh_x, rho_mesh_y,
                   nb_t, nb_h, nb_load):
     
-    loads_noise = np.zeros((nb_load, nb_t, 1 + nb_h))
-    for load_id, (load_x, load_y) in loads_charac[["x", 'y']].iterrows():
+    loads_noise = np.zeros((nb_load, nb_t, nb_h))
+    for row_id, (load_id, (load_x, load_y)) in enumerate(loads_charac[["x", 'y']].iterrows()):
         # compute where the "point" is on the mesh
         load_mesh = 1.0 * load_mesh_tmp
         load_mesh[:,0] = (load_x - range_x[0])/delta_x
@@ -69,7 +71,7 @@ def compute_noise(load_mesh_tmp, loads_charac, model,
         load_mesh[:,1] /= rho_mesh_y
         
         noise_load = model.predict(load_mesh)
-        loads_noise[load_id, :, :] = noise_load.reshape(nb_t, nb_h + 1)
+        loads_noise[row_id, :, :] = noise_load.reshape(nb_t, nb_h)
         
     # renormalize the noise
     loads_noise -= loads_noise.mean()
@@ -103,7 +105,7 @@ def get_knn_fitted(forecasts_params, coords_mesh, noise_mesh):
     return model
 
 
-def get_forecast_parameters(forecasts_params, load_params):    
+def get_forecast_parameters(forecasts_params, load_params, data_type="load"):    
     hs_mins = [int(el) for el in forecasts_params["h"]]
     # convert the h in "number of steps" (and not in minutes)
     hs = [h // load_params['dt'] for h in hs_mins]
@@ -114,9 +116,9 @@ def get_forecast_parameters(forecasts_params, load_params):
             warnings.warn("Some forecast horizons are not muliple of the duration of a steps. They will be rounded")
     
     # load the parameters "h" for the forecasts
-    std_hs = [float(el) for el in forecasts_params["h_std_load"]]
+    std_hs = [float(el) for el in forecasts_params[f"h_std_{data_type}"]]
     for std in std_hs:
-        assert std > 0, f"all parameters of 'h_std_load' should be >0 we found {std}"
+        assert std > 0, f"all parameters of 'h_std_{data_type}' should be >0 we found {std}"
     assert len(std_hs) == len(hs), "you should provide as much 'error' as there are forecasts horizon"
     return hs_mins, hs, std_hs
 
@@ -148,15 +150,20 @@ def resize_mesh_factor(loads_charac, gen_charac, ratio_border=20.):
     return delta_x, delta_y, range_x, range_y
 
     
-def get_forecast(load_p, loads_noise, hs, std_hs, loads_charac):
+def get_forecast(load_p, loads_noise, hs, std_hs, loads_charac, reshape=True, keep_first_dim=False):
     nb_load = load_p.shape[0]
     nb_t = load_p.shape[1]
     nb_h = len(hs)
     
     load_p_for = np.stack([np.roll(load_p, -h) for h in hs], axis=2)
     
-    loads_noise_forecast = 1.0 * loads_noise[:,:,1:]
-    loads_noise_forecast *= np.array(std_hs).reshape(1,12)
+    if keep_first_dim:
+        loads_noise_forecast = 1.0 * loads_noise[:,:,:]
+    else:
+        # in case of load, first dimension is thrown out (used to
+        # compute the real time series data)
+        loads_noise_forecast = 1.0 * loads_noise[:,:,1:]
+    loads_noise_forecast *= np.array(std_hs).reshape(1, len(hs))
     loads_noise_forecast *= loads_charac["Pmax"].values.reshape(nb_load, 1, 1)
     load_p_for += loads_noise_forecast
     # keep the last value for the "forecasts outside the episode"
@@ -164,5 +171,6 @@ def get_forecast(load_p, loads_noise, hs, std_hs, loads_charac):
         load_p_for[:, (nb_t - ts):, col] = load_p_for[:, (nb_t - ts) - 1, col].reshape(nb_load, 1)
     
     # put everything in the right shape
-    load_p_for = load_p_for.reshape(nb_load, nb_t * nb_h)
+    if reshape:
+        load_p_for = load_p_for.reshape(nb_load, nb_t * nb_h)
     return load_p_for

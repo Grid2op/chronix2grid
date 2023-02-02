@@ -110,7 +110,7 @@ def generate_new_loads(load_seed,
                                 range_x, range_y,
                                 delta_x, delta_y,
                                 rho_mesh_x, rho_mesh_y,
-                                nb_t, nb_h, nb_load)
+                                nb_t, nb_h + 1, nb_load)
         
     # generate the "real" loads
     load_p = load_ref * (std_temperature_noise * loads_noise[:,:,0] + seasonal_pattern_load)

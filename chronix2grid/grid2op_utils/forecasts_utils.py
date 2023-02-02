@@ -113,6 +113,23 @@ def fix_forecast_ramps(new_forecasts,
     return res_gen_p_forecasted_df_res, t0_errors, errors
 
 
+def fix_solar(forecast, real_value, pmax):
+    # inplace !
+    forecast[forecast < 0.] = 0.
+    pmax = np.stack([pmax.reshape(-1,1) for _ in range(forecast.shape[-1])], axis=2)
+    forecast[forecast > pmax] = pmax
+    # no solar at night
+    real_value = np.stack([real_value for _ in range(forecast.shape[-1])], axis=2)
+    forecast[real_value==0.] = 0.
+
+
+def fix_wind(forecast, real_value, pmax):
+    # inplace !
+    forecast[forecast < 0.] = 0.
+    pmax = np.stack([pmax.reshape(-1,1) for _ in range(forecast.shape[-1])], axis=2)
+    forecast[forecast > pmax] = pmax
+
+
 def generate_new_gen_forecasts(prng,
                                forecasts_params,
                                load_params,
@@ -136,9 +153,16 @@ def generate_new_gen_forecasts(prng,
     # load the parameters controling the RES
     with open(os.path.join(path_env, "params_res.json"), "r") as f:
         res_params = json.load(f)
-        
+    
+    res_gen_p_forecasted = np.stack([res_gen_p_df.values.T for _ in hs], axis=2)
+    
+    forecasts_params["T"] = load_params["T"]
+    res_params["T"] = load_params["T"]
+    
     # generate the independant data on the mesh
-    for data_type in ["solar"]:
+    for data_type, fun_fix in zip(["solar", "wind"],
+                                  [fix_solar, fix_wind]):
+        hs_mins, hs, std_hs = get_forecast_parameters(forecasts_params, load_params, data_type)
         tmp_ = get_iid_noise(None, res_params, forecasts_params,
                              loads_charac, data_type, get_add_dim_renew, prng)
         noise_mesh, (Nx_comp, Ny_comp, Nt_comp, Nh_comp) = tmp_
@@ -158,10 +182,11 @@ def generate_new_gen_forecasts(prng,
                                      rho_mesh_t, rho_mesh_h)
         
         # now retrieve the real noise for each load
-        gen_this_type = gens_charac.loc[gens_charac["type"] == data_type]
-        nb_gen_this_type = gen_this_type.shape[0]
+        mask_this_type = gens_charac["type"].values == data_type
+        gen_carac_this_type = gens_charac.loc[mask_this_type]
+        nb_gen_this_type = gen_carac_this_type.shape[0]
         this_noise = compute_noise(mesh_tmp,
-                                   gen_this_type,
+                                   gen_carac_this_type,
                                    model,
                                    range_x, range_y,
                                    delta_x, delta_y,
@@ -169,9 +194,21 @@ def generate_new_gen_forecasts(prng,
                                    nb_t, nb_h, nb_gen_this_type)
         
         # generate all the forecasts
-        gen_p_this_type = res_gen_p_df[gens_charac["type"].value == data_type]
-        lgen_p_for_this_type = get_forecast(gen_p_this_type, this_noise, hs, std_hs, loads_charac)
-        
+        gen_p_this_type = 1.0 * res_gen_p_df.loc[:, mask_this_type].values.T
+        gen_p_for_this_type = get_forecast(gen_p_this_type,
+                                           this_noise[:, :-1, :],
+                                           hs,
+                                           std_hs,
+                                           gen_carac_this_type,
+                                           reshape=False,
+                                           keep_first_dim=True)
+        res_gen_p_forecasted[mask_this_type, :, :] = gen_p_for_this_type
+        fun_fix(res_gen_p_forecasted, gen_p_this_type, gen_carac_this_type["Pmax"])
+    res_gen_p_forecasted = res_gen_p_forecasted.reshape(nb_gen, (nb_t - 1) * nb_h)
+    res_gen_p_forecasted = np.transpose(res_gen_p_forecasted, (1, 0))
+    res_gen_p_forecasted_df = pd.DataFrame(res_gen_p_forecasted, columns=gens_charac["name"])
+    import pdb
+    pdb.set_trace()
     return res_gen_p_forecasted_df
 
 
