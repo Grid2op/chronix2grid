@@ -20,7 +20,11 @@ def add_data(env: grid2op.Environment.Environment,
              seed=None,
              nb_scenario=1,
              nb_core=1,  # TODO
-             with_loss=True):
+             with_loss=True,
+             files_to_copy=("maintenance_meta.json",
+                            "params_load.json",
+                            "params_forecasts.json")
+             ):
     """This function adds some data to already existing scenarios.
     
     .. warning::
@@ -92,14 +96,15 @@ def add_data(env: grid2op.Environment.Environment,
                           load_seeds[seed_num],
                           renew_seeds[seed_num],
                           gen_p_forecast_seeds[seed_num],
-                          with_loss
+                          with_loss,
+                          files_to_copy
                           ))
     if nb_core == 1:
         for args in argss:
             path_env, name_gen, gen_type, output_dir, start_date, dt, scen_id, load_seed, renew_seed, \
-                gen_p_forecast_seed, handle_loss = args
+                gen_p_forecast_seed, handle_loss, files_to_copy = args
             res_gen = generate_a_scenario(path_env, name_gen, gen_type, output_dir, start_date, dt, scen_id, load_seed, renew_seed, 
-                                          gen_p_forecast_seed, handle_loss)
+                                          gen_p_forecast_seed, handle_loss, files_to_copy=files_to_copy)
             error_, *_ = res_gen
             if error_ is not None:
                 print("=============================")

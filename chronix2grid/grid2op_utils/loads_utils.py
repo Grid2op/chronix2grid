@@ -138,7 +138,7 @@ def generate_loads(path_env,
                    dt,
                    number_of_minutes,
                    generic_params,
-                   load_q_from_p_coeff=0.7,
+                   load_q_from_p_coeff_default=0.7,
                    day_lag=6):
     """
     This function generates the load for each consumption on a grid
@@ -173,6 +173,11 @@ def generate_loads(path_env,
     load_params["T"] = number_of_minutes
     load_params["planned_std"] = float(generic_params["planned_std"])
     
+    if "load_q_from_p_coeff" in load_params:
+        load_q_from_p_coeff = float(load_params["load_q_from_p_coeff"])
+    else:
+        load_q_from_p_coeff = load_q_from_p_coeff_default
+        
     forecasts_params = {}
     new_forecasts = False
     path_for_ = os.path.join(path_env, "params_forecasts.json")

@@ -5,16 +5,12 @@
 # you can obtain one at http://mozilla.org/MPL/2.0/.
 # SPDX-License-Identifier: MPL-2.0
 # This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
-import copy
-from datetime import datetime, timedelta
+
 import json
-import shutil
-import time
 import pandas as pd
 import os
 import cvxpy as cp
 import numpy as np
-
 
 from chronix2grid.generation.renewable.generate_solar_wind import get_add_dim as get_add_dim_renew
 from chronix2grid.grid2op_utils.noise_generation_utils import (generate_coords_mesh,
@@ -25,10 +21,9 @@ from chronix2grid.grid2op_utils.noise_generation_utils import (generate_coords_m
                                                                get_iid_noise,
                                                                resize_mesh_factor,
                                                                get_forecast)
-    
 
 
-def fix_forecast_ramps(new_forecasts,
+def fix_forecast_ramps(nb_h,
                        load_p,
                        load_p_forecasted,
                        res_gen_p_df,
@@ -42,22 +37,24 @@ def fix_forecast_ramps(new_forecasts,
     load_f = load_p_forecasted.sum(axis=1)
     scaling_factor = env_for_loss.gen_pmax[env_for_loss.gen_redispatchable]
     scale_for_loads =  np.repeat(scaling_factor.reshape(1,-1), total_step, axis=0)
+    sum_pmax_renew = env_for_loss.gen_pmax[env_for_loss.gen_renewable].sum()
     
     p_min = np.repeat(env_for_loss.gen_pmin[env_for_loss.gen_redispatchable].reshape(1,-1)  / scaling_factor,
-                      total_step+1,
+                      total_step + nb_h,
                       axis=0)
     p_max = np.repeat(env_for_loss.gen_pmax[env_for_loss.gen_redispatchable].reshape(1,-1) / scaling_factor,
-                      total_step+1,
+                      total_step + nb_h,
                       axis=0)
     
     ramp_min = np.repeat(-env_for_loss.gen_max_ramp_down[env_for_loss.gen_redispatchable].reshape(1,-1) / scaling_factor,
-                         total_step,
-                            axis=0)
+                         total_step + (nb_h-1),
+                         axis=0)
     ramp_max = np.repeat(env_for_loss.gen_max_ramp_up[env_for_loss.gen_redispatchable].reshape(1,-1) / scaling_factor,
-                         total_step,
+                         total_step + (nb_h-1),
                          axis=0)
     
     res_gen_p = np.zeros((res_gen_p_forecasted_df.shape[0], total_gen))
+    amount_curtailed_for = np.zeros((res_gen_p_forecasted_df.shape[0], ))
     has_error = np.zeros(res_gen_p_forecasted_df.shape[0], dtype=bool)
     t0_errors = []
     errors = []
@@ -65,16 +62,27 @@ def fix_forecast_ramps(new_forecasts,
         # forecast are "consistent from a power system point of view" batch by batch
         # losses are not handled here !
         loss_scale = res_gen_p_df.iloc[t0].sum() / load_p.iloc[t0].sum()
+        indx_forecasts = np.arange(t0*nb_h, (t0+1)*nb_h)
         
-        p_t = cp.Variable(shape=(total_step + 1, total_gen), pos=True)
-        real_p = cp.multiply(p_t, scale_for_loads)
-        load = np.array([res_gen_p_df.iloc[t0, env_for_loss.gen_redispatchable].sum(),  # value in the env
-                         load_f.iloc[t0] * loss_scale - res_gen_p_forecasted_df.iloc[t0, ~env_for_loss.gen_redispatchable].sum() # forecast 5 mins later
-                        ]
+        prod_renew_for = res_gen_p_forecasted_df.iloc[indx_forecasts, env_for_loss.gen_renewable].sum(axis=1)
+        loss_for = (load_f.iloc[indx_forecasts] * loss_scale - prod_renew_for)
+        
+        # curtailment
+        curt_t_scaled = cp.Variable(shape=(total_step + nb_h, ), nonneg=True)
+        curt_t = cp.multiply(curt_t_scaled, sum_pmax_renew)
+        renew = np.array(([res_gen_p_df.iloc[t0, env_for_loss.gen_renewable].sum()] +  # value in the env
+                          prod_renew_for.tolist())
                         )
-        target_vector = 1.0 * np.concatenate((res_gen_p_df.iloc[t0, env_for_loss.gen_redispatchable],
-                                              res_gen_p_forecasted_df.iloc[t0, env_for_loss.gen_redispatchable]),
-                                              axis=0).reshape(2, total_gen)
+        
+        # generation
+        p_t = cp.Variable(shape=(total_step + nb_h, total_gen), pos=True)
+        real_p = cp.multiply(p_t, scale_for_loads)
+        load = np.array(([res_gen_p_df.iloc[t0, env_for_loss.gen_redispatchable].sum()] +  # value in the env
+                         loss_for.tolist())
+                        )
+        target_vector = 1.0 * np.concatenate((res_gen_p_df.iloc[t0, env_for_loss.gen_redispatchable].values.reshape(1, total_gen),
+                                              res_gen_p_forecasted_df.iloc[indx_forecasts, env_for_loss.gen_redispatchable].values),
+                                              axis=0).reshape(1+nb_h, total_gen)
         
         turned_off_orig = 1.0 * (target_vector == 0.)
         target_vector /= scale_for_loads
@@ -84,9 +92,13 @@ def fix_forecast_ramps(new_forecasts,
                        p_t <= p_max,
                        p_t[1:,:] - p_t[:-1,:] >= ramp_min,
                        p_t[1:,:] - p_t[:-1,:] <= ramp_max,
-                       cp.sum(real_p, axis=1) == load.reshape(-1),
+                       cp.sum(real_p, axis=1) == (load.reshape(-1) + curt_t),
+                       curt_t_scaled <= renew / sum_pmax_renew,
+                       curt_t_scaled >= 0.,
+                       curt_t_scaled[0] == 0.
                        ]
-        cost = cp.sum_squares(p_t - target_vector) + cp.norm1(cp.multiply(p_t, turned_off_orig))
+        
+        cost = cp.sum_squares(p_t - target_vector) + cp.norm1(cp.multiply(p_t, turned_off_orig)) + cp.sum_squares(curt_t_scaled)  # TODO normalize last stuff
         prob = cp.Problem(cp.Minimize(cost), constraints)
         try:
             prob.solve()
@@ -94,40 +106,86 @@ def fix_forecast_ramps(new_forecasts,
             t0_errors.append(t0)
             errors.append(RuntimeError(f"cvxpy failed to find a solution for t0 {t0}, error {exc_}"))
             has_error[t0] = True
+            continue
         
+        load_p.iloc[:12].sum(axis=1)
+        load_f.iloc[indx_forecasts]
         # assign the generators
         gen_p_after_optim = real_p.value
         if gen_p_after_optim is None:
             t0_errors.append(t0)
             errors.append(f"cvxpy failed to find a solution for t0 {t0}, and returned None")
             has_error[t0] = True
+            continue
             
         if not has_error[t0]:
             res_gen_p[t0] = 1.0 * gen_p_after_optim[1,:]
+            amount_curtailed_for[indx_forecasts] = curt_t.value[1:]
             
     # last value is not used anyway
     # res_gen_p[-1, :] = 1.0 * gen_p_after_optim[1,:]
     has_error[-1] = True
         
     res_gen_p_forecasted_df_res = 1.0 * res_gen_p_forecasted_df
-    return res_gen_p_forecasted_df_res, t0_errors, errors
+    # assign controlable generators
+    res_gen_p_forecasted_df_res.iloc[~has_error, env_for_loss.gen_redispatchable] = res_gen_p[~has_error,:]
+    
+    # fix for curtailment
+    total_renew = res_gen_p_forecasted_df_res.iloc[:, env_for_loss.gen_renewable].sum(axis=1)
+    total_renew[total_renew <= 1.] = 1.  # normalize for value close to 0.
+    ratio = (total_renew - amount_curtailed_for) / total_renew
+    res_gen_p_forecasted_df_res.iloc[:, env_for_loss.gen_redispatchable] *= np.stack([ratio for _ in 
+                                                                                      range(np.sum(env_for_loss.gen_redispatchable))],
+                                                                                     axis=1)
+    
+    return res_gen_p_forecasted_df_res, t0_errors, errors, amount_curtailed_for
 
 
+def fix_negative(forecast):
+    # inplace
+    forecast[forecast < 0.] = 0.
+    
+
+def fix_pmax(forecast, pmax):
+    # forecasts : (nb_gen, nb_t, nb_h)
+    # pmax: (nb_gen)
+    # not inplace
+    pmax_ = np.stack([pmax for _ in range(forecast.shape[1])], axis=1)
+    # pmax_: (nb_gen, nb_t)
+    pmax_ = np.stack([pmax_ for _ in range(forecast.shape[-1])], axis=2)
+    # pmax_: (nb_gen, nb_t, nb_h)
+    
+    init_shape = forecast.shape
+    forecast_ = forecast.ravel()
+    pmax_ = pmax_.ravel()
+    mask_ = forecast_ > pmax_
+    forecast_[mask_] = pmax_[mask_]
+    forecast_ = forecast_.reshape(init_shape)
+    return forecast_
+    
+    
 def fix_solar(forecast, real_value, pmax):
     # inplace !
-    forecast[forecast < 0.] = 0.
-    pmax = np.stack([pmax.reshape(-1,1) for _ in range(forecast.shape[-1])], axis=2)
-    forecast[forecast > pmax] = pmax
+    
+    # if value < 0. then it's 0.
+    fix_negative(forecast)
+    
+    # if above pmax then pmax
+    forecast = fix_pmax(forecast, pmax)
+    
     # no solar at night
-    real_value = np.stack([real_value for _ in range(forecast.shape[-1])], axis=2)
-    forecast[real_value==0.] = 0.
+    real_value_ = np.stack([real_value for _ in range(forecast.shape[-1])], axis=2)
+    forecast[real_value_ <= 1e-3] = 0.
 
 
 def fix_wind(forecast, real_value, pmax):
     # inplace !
-    forecast[forecast < 0.] = 0.
-    pmax = np.stack([pmax.reshape(-1,1) for _ in range(forecast.shape[-1])], axis=2)
-    forecast[forecast > pmax] = pmax
+    
+    # if value < 0. then it's 0.
+    fix_negative(forecast)
+    
+    # if above pmax then pmax
+    forecast = fix_pmax(forecast, pmax)
 
 
 def generate_new_gen_forecasts(prng,
@@ -181,7 +239,7 @@ def generate_new_gen_forecasts(prng,
         mesh_tmp = get_load_mesh_tmp(nb_t, hs, hs_mins,
                                      rho_mesh_t, rho_mesh_h)
         
-        # now retrieve the real noise for each load
+        # now retrieve the real noise for each gen of this type
         mask_this_type = gens_charac["type"].values == data_type
         gen_carac_this_type = gens_charac.loc[mask_this_type]
         nb_gen_this_type = gen_carac_this_type.shape[0]
@@ -202,14 +260,16 @@ def generate_new_gen_forecasts(prng,
                                            gen_carac_this_type,
                                            reshape=False,
                                            keep_first_dim=True)
+        
+        # fix the value of the forecast (if above pmax or bellow pmin for example)
+        fun_fix(gen_p_for_this_type, gen_p_this_type, gen_carac_this_type["Pmax"].values)
+        
         res_gen_p_forecasted[mask_this_type, :, :] = gen_p_for_this_type
-        fun_fix(res_gen_p_forecasted, gen_p_this_type, gen_carac_this_type["Pmax"])
+        
     res_gen_p_forecasted = res_gen_p_forecasted.reshape(nb_gen, (nb_t - 1) * nb_h)
     res_gen_p_forecasted = np.transpose(res_gen_p_forecasted, (1, 0))
     res_gen_p_forecasted_df = pd.DataFrame(res_gen_p_forecasted, columns=gens_charac["name"])
-    import pdb
-    pdb.set_trace()
-    return res_gen_p_forecasted_df
+    return res_gen_p_forecasted_df, nb_h
 
 
 def generate_forecasts_gen(new_forecasts,
@@ -226,25 +286,27 @@ def generate_forecasts_gen(new_forecasts,
                            gens_charac,
                            path_env):
     if new_forecasts:
-        res_gen_p_forecasted_df = generate_new_gen_forecasts(prng,
-                                                             forecasts_params,
-                                                             load_params,
-                                                             loads_charac,
-                                                             gens_charac,
-                                                             path_env,
-                                                             res_gen_p_df)
+        res_gen_p_forecasted_df, nb_h = generate_new_gen_forecasts(prng,
+                                                                   forecasts_params,
+                                                                   load_params,
+                                                                   loads_charac,
+                                                                   gens_charac,
+                                                                   path_env,
+                                                                   res_gen_p_df)
     else:
         res_gen_p_forecasted_df = res_gen_p_df * prng.lognormal(mean=0.0,
                                                                 sigma=sigma,
                                                                 size=res_gen_p_df.shape)
         res_gen_p_forecasted_df = res_gen_p_forecasted_df.shift(-1)
         res_gen_p_forecasted_df.iloc[-1] = 1.0 * res_gen_p_forecasted_df.iloc[-2]
+        nb_h = 1
         
-    res_gen_p_forecasted_df_res, t0_errors, errors = fix_forecast_ramps(new_forecasts,
-                                                                        load_p,
-                                                                        load_p_forecasted,
-                                                                        res_gen_p_df,
-                                                                        res_gen_p_forecasted_df,
-                                                                        env_for_loss,
-                                                                        hydro_constraints)
-    return res_gen_p_forecasted_df_res, t0_errors, errors
+    tmp_ = fix_forecast_ramps(nb_h,
+                              load_p,
+                              load_p_forecasted,
+                              res_gen_p_df,
+                              res_gen_p_forecasted_df,
+                              env_for_loss,
+                              hydro_constraints)
+    res_gen_p_forecasted_df_res, t0_errors, errors, amount_curtailed_for = tmp_
+    return res_gen_p_forecasted_df_res, amount_curtailed_for, t0_errors, errors
