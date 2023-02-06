@@ -729,11 +729,13 @@ def save_generated_data(this_scen_path,
     float_prec : _type_, optional
         _description_, by default FLOATING_POINT_PRECISION_FORMAT
     """
-    li_dfs = [load_p, load_p_forecasted, load_q, load_q_forecasted, prod_p, prod_p_forecasted]
+    li_dfs = [load_p, load_p_forecasted, prod_p, prod_p_forecasted]
     li_nms = ["load_p", "load_p_forecasted", "prod_p", "prod_p_forecasted"]
     
     if save_load_q:
+        li_dfs.append(load_q)
         li_nms.append("load_q")
+        li_dfs.append(load_q_forecasted)
         li_nms.append("load_q_forecasted")
         
     if debug:
@@ -741,6 +743,7 @@ def save_generated_data(this_scen_path,
         li_nms.append("prod_p_generated")
         li_dfs.append(prod_p_after_dispatch)
         li_nms.append("prod_p_after_dispatch")
+        
     for df, nm in zip(li_dfs, li_nms):
         df.to_csv(os.path.join(this_scen_path, f'{nm}.csv.bz2'),
                   sep=sep,
@@ -842,7 +845,6 @@ def save_meta_data(this_scen_path,
                   sort_keys=True,
                   indent=4)
         
-    print(files_to_copy)
     for fn_ in files_to_copy:
         src_path = os.path.join(path_env, fn_)
         if os.path.exists(src_path):

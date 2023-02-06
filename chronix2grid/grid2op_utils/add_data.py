@@ -103,8 +103,15 @@ def add_data(env: grid2op.Environment.Environment,
         for args in argss:
             path_env, name_gen, gen_type, output_dir, start_date, dt, scen_id, load_seed, renew_seed, \
                 gen_p_forecast_seed, handle_loss, files_to_copy = args
-            res_gen = generate_a_scenario(path_env, name_gen, gen_type, output_dir, start_date, dt, scen_id, load_seed, renew_seed, 
-                                          gen_p_forecast_seed, handle_loss, files_to_copy=files_to_copy)
+            res_gen = generate_a_scenario(path_env,
+                                          name_gen, gen_type,
+                                          output_dir,
+                                          start_date, dt,
+                                          scen_id,
+                                          load_seed, renew_seed, 
+                                          gen_p_forecast_seed,
+                                          handle_loss,
+                                          files_to_copy=files_to_copy)
             error_, *_ = res_gen
             if error_ is not None:
                 print("=============================")
