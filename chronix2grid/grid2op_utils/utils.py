@@ -848,8 +848,6 @@ def save_meta_data(this_scen_path,
         if os.path.exists(src_path):
             shutil.copy(src=src_path, 
                         dst=os.path.join(this_scen_path, fn_))
-    import sys
-    sys.exit(0)
     
 
 def generate_a_scenario(path_env,

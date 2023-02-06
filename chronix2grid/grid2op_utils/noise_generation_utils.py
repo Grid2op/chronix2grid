@@ -174,3 +174,62 @@ def get_forecast(load_p, loads_noise, hs, std_hs, loads_charac, reshape=True, ke
     if reshape:
         load_p_for = load_p_for.reshape(nb_load, nb_t * nb_h)
     return load_p_for
+
+
+def generate_noise(loads_charac,
+                   gen_charac,
+                   forecasts_params,
+                   load_params,
+                   load_seed,
+                   data_type,
+                   get_add_dim,
+                   nb_t,
+                   elem_params,
+                   elem_charac,
+                   nb_elem,
+                   add_h0=True,
+                   prng_noise=None):
+    # compute the "real" size of the mesh 
+    delta_x, delta_y, range_x, range_y = resize_mesh_factor(loads_charac, gen_charac)
+    
+    # retrieve the forecast parameters
+    hs_mins, hs, std_hs = get_forecast_parameters(forecasts_params, load_params) 
+     
+    # generate the independant data on the mesh 
+    tmp_ = get_iid_noise(load_seed, elem_params, forecasts_params,
+                         loads_charac, data_type, get_add_dim,
+                         prng_noise)
+    noise_mesh, (Nx_comp, Ny_comp, Nt_comp, Nh_comp) = tmp_
+    
+    # resize the mesh
+    res_mesh = generate_coords_mesh(Nx_comp,
+                                    Ny_comp,
+                                    Nt_comp,
+                                    Nh_comp,
+                                    noise_mesh.size) 
+    coords_mesh, rho_mesh_x, rho_mesh_y, rho_mesh_t, rho_mesh_h = res_mesh
+    
+    # "fit" the kNN    
+    model = get_knn_fitted(forecasts_params, coords_mesh, noise_mesh)
+    
+    # get the "temporary" for the load coordinates (whether or not to generate the
+    # also the "env" value with this function)
+    if add_h0:
+        hs_ = [0] + hs
+    else:
+        hs_ = hs
+    
+    # retrieve the "template" of coordinates of the mesh for the output vector
+    mesh_tmp = get_load_mesh_tmp(nb_t, hs_, hs_mins,
+                                 rho_mesh_t, rho_mesh_h)
+    
+    # now retrieve the real noise for each load
+    this_noise = compute_noise(mesh_tmp,
+                               elem_charac,
+                               model,
+                               range_x, range_y,
+                               delta_x, delta_y,
+                               rho_mesh_x, rho_mesh_y,
+                               nb_t, len(hs_), nb_elem)
+    
+    return this_noise, hs, std_hs

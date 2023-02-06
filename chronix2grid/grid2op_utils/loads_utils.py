@@ -18,14 +18,8 @@ from chronix2grid.generation.consumption.consumption_utils import (get_seasonal_
 
 from chronix2grid.generation.consumption.generate_load import get_add_dim as get_add_dim_load
 
-from chronix2grid.grid2op_utils.noise_generation_utils import (generate_coords_mesh,
-                                                               get_load_mesh_tmp,
-                                                               compute_noise,
-                                                               get_knn_fitted,
-                                                               get_forecast_parameters,
-                                                               get_iid_noise,
-                                                               resize_mesh_factor,
-                                                               get_forecast)
+from chronix2grid.grid2op_utils.noise_generation_utils import (get_forecast,
+                                                               generate_noise)
        
        
 def get_data_frames(load_p, load_p_for, loads_charac, datetime_index, nb_h):
@@ -70,17 +64,9 @@ def generate_new_loads(load_seed,
     datetime_index = pd.date_range(start=load_params['start_date'],
                                    end=load_params['end_date'],
                                    freq=str(load_params['dt']) + 'min')
-    nb_t = datetime_index.shape[0]
-    hs_mins, hs, std_hs = get_forecast_parameters(forecasts_params, load_params)    
+    nb_t = datetime_index.shape[0] 
     std_temperature_noise = float(load_params['std_temperature_noise'])
     
-    # compute the "real" size of the mesh 
-    delta_x, delta_y, range_x, range_y = resize_mesh_factor(loads_charac, gen_charac)
-    
-    # generate the independant data on the mesh
-    tmp_ = get_iid_noise(load_seed, load_params, forecasts_params,
-                         loads_charac, data_type, get_add_dim_load)
-    noise_mesh, (Nx_comp, Ny_comp, Nt_comp, Nh_comp) = tmp_
     # retrieve the reference curve "bar"
     load_ref = get_load_ref(loads_charac, load_params, load_weekly_pattern, day_lag)
     # (nb_load, nb_t)
@@ -90,27 +76,19 @@ def generate_new_loads(load_seed,
     seasonal_pattern_load = np.tile(seasonal_pattern_unit, (nb_load, 1))
     # (nb_load, nb_t)
     
-    # get the inteporlation on the mesh
-    res_mesh = generate_coords_mesh(Nx_comp,
-                                    Ny_comp,
-                                    Nt_comp,
-                                    Nh_comp,
-                                    noise_mesh.size) 
-    coords_mesh, rho_mesh_x, rho_mesh_y, rho_mesh_t, rho_mesh_h = res_mesh
-    
-    # "fit" the kNN    
-    model = get_knn_fitted(forecasts_params, coords_mesh, noise_mesh)
-    
-    # get the "temporary" for the load coordinates
-    hs_ = [0] + hs
-    load_mesh_tmp = get_load_mesh_tmp(nb_t, hs_, hs_mins,
-                                      rho_mesh_t, rho_mesh_h)
-    # now retrieve the real noise for each load
-    loads_noise = compute_noise(load_mesh_tmp, loads_charac, model,
-                                range_x, range_y,
-                                delta_x, delta_y,
-                                rho_mesh_x, rho_mesh_y,
-                                nb_t, nb_h + 1, nb_load)
+    # compute the noise for the loads
+    loads_noise, hs, std_hs = generate_noise(loads_charac,
+                                             gen_charac,
+                                             forecasts_params,
+                                             load_params,
+                                             load_seed,
+                                             data_type,
+                                             get_add_dim_load,
+                                             nb_t,
+                                             load_params,
+                                             loads_charac,
+                                             nb_load,
+                                             add_h0=True)
         
     # generate the "real" loads
     load_p = load_ref * (std_temperature_noise * loads_noise[:,:,0] + seasonal_pattern_load)

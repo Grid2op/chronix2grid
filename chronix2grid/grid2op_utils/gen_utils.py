@@ -13,14 +13,8 @@ import cvxpy as cp
 import numpy as np
 
 from chronix2grid.generation.renewable.generate_solar_wind import get_add_dim as get_add_dim_renew
-from chronix2grid.grid2op_utils.noise_generation_utils import (generate_coords_mesh,
-                                                               get_load_mesh_tmp,
-                                                               compute_noise,
-                                                               get_knn_fitted,
-                                                               get_forecast_parameters,
-                                                               get_iid_noise,
-                                                               resize_mesh_factor,
-                                                               get_forecast)
+from chronix2grid.grid2op_utils.noise_generation_utils import (get_forecast,
+                                                               generate_noise)
 
 
 def fix_forecast_ramps(nb_h,
@@ -202,17 +196,13 @@ def generate_new_gen_forecasts(prng,
     datetime_index = pd.date_range(start=load_params['start_date'],
                                    end=load_params['end_date'],
                                    freq=str(load_params['dt']) + 'min')
-    nb_t = datetime_index.shape[0]
-    hs_mins, hs, std_hs = get_forecast_parameters(forecasts_params, load_params)
-    
-    # compute the "real" size of the mesh 
-    delta_x, delta_y, range_x, range_y = resize_mesh_factor(loads_charac, gens_charac)
+    nb_t = datetime_index.shape[0]    
     
     # load the parameters controling the RES
     with open(os.path.join(path_env, "params_res.json"), "r") as f:
         res_params = json.load(f)
     
-    res_gen_p_forecasted = np.stack([res_gen_p_df.values.T for _ in hs], axis=2)
+    res_gen_p_forecasted = None
     
     forecasts_params["T"] = load_params["T"]
     res_params["T"] = load_params["T"]
@@ -220,36 +210,27 @@ def generate_new_gen_forecasts(prng,
     # generate the independant data on the mesh
     for data_type, fun_fix in zip(["solar", "wind"],
                                   [fix_solar, fix_wind]):
-        hs_mins, hs, std_hs = get_forecast_parameters(forecasts_params, load_params, data_type)
-        tmp_ = get_iid_noise(None, res_params, forecasts_params,
-                             loads_charac, data_type, get_add_dim_renew, prng)
-        noise_mesh, (Nx_comp, Ny_comp, Nt_comp, Nh_comp) = tmp_
-    
-        # get the inteporlation on the mesh
-        res_mesh = generate_coords_mesh(Nx_comp,
-                                        Ny_comp,
-                                        Nt_comp,
-                                        Nh_comp,
-                                        noise_mesh.size) 
-        coords_mesh, rho_mesh_x, rho_mesh_y, rho_mesh_t, rho_mesh_h = res_mesh
         
-        # "fit" the kNN    
-        model = get_knn_fitted(forecasts_params, coords_mesh, noise_mesh)
-    
-        mesh_tmp = get_load_mesh_tmp(nb_t, hs, hs_mins,
-                                     rho_mesh_t, rho_mesh_h)
-        
-        # now retrieve the real noise for each gen of this type
+        # get the parameters for this data type
         mask_this_type = gens_charac["type"].values == data_type
         gen_carac_this_type = gens_charac.loc[mask_this_type]
         nb_gen_this_type = gen_carac_this_type.shape[0]
-        this_noise = compute_noise(mesh_tmp,
-                                   gen_carac_this_type,
-                                   model,
-                                   range_x, range_y,
-                                   delta_x, delta_y,
-                                   rho_mesh_x, rho_mesh_y,
-                                   nb_t, nb_h, nb_gen_this_type)
+        
+        # generrate the noise for all the generators
+        this_noise, hs, std_hs = generate_noise(loads_charac,
+                                                gens_charac,
+                                                forecasts_params,
+                                                load_params,
+                                                None,
+                                                data_type,
+                                                get_add_dim_renew,
+                                                nb_t,
+                                                res_params,
+                                                gen_carac_this_type,
+                                                nb_gen_this_type,
+                                                add_h0=False,
+                                                prng_noise=prng)
+        # shape: (nb_elem, nb_t, nb_h)
         
         # generate all the forecasts
         gen_p_this_type = 1.0 * res_gen_p_df.loc[:, mask_this_type].values.T
@@ -264,6 +245,9 @@ def generate_new_gen_forecasts(prng,
         # fix the value of the forecast (if above pmax or bellow pmin for example)
         fun_fix(gen_p_for_this_type, gen_p_this_type, gen_carac_this_type["Pmax"].values)
         
+        # now put everything in the right shape
+        if res_gen_p_forecasted is None:
+            res_gen_p_forecasted = np.stack([res_gen_p_df.values.T for _ in hs], axis=2)
         res_gen_p_forecasted[mask_this_type, :, :] = gen_p_for_this_type
         
     res_gen_p_forecasted = res_gen_p_forecasted.reshape(nb_gen, (nb_t - 1) * nb_h)
