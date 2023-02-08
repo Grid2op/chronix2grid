@@ -684,7 +684,7 @@ def handle_losses(path_env,
                                                            percentile_quality_decrease=percentile_quality_decrease,  
                                                            )
     if error_ is not None:
-        return None, error_, None
+        return None, error_, None, env_for_loss
     
     # reformat the generators
     res_gen_p_df = pd.DataFrame(res_gen_p, index=final_gen_p.index, columns=env_for_loss.name_gen)
