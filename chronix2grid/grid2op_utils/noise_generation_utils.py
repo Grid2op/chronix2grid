@@ -193,8 +193,11 @@ def generate_noise(loads_charac,
     delta_x, delta_y, range_x, range_y = resize_mesh_factor(loads_charac, gen_charac)
     
     # retrieve the forecast parameters
-    hs_mins, hs, std_hs = get_forecast_parameters(forecasts_params, load_params) 
-     
+    if data_type=='temperature':
+        hs_mins, hs, std_hs = get_forecast_parameters(forecasts_params, load_params) 
+    else:
+        hs_mins, hs, std_hs = get_forecast_parameters(forecasts_params, load_params, data_type)
+             
     # generate the independant data on the mesh 
     tmp_ = get_iid_noise(load_seed, elem_params, forecasts_params,
                          loads_charac, data_type, get_add_dim,
