@@ -40,7 +40,7 @@ def compute_wind_series(prng, locations, Pmax, long_noise, medium_noise, short_n
     Nt_inter = int(params['T'] // params['dt'] + 1)
     t = np.linspace(0, params['T'], Nt_inter, endpoint=True)
     start_min = int(
-        pd.Timedelta(params['start_date'] - pd.to_datetime('2018/01/01', format='%Y-%m-%d')).total_seconds() // 60)
+        pd.Timedelta(params['start_date'] - pd.to_datetime('2018-01-01', format='%Y-%m-%d')).total_seconds() // 60)
     seasonal_pattern = np.cos((2 * np.pi / (365 * 24 * 60)) * (t - 30 * 24 * 60 - start_min))
 
     # Combine signals
@@ -104,7 +104,7 @@ def compute_solar_pattern(params, solar_pattern):
         (np.array) A smooth solar pattern
     """
 
-    start_year = pd.to_datetime(str(params['start_date'].year) + '/01/01', format='%Y-%m-%d')
+    start_year = pd.to_datetime(str(params['start_date'].year) + '-01-01', format='%Y-%m-%d')
     end_min = int(pd.Timedelta(params['end_date'] - start_year).total_seconds() // 60)
 
     Nt_inter_hr = int(end_min // 60 + 1)
@@ -118,7 +118,7 @@ def compute_solar_pattern(params, solar_pattern):
     f2 = interp1d(t_pattern, stacked_solar_pattern, kind='cubic')
 
     Nt_inter = int(params['T'] // params['dt'] + 1)
-    start_year = pd.to_datetime(str(params['start_date'].year) + '/01/01', format='%Y-%m-%d')
+    start_year = pd.to_datetime(str(params['start_date'].year) + '-01-01', format='%Y-%m-%d')
     start_min = int(pd.Timedelta(params['start_date'] - start_year).total_seconds() // 60)
     end_min = int(pd.Timedelta(params['end_date'] - start_year).total_seconds() // 60)
 

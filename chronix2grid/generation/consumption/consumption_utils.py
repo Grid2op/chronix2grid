@@ -45,7 +45,7 @@ def compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern, 
 def get_seasonal_pattern(params):
     Nt_inter = int(params['T'] // params['dt'] + 1)
     t = np.linspace(0., (params['end_date'] - params["start_date"]).total_seconds(), Nt_inter, endpoint=True, dtype=float)
-    start_year = pd.to_datetime(str(params['start_date'].year) + '/01/01', format='%Y-%m-%d')
+    start_year = pd.to_datetime(str(params['start_date'].year) + '-01-01', format='%Y-%m-%d')
     start_min = float(pd.Timedelta(params['start_date'] - start_year).total_seconds())
     nb_sec_per_day =  24. * 60. * 60.
     nb_sec_per_year = (365. * nb_sec_per_day)
@@ -104,7 +104,7 @@ def compute_load_pattern(params, weekly_pattern, index, day_lag):
     weekly_pattern = weekly_pattern[(nb_step_lag_for_starting_day + index * index_weekly_perweek):(nb_step_lag_for_starting_day + (index + 1) * index_weekly_perweek)]
     weekly_pattern /= np.mean(weekly_pattern)
 
-    start_year = pd.to_datetime(str(params['start_date'].year) + '/01/01', format='%Y-%m-%d')
+    start_year = pd.to_datetime(str(params['start_date'].year) + '-01-01', format='%Y-%m-%d')
     T_bis = int(pd.Timedelta(params['end_date'] - start_year).total_seconds() // (60))
 
     Nt_inter_hr = int(T_bis // 5 + 1)
@@ -118,7 +118,7 @@ def compute_load_pattern(params, weekly_pattern, index, day_lag):
     f2 = interp1d(t_pattern, stacked_weekly_pattern, kind='cubic')
 
     Nt_inter = int(params['T'] // params['dt'] + 1)
-    start_year = pd.to_datetime(str(params['start_date'].year) + '/01/01', format='%Y-%m-%d')
+    start_year = pd.to_datetime(str(params['start_date'].year) + '-01-01', format='%Y-%m-%d')
     start_min = int(pd.Timedelta(params['start_date'] - start_year).total_seconds() // 60)
     end_min = int(pd.Timedelta(params['end_date'] - start_year).total_seconds() // 60)
     t_inter = np.linspace(start_min, end_min, Nt_inter, endpoint=True)

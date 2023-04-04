@@ -579,6 +579,27 @@ def _fix_losses_one_scenario(env_for_loss,
     
     return res_gen_p, error_, quality_
 
+def make_env_for_loss(path_env, env_param, load_p, load_q, final_gen_p,
+                      gen_v, start_date_dt, dt_dt):
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        env_for_loss = grid2op.make(
+            path_env,
+            test=True,
+            # grid_path=grid_path, # assign it the 118 grid
+            param=env_param,
+            backend=LightSimBackend(),
+            chronics_class=FromNPY,
+            # chronics_path=path_chronix2grid,
+            data_feeding_kwargs={"load_p": load_p.values,  # np.concatenate([load_p.values[0].reshape(1,-1), load_p.values]),
+                                    "load_q": load_q.values,  # np.concatenate([load_q.values[0].reshape(1,-1), load_q.values]),
+                                    "prod_p": 1.0 * final_gen_p.values,  # 1.0 * np.concatenate([final_gen_p.values[0].reshape(1,-1), final_gen_p.values]),
+                                    "prod_v": gen_v,  # np.concatenate([gen_v[0].reshape(1,-1), gen_v])}
+                                    "start_datetime": start_date_dt,
+                                    "time_interval": dt_dt,
+            }
+            )
+    return env_for_loss
 
 def handle_losses(path_env,
                   n_gen,
@@ -652,24 +673,9 @@ def handle_losses(path_env,
     env_param.NO_OVERFLOW_DISCONNECTION = True
     gen_v = np.tile(np.array([float(gens_charac.loc[gens_charac["name"] == nm_gen].V) for nm_gen in name_gen ]),
                     load_p.shape[0]).reshape(-1, n_gen)
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore")
-        env_for_loss = grid2op.make(
-            path_env,
-            test=True,
-            # grid_path=grid_path, # assign it the 118 grid
-            param=env_param,
-            backend=LightSimBackend(),
-            chronics_class=FromNPY,
-            # chronics_path=path_chronix2grid,
-            data_feeding_kwargs={"load_p": load_p.values,  # np.concatenate([load_p.values[0].reshape(1,-1), load_p.values]),
-                                 "load_q": load_q.values,  # np.concatenate([load_q.values[0].reshape(1,-1), load_q.values]),
-                                 "prod_p": 1.0 * final_gen_p.values,  # 1.0 * np.concatenate([final_gen_p.values[0].reshape(1,-1), final_gen_p.values]),
-                                 "prod_v": gen_v,  # np.concatenate([gen_v[0].reshape(1,-1), gen_v])}
-                                 "start_datetime": start_date_dt,
-                                 "time_interval": dt_dt,
-            }
-            )
+    
+    env_for_loss = make_env_for_loss(path_env, env_param, load_p, load_q,
+                                     final_gen_p, gen_v, start_date_dt, dt_dt)
     res_gen_p, error_, quality_ = _fix_losses_one_scenario(env_for_loss,
                                                            scenario_id,
                                                            loss_param,
@@ -976,8 +982,8 @@ def generate_a_scenario(path_env,
         return error_, None, None, None, None, None, None, None
     
     # now try to move the generators so that when I run an AC powerflow, the setpoint of generators does not change "too much"
+    n_gen = len(name_gen)
     if handle_loss:
-        n_gen = len(name_gen)
         res_gen_p_df, error_, quality_, env_for_loss = handle_losses(path_env,
                                                                      n_gen,
                                                                      name_gen,
@@ -999,6 +1005,15 @@ def generate_a_scenario(path_env,
         res_gen_p_df = 1.0 * gen_p_after_dispatch
         quality_ = (-1, float("Nan"), float("Nan"), float("Nan"), float("Nan"))
         
+        env_param = Parameters()
+        env_param.NO_OVERFLOW_DISCONNECTION = True
+        gen_v = np.tile(np.array([float(gens_charac.loc[gens_charac["name"] == nm_gen].V) for nm_gen in name_gen ]),
+                        load_p.shape[0]).reshape(-1, n_gen)
+        env_for_loss = make_env_for_loss(path_env, env_param,
+                                         load_p, load_q,
+                                         final_gen_p, gen_v,
+                                         start_date_dt, dt_dt)
+    
     prng = default_rng(gen_p_forecast_seed)
     beg_forca = time.perf_counter()
     tmp_ = generate_forecasts_gen(new_forecasts,

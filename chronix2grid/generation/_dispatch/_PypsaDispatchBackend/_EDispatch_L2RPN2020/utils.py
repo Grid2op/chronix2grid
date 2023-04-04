@@ -307,7 +307,7 @@ def run_opf(net,
         Results of OPF dispatch
     """    
     to_disp = {'day': demand.index.day.unique().values[0],
-               'week': demand.index.week.unique().values[0],
+               'week': demand.index.isocalendar().week.unique()[0],
                'month': demand.index.month.unique().values[0],
     }
     mode = params['mode_opf']
