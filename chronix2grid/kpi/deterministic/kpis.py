@@ -85,12 +85,11 @@ class EconomicDispatchValidator:
             os.mkdir(os.path.join(self.image_repo, 'thermal_load_kpi'))
             os.mkdir(os.path.join(self.image_repo, 'load_kpi'))
 
-
         # Aggregate chronics variables
-        self.ref_agg_conso = ref_consumption.sum(axis=1)
-        self.syn_agg_conso = syn_consumption.sum(axis=1)
-        self.agg_ref_dispatch = ref_dispatch.sum(axis=1)
-        self.agg_syn_dispatch = synthetic_dispatch.sum(axis=1)
+        self.ref_agg_conso = ref_consumption.drop("Time", axis=1).sum(axis=1)
+        self.syn_agg_conso = syn_consumption.drop("Time", axis=1).sum(axis=1)
+        self.agg_ref_dispatch = ref_dispatch.drop("Time", axis=1).sum(axis=1)
+        self.agg_syn_dispatch = synthetic_dispatch.drop("Time", axis=1).sum(axis=1)
         
         # Read grid characteristics
         if prods_charac is not None:
@@ -167,14 +166,14 @@ class EconomicDispatchValidator:
         """
 
         # Sum of production per generator type
-        ref_prod_per_gen = self.ref_dispatch.sum(axis = 0)
+        ref_prod_per_gen = self.ref_dispatch.drop("Time", axis=1).sum(axis = 0)
         ref_prod_per_gen = pd.DataFrame({"Prod": ref_prod_per_gen.values, "name":ref_prod_per_gen.index})
         ref_prod_per_gen = ref_prod_per_gen.merge(self.prod_charac[["name","type"]], how = 'left',
                                                   on = 'name')
         ref_prod_per_gen = ref_prod_per_gen.groupby('type').sum()
         ref_prod_per_gen = ref_prod_per_gen.sort_index()
 
-        syn_prod_per_gen = self.syn_dispatch.sum(axis=0)
+        syn_prod_per_gen = self.syn_dispatch.drop("Time", axis=1).sum(axis=0)
         syn_prod_per_gen = pd.DataFrame({"Prod": syn_prod_per_gen.values, "name": syn_prod_per_gen.index})
         syn_prod_per_gen = syn_prod_per_gen.merge(self.prod_charac[["name", "type"]], how='left',
                                                   on='name')

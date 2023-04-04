@@ -268,7 +268,7 @@ def get_grouped_snapshots(snapshot, mode):
     """    
     # Define all posibilities mode
     periods = {'day': snapshot.groupby(snapshot.day).values(),
-               'week': snapshot.groupby(snapshot.week).values(),
+               'week': snapshot.groupby(snapshot.isocalendar().week).values(),
                'month': snapshot.groupby(snapshot.month).values()
     }
     return periods[mode]
