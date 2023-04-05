@@ -233,6 +233,27 @@ def generate_economic_dispatch(path_env, start_date_dt, end_date_dt, dt, number_
     total_solar_curt = total_solar.values[mask_solar].sum() - res_dispatch.chronix.prods_dispatch['agg_solar'].values[mask_solar].sum()
     return final_gen_p, total_wind_curt, total_solar_curt, hydro_constraints, None
 
+def fix_nan_hydro_i_dont_know_why(arr):
+    # economic_dispatch.make_hydro_constraints_from_res_load_scenario() sometimes return all nans for a given row...
+    # don't ask me why
+    if np.all(np.isfinite(arr)):
+        # nothing to do, data are correct
+        return 1.0 * arr
+    if np.all(~np.isfinite(arr)):
+        # cannot do anything: nothing is finite
+        return arr
+    if np.any(np.isfinite(arr).sum(axis=0) == arr.shape[0]):
+        # there is at least a column full of Nan I cannot do anything either
+        return np.NaN * arr
+    # to fix the nan values, I assign the last known finite value per column
+    res = 1.0 * arr
+    for col_id in range(arr.shape[1]):
+        finite_ind = np.where(np.isfinite(res[:,col_id]))[0]
+        infinite_ind = np.where(~np.isfinite(res[:,col_id]))[0]
+        idx = np.searchsorted(finite_ind, infinite_ind)
+        idx[idx == finite_ind.shape[0]] = finite_ind.shape[0] - 1
+        res[infinite_ind, col_id] = finite_ind[idx]
+    
 def _adjust_gens(all_loss_orig,
                  env_for_loss,
                  datetimes,
@@ -337,8 +358,14 @@ def _adjust_gens(all_loss_orig,
     ramp_max = np.repeat(env_for_loss.gen_max_ramp_up[env_for_loss.gen_redispatchable].reshape(1,-1) * params["RampErrorCorrRatio"]  / scaling_factor,
                             total_step - 1,
                             axis=0)
-    p_max[:, ids_hyrdo] = 1.0 * hydro_constraints["p_max_pu"].values
-     
+    p_max[:, ids_hyrdo] = fix_nan_hydro_i_dont_know_why(hydro_constraints["p_max_pu"].values)
+    
+    for el, el_nm in zip([p_min, p_max, ramp_min, ramp_max],
+                         ["p_min", "p_max", "ramp_min", "ramp_max"]):
+        if not np.all(np.isfinite(el)):
+            error_ = RuntimeError(f"{el_nm} contains non finite values")
+            return None, error_, None
+    
     while True:
         iter_num += 1
         load = load_without_loss + all_loss - np.sum(res_gen_p[:,~env_for_loss.gen_redispatchable], axis=1)
@@ -346,7 +373,7 @@ def _adjust_gens(all_loss_orig,
         target_vector = res_gen_p[:,env_for_loss.gen_redispatchable] / scaling_factor         
         
         #### cvxpy
-        p_t = cp.Variable(shape=(total_step,total_gen), pos=True)
+        p_t = cp.Variable(shape=(total_step,total_gen))
         real_p = cp.multiply(p_t, scale_for_loads)
         
         constraints = [p_t >= p_min,
@@ -358,9 +385,15 @@ def _adjust_gens(all_loss_orig,
         cost = cp.sum_squares(p_t - target_vector) + cp.norm1(cp.multiply(p_t, turned_off_orig))
         prob = cp.Problem(cp.Minimize(cost), constraints)
         try:
-            prob.solve()
+            res = prob.solve()
         except cp.error.SolverError as exc_:
             error_ = RuntimeError(f"cvxpy failed to find a solution at iteration {iter_num}, error {exc_}")
+            res_gen_p = None
+            quality_ = None
+            break
+        
+        if not np.isfinite(res):
+            error_ = RuntimeError(f"cvxpy failed to find a solution at iteration {iter_num}, and return a non finite cost")
             res_gen_p = None
             quality_ = None
             break
@@ -372,7 +405,13 @@ def _adjust_gens(all_loss_orig,
             res_gen_p = None
             quality_ = None
             break
-            
+ 
+        if np.any(~np.isfinite(gen_p_after_optim)):
+            error_ = RuntimeError(f"cvxpy failed to find a solution at iteration {iter_num}, and returned nans.")
+            res_gen_p = None
+            quality_ = None
+            break
+                   
         id_redisp = 0
         for gen_id, gen_nm in enumerate(env_for_loss.name_gen):
             if env_for_loss.gen_redispatchable[gen_id]:
