@@ -268,7 +268,7 @@ def get_grouped_snapshots(snapshot, mode):
     """    
     # Define all posibilities mode
     periods = {'day': snapshot.groupby(snapshot.day).values(),
-               'week': snapshot.groupby(snapshot.week).values(),
+               'week': snapshot.groupby(snapshot.isocalendar().week).values(),
                'month': snapshot.groupby(snapshot.month).values()
     }
     return periods[mode]
@@ -307,7 +307,7 @@ def run_opf(net,
         Results of OPF dispatch
     """    
     to_disp = {'day': demand.index.day.unique().values[0],
-               'week': demand.index.week.unique().values[0],
+               'week': demand.index.isocalendar().week.unique()[0],
                'month': demand.index.month.unique().values[0],
     }
     mode = params['mode_opf']
