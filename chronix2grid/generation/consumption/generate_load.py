@@ -31,7 +31,9 @@ def get_add_dim(params, loads_charac):
     return add_dim
 
 
-def main(scenario_destination_path, seed, params, loads_charac, load_weekly_pattern, write_results = True, day_lag=0):
+def main(scenario_destination_path, seed, params, loads_charac,
+         load_weekly_pattern, write_results = True, day_lag=0,
+         return_ref_curve=False):
     """
     This is the load generation function, it allows you to generate consumption chronics based on demand nodes characteristics and on weekly demand patterns.
 
@@ -74,7 +76,10 @@ def main(scenario_destination_path, seed, params, loads_charac, load_weekly_patt
                                        load_weekly_pattern,
                                        start_day=start_day,
                                        add_dim=add_dim,
-                                       day_lag=day_lag)
+                                       day_lag=day_lag,
+                                       return_ref_curve=return_ref_curve)
+    if return_ref_curve:
+        loads_series, ref_curve = loads_series
     loads_series['datetime'] = datetime_index
 
     # Save files
@@ -94,5 +99,7 @@ def main(scenario_destination_path, seed, params, loads_charac, load_weekly_patt
         write_results=write_results,
         index=False
     )
-    
-    return load_p, load_p_forecasted
+    if not return_ref_curve:
+        return load_p, load_p_forecasted
+    else:
+        return load_p, load_p_forecasted, ref_curve

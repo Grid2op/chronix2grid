@@ -80,7 +80,8 @@ def get_last_scenario_id(env_chronics_dir):
         max_ = -1
     return max_
 
-def generate_renewable_energy_sources(path_env, renew_seed, start_date_dt, end_date_dt, dt, number_of_minutes, generic_params, gens_charac):
+def generate_renewable_energy_sources(path_env, renew_seed, start_date_dt, end_date_dt,
+                                      dt, number_of_minutes, generic_params, gens_charac):
     """This function generates the amount of power produced by renewable energy sources (res). 
     
     It serves as a maximum value for the economic dispatch. 
@@ -123,8 +124,10 @@ def generate_renewable_energy_sources(path_env, renew_seed, start_date_dt, end_d
                                      loads_charac=gens_charac,
                                      res_config_manager=None,
                                      write_results=False)
-    prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = renew_backend.run(solar_pattern=solar_pattern)
-    return prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted
+    tmp_ = renew_backend.run(solar_pattern=solar_pattern,
+                             return_ref_curve=True)
+    prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted, solar_ref, wind_ref = tmp_
+    return prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted, solar_ref, wind_ref
 
 
 def generate_economic_dispatch(path_env, start_date_dt, end_date_dt, dt, number_of_minutes, generic_params, 
@@ -773,7 +776,10 @@ def save_meta_data(this_scen_path,
                    forca_t0_errors,
                    forca_errors,
                    amount_curtailed_for,
-                   files_to_copy=("maintenance_meta.json",)):
+                   files_to_copy=("maintenance_meta.json",),
+                   load_ref=None,
+                   solar_ref=None,
+                   wind_ref=None):
     """This function saves the "meta data" required for a succesful grid2op run !
 
     Parameters
@@ -844,13 +850,20 @@ def save_meta_data(this_scen_path,
                   fp=f,
                   sort_keys=True,
                   indent=4)
-        
+    
     for fn_ in files_to_copy:
         src_path = os.path.join(path_env, fn_)
         if os.path.exists(src_path):
             shutil.copy(src=src_path, 
                         dst=os.path.join(this_scen_path, fn_))
     
+    # save the ref curve for load, solar and wind
+    if load_ref is not None:
+        np.save(file=os.path.join(this_scen_path, "load_ref.npy"), arr=load_ref)
+    if solar_ref is not None:
+        np.save(file=os.path.join(this_scen_path, "solar_ref.npy"), arr=solar_ref)
+    if wind_ref is not None:
+        np.save(file=os.path.join(this_scen_path, "wind_ref.npy"), arr=wind_ref)
 
 def generate_a_scenario(path_env,
                         name_gen,
@@ -869,6 +882,8 @@ def generate_a_scenario(path_env,
                         threshold_stop=0.05,
                         max_iter=100,
                         files_to_copy=("maintenance_meta.json",),
+                        save_ref_curve=False,
+                        day_lag=6, # TODO 6 because it's 2050
                         debug=True  # TODO more feature !
                         ):
     """This function generates and save the data for a scenario.
@@ -934,10 +949,10 @@ def generate_a_scenario(path_env,
                           dt,
                           number_of_minutes,
                           generic_params,
-                          day_lag=6  # TODO 6 because it's 2050
+                          day_lag=day_lag 
                           )
     (new_forecasts, forecasts_params, load_params, loads_charac,
-     load_p, load_q, load_p_forecasted, load_q_forecasted) = tmp_
+     load_p, load_q, load_p_forecasted, load_q_forecasted, load_ref) = tmp_
     
     # renewable energy sources generation
     res_renew = generate_renewable_energy_sources(path_env,
@@ -948,7 +963,7 @@ def generate_a_scenario(path_env,
                                                   number_of_minutes,
                                                   generic_params,
                                                   gens_charac)
-    prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted = res_renew
+    prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted, solar_ref, wind_ref = res_renew
 
     if prod_solar.isna().any().any():
         error_ = RuntimeError("Nan generated in solar data")
@@ -1061,7 +1076,11 @@ def generate_a_scenario(path_env,
                        forca_t0_errors=t0_errors,
                        forca_errors=errors,
                        amount_curtailed_for=amount_curtailed_for,
-                       files_to_copy=files_to_copy
+                       files_to_copy=files_to_copy,
+                       # ref curve
+                       load_ref=load_ref if save_ref_curve else None,
+                       solar_ref=solar_ref if save_ref_curve else None,
+                       wind_ref=wind_ref if save_ref_curve else None,
                        )
         
     return error_, quality_, load_p, load_p_forecasted, load_q, load_q_forecasted, res_gen_p_df, res_gen_p_forecasted_df_res

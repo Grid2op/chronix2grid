@@ -158,7 +158,7 @@ def fix_pmax(forecast, pmax):
     return forecast_
     
     
-def fix_solar(forecast, real_value, pmax):
+def fix_solar(forecast, real_value, pmax, tol=1e-2):
     # inplace !
     
     # if value < 0. then it's 0.
@@ -168,8 +168,8 @@ def fix_solar(forecast, real_value, pmax):
     forecast = fix_pmax(forecast, pmax)
     
     # no solar at night
-    real_value_ = np.stack([real_value for _ in range(forecast.shape[-1])], axis=2)
-    forecast[real_value_ <= 1e-3] = 0.
+    real_value_ = np.stack([np.roll(real_value, -h) for h in range(forecast.shape[-1])], axis=2)
+    forecast[real_value_ <= tol] = 0.
 
 
 def fix_wind(forecast, real_value, pmax):

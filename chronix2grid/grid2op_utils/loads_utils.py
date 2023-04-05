@@ -57,7 +57,8 @@ def generate_new_loads(load_seed,
                        gen_charac,
                        load_weekly_pattern,
                        data_type='temperature',
-                       day_lag=6):    
+                       day_lag=6,
+                       return_ref_curve=True):    
     # read the parameters from the inputs
     nb_load = len(loads_charac['name'])
     nb_h = len(forecasts_params["h"])
@@ -75,6 +76,9 @@ def generate_new_loads(load_seed,
     seasonal_pattern_unit = get_seasonal_pattern(load_params)
     seasonal_pattern_load = np.tile(seasonal_pattern_unit, (nb_load, 1))
     # (nb_load, nb_t)
+    if return_ref_curve:
+        load_hat = load_ref * seasonal_pattern_load
+        load_hat = 1.0 * load_hat.T[:-1,:]
     
     # compute the noise for the loads
     loads_noise, hs, std_hs = generate_noise(loads_charac,
@@ -104,8 +108,9 @@ def generate_new_loads(load_seed,
                                                loads_charac,
                                                datetime_index,
                                                nb_h)
-    
-    return load_p_df, load_p_for_df
+    if not return_ref_curve:
+        return load_p_df, load_p_for_df
+    return load_p_df, load_p_df, load_hat
 
 
 def generate_loads(path_env,
@@ -169,13 +174,14 @@ def generate_loads(path_env,
     load_weekly_pattern = pd.read_csv(os.path.join(ref_pattern_path, "load_weekly_pattern.csv"), sep=",")
     
     if new_forecasts:
-        load_p, load_p_forecasted = generate_new_loads(load_seed,
-                                                       load_params,
-                                                       forecasts_params,
-                                                       loads_charac,
-                                                       gen_charac,
-                                                       load_weekly_pattern,
-                                                       day_lag=day_lag)
+        load_p, load_p_forecasted, load_ref_curve = generate_new_loads(load_seed,
+                                                                       load_params,
+                                                                       forecasts_params,
+                                                                       loads_charac,
+                                                                       gen_charac,
+                                                                       load_weekly_pattern,
+                                                                       day_lag=day_lag,
+                                                                       return_ref_curve=True)
     else:
         load_generator = ConsumptionGeneratorBackend(out_path=None,
                                                      seed=load_seed, 
@@ -185,9 +191,10 @@ def generate_loads(path_env,
                                                      load_config_manager=None,
                                                      day_lag=day_lag)
         
-        load_p, load_p_forecasted = load_generator.run(load_weekly_pattern=load_weekly_pattern)
+        load_p, load_p_forecasted, load_ref_curve = load_generator.run(load_weekly_pattern=load_weekly_pattern,
+                                                                       return_ref_curve=True)
     
     load_q = load_p * load_q_from_p_coeff
     load_q_forecasted = load_p_forecasted * load_q_from_p_coeff
     return (new_forecasts, forecasts_params, load_params, loads_charac,
-            load_p, load_q, load_p_forecasted, load_q_forecasted)
+            load_p, load_q, load_p_forecasted, load_q_forecasted, load_ref_curve)

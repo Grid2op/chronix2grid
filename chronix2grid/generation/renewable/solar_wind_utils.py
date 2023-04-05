@@ -15,7 +15,9 @@ from scipy.interpolate import interp1d
 from .. import generation_utils as utils
 import chronix2grid.constants as cst
 
-def compute_wind_series(prng, locations, Pmax, long_noise, medium_noise, short_noise, params, smoothdist, add_dim):
+def compute_wind_series(prng, locations, Pmax, long_noise, medium_noise,
+                        short_noise, params, smoothdist, add_dim,
+                        return_ref_curve=False):
     # Compute refined signals
     long_scale_signal = utils.interpolate_noise(
         long_noise,
@@ -40,7 +42,7 @@ def compute_wind_series(prng, locations, Pmax, long_noise, medium_noise, short_n
     Nt_inter = int(params['T'] // params['dt'] + 1)
     t = np.linspace(0, params['T'], Nt_inter, endpoint=True)
     start_min = int(
-        pd.Timedelta(params['start_date'] - pd.to_datetime('2018/01/01', format='%Y-%m-%d')).total_seconds() // 60)
+        pd.Timedelta(params['start_date'] - pd.to_datetime('2018-01-01', format='%Y-%m-%d')).total_seconds() // 60)
     seasonal_pattern = np.cos((2 * np.pi / (365 * 24 * 60)) * (t - 30 * 24 * 60 - start_min))
 
     # Combine signals
@@ -59,9 +61,15 @@ def compute_wind_series(prng, locations, Pmax, long_noise, medium_noise, short_n
     signal = smooth(signal)
     wind_series = Pmax * signal
     wind_series[wind_series > 0.95 * Pmax] = 0.95 * Pmax
-    return wind_series
+    if not return_ref_curve:
+        return wind_series
+    return wind_series, 1e-1 * np.exp(4 * (0.7 + 0.3 * seasonal_pattern) * 0.3)
 
-def compute_solar_series(prng, locations, Pmax, solar_noise, params, solar_pattern, smoothdist, time_scale, add_dim, scale_solar_coord_for_correlation=None):
+
+def compute_solar_series(prng, locations, Pmax, solar_noise, params,
+                         solar_pattern, smoothdist, time_scale,
+                         add_dim, scale_solar_coord_for_correlation=None,
+                         return_ref_curve=False):
 
     # Compute noise at desired locations
     if scale_solar_coord_for_correlation is not None:
@@ -88,7 +96,10 @@ def compute_solar_series(prng, locations, Pmax, solar_noise, params, solar_patte
     solar_series = Pmax * signal
     # solar_series[np.isclose(solar_series, 0.)] = 0
     solar_series[solar_series > 0.95 * Pmax] = 0.95 * Pmax
-    return solar_series
+    if not return_ref_curve:
+        return solar_series
+    else:
+        return solar_series, solar_pattern * mean_solar_pattern
 
 def compute_solar_pattern(params, solar_pattern):
     """
@@ -118,7 +129,7 @@ def compute_solar_pattern(params, solar_pattern):
     f2 = interp1d(t_pattern, stacked_solar_pattern, kind='cubic')
 
     Nt_inter = int(params['T'] // params['dt'] + 1)
-    start_year = pd.to_datetime(str(params['start_date'].year) + '/01/01', format='%Y-%m-%d')
+    start_year = pd.to_datetime(str(params['start_date'].year) + '-01-01', format='%Y-%m-%d')
     start_min = int(pd.Timedelta(params['start_date'] - start_year).total_seconds() // 60)
     end_min = int(pd.Timedelta(params['end_date'] - start_year).total_seconds() // 60)
 

@@ -16,7 +16,9 @@ from scipy.interpolate import interp1d
 from .. import generation_utils as utils
 import chronix2grid.constants as cst
 
-def compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern, start_day, add_dim, day_lag=0):
+def compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern,
+                  start_day, add_dim, day_lag=0,
+                  return_ref_curve=False):
     #6  # this is only TRUE if you simulate 2050 !!! formula does not really work
     
     # Compute active part of loads
@@ -28,18 +30,30 @@ def compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern, 
     # day_lag = (first_dow_chronics - start_day_of_week) % 7
     # day_lag = 0
     loads_series = {}
+    ref_curves = None
     for i, name in enumerate(loads_charac['name']):
         mask = (loads_charac['name'] == name)
         if loads_charac[mask]['type'].values == 'residential':
             locations = [loads_charac[mask]['x'].values[0], loads_charac[mask]['y'].values[0]]
             Pmax = loads_charac[mask]['Pmax'].values[0]
-            loads_series[name] = compute_residential(locations, Pmax, temperature_noise, params, weekly_pattern, index=i, day_lag=day_lag, add_dim=add_dim)
+            tmp_ = compute_residential(locations, Pmax, temperature_noise,
+                                       params, weekly_pattern, index=i,
+                                       day_lag=day_lag, add_dim=add_dim,
+                                       return_ref_curve=return_ref_curve)
+            if return_ref_curve:
+                if ref_curves is None:
+                    ref_curves = np.zeros((tmp_.shape[0], loads_charac.shape[0]))
+                loads_series[name], ref_curves[:,i] = tmp_
+            else:
+                loads_series[name] = tmp_
 
         if loads_charac[mask]['type'].values == 'industrial':
             raise NotImplementedError("Impossible to generate industrial loads for now.")
             Pmax = loads_charac[mask]['Pmax'].values[0]
             loads_series[name] = compute_industrial(Pmax, params)
-    return loads_series
+    if not return_ref_curve:
+        return loads_series
+    return loads_series, ref_curves
 
 
 def get_seasonal_pattern(params):
@@ -55,7 +69,9 @@ def get_seasonal_pattern(params):
     return seasonal_pattern
 
 
-def compute_residential(locations, Pmax, temperature_noise, params, weekly_pattern, index, day_lag=None, add_dim=0):
+def compute_residential(locations, Pmax, temperature_noise, params,
+                        weekly_pattern, index, day_lag=None, add_dim=0,
+                        return_ref_curve=False):
 
 
     # Compute refined signals
@@ -75,7 +91,8 @@ def compute_residential(locations, Pmax, temperature_noise, params, weekly_patte
     
     std_temperature_noise = params['std_temperature_noise']
     residential_series = Pmax * weekly_pattern * (std_temperature_noise * temperature_signal + seasonal_pattern)
-
+    if return_ref_curve:
+        return residential_series, Pmax * weekly_pattern * seasonal_pattern
     return residential_series
 
 def compute_load_pattern(params, weekly_pattern, index, day_lag):

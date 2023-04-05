@@ -38,11 +38,11 @@ class ConsumptionGeneratorBackend:
         self.out_path = out_path
         self.day_lag = day_lag
 
-    def run(self, load_weekly_pattern=None):
+    def run(self, load_weekly_pattern=None, return_ref_curve=False):
         """
         Runs the generation model in ``chronix2grid.generation.consumption.generate_load`` and writes chronics
         """
         if load_weekly_pattern is None:
             load_weekly_pattern = self.load_config_manager.read_specific()
         return main(self.out_path, self.seed, self.params, self.loads_charac, load_weekly_pattern, self.write_results,
-                    day_lag=self.day_lag)
+                    day_lag=self.day_lag, return_ref_curve=return_ref_curve)
