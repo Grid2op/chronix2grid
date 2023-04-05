@@ -110,7 +110,7 @@ def generate_new_loads(load_seed,
                                                nb_h)
     if not return_ref_curve:
         return load_p_df, load_p_for_df
-    return load_p_df, load_p_df, load_hat
+    return load_p_df, load_p_for_df, load_hat
 
 
 def generate_loads(path_env,
