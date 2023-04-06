@@ -252,7 +252,8 @@ def fix_nan_hydro_i_dont_know_why(arr):
         infinite_ind = np.where(~np.isfinite(res[:,col_id]))[0]
         idx = np.searchsorted(finite_ind, infinite_ind)
         idx[idx == finite_ind.shape[0]] = finite_ind.shape[0] - 1
-        res[infinite_ind, col_id] = finite_ind[idx]
+        res[infinite_ind, col_id] = 1.0 * arr[finite_ind[idx], col_id]
+    return res
     
 def _adjust_gens(all_loss_orig,
                  env_for_loss,
