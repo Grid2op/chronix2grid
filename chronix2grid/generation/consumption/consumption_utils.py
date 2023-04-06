@@ -42,7 +42,7 @@ def compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern,
                                        return_ref_curve=return_ref_curve)
             if return_ref_curve:
                 if ref_curves is None:
-                    ref_curves = np.zeros((tmp_.shape[0], loads_charac.shape[0]))
+                    ref_curves = np.zeros((tmp_[0].shape[0], loads_charac.shape[0]))
                 loads_series[name], ref_curves[:,i] = tmp_
             else:
                 loads_series[name] = tmp_
