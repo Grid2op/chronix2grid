@@ -23,6 +23,9 @@ def compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern,
     
     # Compute active part of loads
     weekly_pattern = load_weekly_pattern['test'].values
+    datetime_lwp = pd.to_datetime(load_weekly_pattern["datetime"], format="%Y-%m-%d %H:%M:%S")
+    isoweekday = np.array([el.isoweekday() for el in datetime_lwp])
+    hour_minutes = np.array([el.hour * 60 + el.minute for el in datetime_lwp])
     
     # start_day_of_week = start_day.weekday()
     # first_dow_chronics = datetime.strptime(load_weekly_pattern["datetime"].iloc[1], "%Y-%m-%d %H:%M:%S").weekday()
@@ -39,7 +42,9 @@ def compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern,
             tmp_ = compute_residential(locations, Pmax, temperature_noise,
                                        params, weekly_pattern, index=i,
                                        day_lag=day_lag, add_dim=add_dim,
-                                       return_ref_curve=return_ref_curve)
+                                       return_ref_curve=return_ref_curve,
+                                       isoweekday_lwp=isoweekday,
+                                       hour_minutes_lwp=hour_minutes)
             if return_ref_curve:
                 if ref_curves is None:
                     ref_curves = np.zeros((tmp_[0].shape[0], loads_charac.shape[0]))
@@ -71,7 +76,9 @@ def get_seasonal_pattern(params):
 
 def compute_residential(locations, Pmax, temperature_noise, params,
                         weekly_pattern, index, day_lag=None, add_dim=0,
-                        return_ref_curve=False):
+                        return_ref_curve=False,
+                        isoweekday_lwp=None,
+                        hour_minutes_lwp=None):
 
 
     # Compute refined signals
@@ -87,7 +94,7 @@ def compute_residential(locations, Pmax, temperature_noise, params,
     seasonal_pattern = get_seasonal_pattern(params)
 
     # Get weekly pattern
-    weekly_pattern = compute_load_pattern(params, weekly_pattern, index, day_lag)
+    weekly_pattern = compute_load_pattern(params, weekly_pattern, index, day_lag, isoweekday_lwp=isoweekday_lwp, hour_minutes_lwp=hour_minutes_lwp)
     
     std_temperature_noise = params['std_temperature_noise']
     residential_series = Pmax * weekly_pattern * (std_temperature_noise * temperature_signal + seasonal_pattern)
@@ -95,7 +102,7 @@ def compute_residential(locations, Pmax, temperature_noise, params,
         return residential_series, Pmax * weekly_pattern * seasonal_pattern
     return residential_series
 
-def compute_load_pattern(params, weekly_pattern, index, day_lag):
+def compute_load_pattern(params, weekly_pattern, index, day_lag, isoweekday_lwp=None, hour_minutes_lwp=None):
     """
     Loads a typical hourly pattern, and interpolates it to generate
     a smooth solar generation pattern between 0 and 1
@@ -109,16 +116,27 @@ def compute_load_pattern(params, weekly_pattern, index, day_lag):
         (np.array) A smooth solar pattern
     """
     # solar_pattern resolution : 1H, 8761
-
-    if day_lag is None:
-        nb_step_lag_for_starting_day = 0
-    else:
-        nb_step_lag_for_starting_day = 12 * 24 * day_lag
-        
+    
     # Keep only one week of pattern
     index_weekly_perweek = 12 * 24 * 7
-    index %= int((weekly_pattern.shape[0] - nb_step_lag_for_starting_day) / index_weekly_perweek - 1)
-    weekly_pattern = weekly_pattern[(nb_step_lag_for_starting_day + index * index_weekly_perweek):(nb_step_lag_for_starting_day + (index + 1) * index_weekly_perweek)]
+    if isoweekday_lwp is None or hour_minutes_lwp is None:
+        # try to guess where to start from input data
+        if day_lag is None:
+            nb_step_lag_for_starting_day = 0
+        else:
+            nb_step_lag_for_starting_day = 12 * 24 * day_lag
+        index %= int((weekly_pattern.shape[0] - nb_step_lag_for_starting_day) / index_weekly_perweek - 1)
+        first_index = (nb_step_lag_for_starting_day + index * index_weekly_perweek)
+    else:
+        # be smarter and take a week starting the same weekday at the same hour than the params["start_date"]
+        isoweekday_start = params["start_date"].isoweekday() - 1  # lag in the input data ?  # O => NO
+        iso_hm_start = params["start_date"].hour * 60 + params["start_date"].minute
+        possible_first_index = np.where((isoweekday_lwp == isoweekday_start) & (iso_hm_start == hour_minutes_lwp))[0]
+        index_modulo = index % possible_first_index.shape[0]
+        first_index = possible_first_index[index_modulo]
+    # now extract right week of data
+    last_index = first_index + index_weekly_perweek
+    weekly_pattern = weekly_pattern[first_index:last_index]
     weekly_pattern /= np.mean(weekly_pattern)
 
     start_year = pd.to_datetime(str(params['start_date'].year) + '-01-01', format='%Y-%m-%d')

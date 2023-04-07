@@ -543,7 +543,7 @@ def _fix_losses_one_scenario(env_for_loss,
     max_diff_orig = np.zeros(env_for_loss.max_episode_duration())
     datetimes = np.zeros(env_for_loss.max_episode_duration(), dtype=datetime)
     
-    env_for_loss.set_id(scenario_id)
+    # env_for_loss.set_id(scenario_id)  # env_for_loss has only 1 set of time series anyways !
     obs = env_for_loss.reset()
     
     i = 0

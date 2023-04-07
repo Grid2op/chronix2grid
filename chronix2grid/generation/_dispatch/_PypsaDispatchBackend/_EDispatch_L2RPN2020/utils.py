@@ -9,7 +9,7 @@
 import numpy as np
 import pandas as pd
 import copy 
-import pypsa
+import warnings
 
 from chronix2grid.generation.dispatch.utils import RampMode
 
@@ -351,7 +351,10 @@ def run_opf(net,
     net.generators_t.p_min_pu = net.generators_t.p_min_pu.iloc[0:0, 0:0]
     
     # Set snapshots
-    net.set_snapshots(demand.index)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning)
+        # pypsa and pandas version
+        net.set_snapshots(demand.index)
     
     
     # ++  ++  ++  ++  ++  ++  ++  ++  ++  ++  ++ 
