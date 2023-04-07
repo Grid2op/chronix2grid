@@ -80,7 +80,6 @@ def add_data(env: grid2op.Environment.Environment,
             gen_p_forecast_seeds.append(gen_p_forecast_seed)
     
     # generate the data
-    # TODO multi proc
     path_env = env.get_path_env()
     name_gen = env.name_gen
     gen_type = env.gen_type
@@ -88,6 +87,8 @@ def add_data(env: grid2op.Environment.Environment,
     argss = []
     for j, scen_id in enumerate(scen_ids):
         for i, start_date in enumerate(li_months):
+            # if start_date != "2035-03-12":
+            #     continue
             seed_num = i + j * len(li_months)
             argss.append((path_env,
                           name_gen,

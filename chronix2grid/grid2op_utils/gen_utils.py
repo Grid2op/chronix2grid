@@ -31,7 +31,6 @@ def fix_forecast_ramps(nb_h,
     load_f = load_p_forecasted.sum(axis=1)
     scaling_factor = env_for_loss.gen_pmax[env_for_loss.gen_redispatchable]
     scale_for_loads =  np.repeat(scaling_factor.reshape(1,-1), total_step, axis=0)
-    sum_pmax_renew = env_for_loss.gen_pmax[env_for_loss.gen_renewable].sum()
     
     p_min = np.repeat(env_for_loss.gen_pmin[env_for_loss.gen_redispatchable].reshape(1,-1)  / scaling_factor,
                       total_step + nb_h,
@@ -60,65 +59,70 @@ def fix_forecast_ramps(nb_h,
         
         prod_renew_for = res_gen_p_forecasted_df.iloc[indx_forecasts, env_for_loss.gen_renewable].sum(axis=1)
         loss_for = (load_f.iloc[indx_forecasts] * loss_scale - prod_renew_for)
-        
+        net_load = np.array(([res_gen_p_df.iloc[t0, env_for_loss.gen_redispatchable].sum()] +  # value in the env
+                             loss_for.tolist())
+                           )
         # curtailment
-        curt_t_scaled = cp.Variable(shape=(total_step + nb_h, ), nonneg=True)
-        curt_t = cp.multiply(curt_t_scaled, sum_pmax_renew)
+        curt_t = cp.Variable(shape=(total_step + nb_h, ), nonneg=True)
+        # curt_t = cp.multiply(curt_t_scaled, sum_pmax_renew)
         renew = np.array(([res_gen_p_df.iloc[t0, env_for_loss.gen_renewable].sum()] +  # value in the env
                           prod_renew_for.tolist())
                         )
+        scale_curt_factor = np.maximum(renew, 1.)
+        curt_t_scaled = cp.multiply(curt_t, 1. / scale_curt_factor)
         
         # generation
         p_t = cp.Variable(shape=(total_step + nb_h, total_gen), pos=True)
         real_p = cp.multiply(p_t, scale_for_loads)
-        load = np.array(([res_gen_p_df.iloc[t0, env_for_loss.gen_redispatchable].sum()] +  # value in the env
-                         loss_for.tolist())
-                        )
         target_vector = 1.0 * np.concatenate((res_gen_p_df.iloc[t0, env_for_loss.gen_redispatchable].values.reshape(1, total_gen),
                                               res_gen_p_forecasted_df.iloc[indx_forecasts, env_for_loss.gen_redispatchable].values),
                                               axis=0).reshape(1+nb_h, total_gen)
         
         turned_off_orig = 1.0 * (target_vector == 0.)
         target_vector /= scale_for_loads
-        
         constraints = [real_p[0,:] == res_gen_p_df.iloc[t0, env_for_loss.gen_redispatchable].values,
                        p_t >= p_min,
                        p_t <= p_max,
                        p_t[1:,:] - p_t[:-1,:] >= ramp_min,
                        p_t[1:,:] - p_t[:-1,:] <= ramp_max,
-                       cp.sum(real_p, axis=1) == (load.reshape(-1) + curt_t),
-                       curt_t_scaled <= renew / sum_pmax_renew,
-                       curt_t_scaled >= 0.,
-                       curt_t_scaled[0] == 0.
+                       cp.sum(real_p, axis=1) >= (net_load.reshape(-1) + curt_t),
+                       cp.sum(real_p, axis=1) <= 1.01 * (net_load.reshape(-1) + curt_t),
+                       curt_t <= renew,
+                       curt_t >= 0.,
+                       curt_t[0] == 0.
                        ]
         
-        cost = cp.sum_squares(p_t - target_vector) + cp.norm1(cp.multiply(p_t, turned_off_orig)) + cp.sum_squares(curt_t_scaled)  # TODO normalize last stuff
+        cost = cp.sum_squares(p_t - target_vector) + cp.norm1(cp.multiply(p_t, turned_off_orig)) + 10. * cp.sum_squares(curt_t_scaled)  # TODO normalize last stuff
         prob = cp.Problem(cp.Minimize(cost), constraints)
         try:
-            prob.solve()
+            res_opt = prob.solve()
         except cp.error.SolverError as exc_:
             t0_errors.append(t0)
             errors.append(RuntimeError(f"cvxpy failed to find a solution for t0 {t0}, error {exc_}"))
-            has_error[t0] = True
+            has_error[indx_forecasts] = True
             continue
         
-        load_p.iloc[:12].sum(axis=1)
-        load_f.iloc[indx_forecasts]
+        if not np.isfinite(res_opt):
+            t0_errors.append(t0)
+            errors.append(RuntimeError(f"cvxpy failed to find a solution for t0 {t0} and returned an infinite cost"))
+            has_error[indx_forecasts] = True
+            continue
+        
         # assign the generators
         gen_p_after_optim = real_p.value
         if gen_p_after_optim is None:
             t0_errors.append(t0)
             errors.append(f"cvxpy failed to find a solution for t0 {t0}, and returned None")
-            has_error[t0] = True
+            has_error[indx_forecasts] = True
             continue
-            
-        if not has_error[t0]:
-            res_gen_p[t0] = 1.0 * gen_p_after_optim[1,:]
+        
+        if not has_error[indx_forecasts[0]]:
+            res_gen_p[indx_forecasts] = 1.0 * gen_p_after_optim[1:,:]
             amount_curtailed_for[indx_forecasts] = curt_t.value[1:]
             
     # last value is not used anyway
     # res_gen_p[-1, :] = 1.0 * gen_p_after_optim[1,:]
-    has_error[-1] = True
+    has_error[-nb_h:] = True
         
     res_gen_p_forecasted_df_res = 1.0 * res_gen_p_forecasted_df
     # assign controlable generators
@@ -128,10 +132,15 @@ def fix_forecast_ramps(nb_h,
     total_renew = res_gen_p_forecasted_df_res.iloc[:, env_for_loss.gen_renewable].sum(axis=1)
     total_renew[total_renew <= 1.] = 1.  # normalize for value close to 0.
     ratio = (total_renew - amount_curtailed_for) / total_renew
-    res_gen_p_forecasted_df_res.iloc[:, env_for_loss.gen_redispatchable] *= np.stack([ratio for _ in 
-                                                                                      range(np.sum(env_for_loss.gen_redispatchable))],
-                                                                                     axis=1)
+    res_gen_p_forecasted_df_res.iloc[:, env_for_loss.gen_renewable] *= np.stack([ratio for _ in 
+                                                                                 range(np.sum(env_for_loss.gen_renewable))],
+                                                                                 axis=1)
     
+    # fix for tiny negative value that, with the magic of rounding
+    # can lead to -0.1 in the data
+    res_gen_p_forecasted_df_res[res_gen_p_forecasted_df_res < 0.] = 0.
+    
+    # make sure the forecasts are always above the demands, even the the opf failed
     return res_gen_p_forecasted_df_res, t0_errors, errors, amount_curtailed_for
 
 
@@ -284,7 +293,19 @@ def generate_forecasts_gen(new_forecasts,
         res_gen_p_forecasted_df = res_gen_p_forecasted_df.shift(-1)
         res_gen_p_forecasted_df.iloc[-1] = 1.0 * res_gen_p_forecasted_df.iloc[-2]
         nb_h = 1
-        
+    
+    # "fix" cases where forecasts are bellow the loads => in that case scale the
+    # controlable generation to be at least 1% above total demand
+    total_gen = res_gen_p_forecasted_df.sum(axis=1)
+    total_demand = load_p_forecasted.sum(axis=1)
+    mask_ko = total_gen <= total_demand
+    nb_concerned = (mask_ko).sum()
+    tmp = type(env_for_loss).gen_pmax[env_for_loss.gen_redispatchable]
+    tmp = tmp / tmp.sum()
+    rep_factor = np.tile(tmp.reshape(-1,1), nb_concerned).T
+    res_gen_p_forecasted_df.loc[mask_ko, type(env_for_loss).gen_redispatchable] *= (1.01 * total_demand - total_gen)[mask_ko].values.reshape(-1,1) * rep_factor
+    
+    # and fix the ramps (an optimizer, step by step)
     tmp_ = fix_forecast_ramps(nb_h,
                               load_p,
                               load_p_forecasted,
