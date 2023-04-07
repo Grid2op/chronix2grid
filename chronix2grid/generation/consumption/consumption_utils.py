@@ -7,8 +7,6 @@
 # This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
 
 import os
-import calendar
-from datetime import datetime
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
@@ -18,14 +16,19 @@ import chronix2grid.constants as cst
 
 def compute_loads(loads_charac, temperature_noise, params, load_weekly_pattern,
                   start_day, add_dim, day_lag=0,
-                  return_ref_curve=False):
+                  return_ref_curve=False,
+                  use_legacy=True):
     #6  # this is only TRUE if you simulate 2050 !!! formula does not really work
     
     # Compute active part of loads
     weekly_pattern = load_weekly_pattern['test'].values
-    datetime_lwp = pd.to_datetime(load_weekly_pattern["datetime"], format="%Y-%m-%d %H:%M:%S")
-    isoweekday = np.array([el.isoweekday() for el in datetime_lwp])
-    hour_minutes = np.array([el.hour * 60 + el.minute for el in datetime_lwp])
+    if use_legacy:
+        isoweekday = None
+        hour_minutes = None
+    else:
+        datetime_lwp = pd.to_datetime(load_weekly_pattern["datetime"], format="%Y-%m-%d %H:%M:%S")
+        isoweekday = np.array([el.isoweekday() for el in datetime_lwp])
+        hour_minutes = np.array([el.hour * 60 + el.minute for el in datetime_lwp])
     
     # start_day_of_week = start_day.weekday()
     # first_dow_chronics = datetime.strptime(load_weekly_pattern["datetime"].iloc[1], "%Y-%m-%d %H:%M:%S").weekday()
@@ -102,7 +105,7 @@ def compute_residential(locations, Pmax, temperature_noise, params,
         return residential_series, Pmax * weekly_pattern * seasonal_pattern
     return residential_series
 
-def compute_load_pattern(params, weekly_pattern, index, day_lag, isoweekday_lwp=None, hour_minutes_lwp=None):
+def compute_load_pattern(params, weekly_pattern, index, day_lag=None, isoweekday_lwp=None, hour_minutes_lwp=None):
     """
     Loads a typical hourly pattern, and interpolates it to generate
     a smooth solar generation pattern between 0 and 1
@@ -129,36 +132,44 @@ def compute_load_pattern(params, weekly_pattern, index, day_lag, isoweekday_lwp=
         first_index = (nb_step_lag_for_starting_day + index * index_weekly_perweek)
     else:
         # be smarter and take a week starting the same weekday at the same hour than the params["start_date"]
-        isoweekday_start = params["start_date"].isoweekday() - 1  # lag in the input data ?  # O => NO
+        isoweekday_start = params["start_date"].isoweekday()
         iso_hm_start = params["start_date"].hour * 60 + params["start_date"].minute
         possible_first_index = np.where((isoweekday_lwp == isoweekday_start) & (iso_hm_start == hour_minutes_lwp))[0]
         index_modulo = index % possible_first_index.shape[0]
         first_index = possible_first_index[index_modulo]
+        
     # now extract right week of data
     last_index = first_index + index_weekly_perweek
     weekly_pattern = weekly_pattern[first_index:last_index]
     weekly_pattern /= np.mean(weekly_pattern)
 
-    start_year = pd.to_datetime(str(params['start_date'].year) + '-01-01', format='%Y-%m-%d')
-    T_bis = int(pd.Timedelta(params['end_date'] - start_year).total_seconds() // (60))
+    # now generate an ouput of the right length
+    if isoweekday_lwp is None or hour_minutes_lwp is None:
+        # legacy usage... does not work at all I don't know why
+        start_year = pd.to_datetime(str(params['start_date'].year) + '-01-01', format='%Y-%m-%d')
+        T_bis = int(pd.Timedelta(params['end_date'] - start_year).total_seconds() // (60))
 
-    Nt_inter_hr = int(T_bis // 5 + 1)
-    N_repet = int((Nt_inter_hr - 1) // len(weekly_pattern) + 1)
-    stacked_weekly_pattern = weekly_pattern
-    for i in range(N_repet - 1):
-        stacked_weekly_pattern = np.append(stacked_weekly_pattern, weekly_pattern)
+        Nt_inter_hr = int(T_bis // 5 + 1)
+        N_repet = int((Nt_inter_hr - 1) // len(weekly_pattern) + 1)
+        stacked_weekly_pattern = np.tile(weekly_pattern, N_repet)
+        
+        # The time is in minutes
+        t_pattern = np.linspace(0, 60 * 7 * 24 * N_repet, 12 * 7 * 24 * N_repet, endpoint=False)
+        f2 = interp1d(t_pattern, stacked_weekly_pattern, kind='cubic')
 
-    # The time is in minutes
-    t_pattern = np.linspace(0, 60 * 7 * 24 * N_repet, 12 * 7 * 24 * N_repet, endpoint=False)
-    f2 = interp1d(t_pattern, stacked_weekly_pattern, kind='cubic')
-
-    Nt_inter = int(params['T'] // params['dt'] + 1)
-    start_year = pd.to_datetime(str(params['start_date'].year) + '-01-01', format='%Y-%m-%d')
-    start_min = int(pd.Timedelta(params['start_date'] - start_year).total_seconds() // 60)
-    end_min = int(pd.Timedelta(params['end_date'] - start_year).total_seconds() // 60)
-    t_inter = np.linspace(start_min, end_min, Nt_inter, endpoint=True)
-    output = f2(t_inter)
-    output = output * (output > 0)
+        Nt_inter = int(params['T'] // params['dt'] + 1)
+        start_year = pd.to_datetime(str(params['start_date'].year) + '-01-01', format='%Y-%m-%d')
+        start_min = int(pd.Timedelta(params['start_date'] - start_year).total_seconds() // 60)
+        end_min = int(pd.Timedelta(params['end_date'] - start_year).total_seconds() // 60)
+        t_inter = np.linspace(start_min, end_min, Nt_inter, endpoint=True)
+        output = f2(t_inter)
+        output = output * (output > 0)
+    else:
+        # new usage
+        nb_ts = int((params['end_date'] - params['start_date']).total_seconds() / 60 / params["dt"] + 1)  # +1 is because of the buggy stuff above...
+        N_repet = np.ceil(nb_ts / weekly_pattern.shape[0]).astype(int)
+        stacked_weekly_pattern = np.tile(weekly_pattern, N_repet)
+        output = stacked_weekly_pattern[:nb_ts]
 
     return output
 

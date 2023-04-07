@@ -38,13 +38,15 @@ def get_data_frames(load_p, load_p_for, loads_charac, datetime_index, nb_h):
     return load_p_df, load_p_for_df
     
     
-def get_load_ref(loads_charac, load_params, load_weekly_pattern, day_lag):
+def get_load_ref(loads_charac, load_params, load_weekly_pattern, isoweekday_lwp=None, hour_minutes_lwp=None):
     weekly_pattern = load_weekly_pattern['test'].values
     pmax_weekly_pattern = []
     for index, name in enumerate(loads_charac['name']):
         mask = (loads_charac['name'] == name)
         Pmax = loads_charac[mask]['Pmax'].values[0]
-        tmp_ = Pmax * compute_load_pattern(load_params, weekly_pattern, index, day_lag)
+        tmp_ = Pmax * compute_load_pattern(load_params, weekly_pattern, index,
+                                           isoweekday_lwp=isoweekday_lwp,
+                                           hour_minutes_lwp=hour_minutes_lwp)
         pmax_weekly_pattern.append(tmp_.reshape(1, -1))
     load_ref = np.concatenate(pmax_weekly_pattern)
     return load_ref
@@ -69,7 +71,11 @@ def generate_new_loads(load_seed,
     std_temperature_noise = float(load_params['std_temperature_noise'])
     
     # retrieve the reference curve "bar"
-    load_ref = get_load_ref(loads_charac, load_params, load_weekly_pattern, day_lag)
+    datetime_lwp = pd.to_datetime(load_weekly_pattern["datetime"], format="%Y-%m-%d %H:%M:%S")
+    isoweekday = np.array([el.isoweekday() for el in datetime_lwp])
+    hour_minutes = np.array([el.hour * 60 + el.minute for el in datetime_lwp])
+    load_ref = get_load_ref(loads_charac, load_params, load_weekly_pattern,
+                            isoweekday_lwp=isoweekday, hour_minutes_lwp=hour_minutes)
     # (nb_load, nb_t)
     
     # Compute seasonal pattern
@@ -192,7 +198,8 @@ def generate_loads(path_env,
                                                      day_lag=day_lag)
         
         load_p, load_p_forecasted, load_ref_curve = load_generator.run(load_weekly_pattern=load_weekly_pattern,
-                                                                       return_ref_curve=True)
+                                                                       return_ref_curve=True,
+                                                                       use_legacy=False)
     
     load_q = load_p * load_q_from_p_coeff
     load_q_forecasted = load_p_forecasted * load_q_from_p_coeff
