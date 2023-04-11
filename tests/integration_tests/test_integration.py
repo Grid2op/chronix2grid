@@ -164,7 +164,7 @@ class TestIntegration(unittest.TestCase):
         path_ref = self.expected_folder_noloss
         files_to_check=['load_p']
         bool = self.check_frames_equal(path_out, path_ref, files_to_check)
-        self.assertTrue(bool)
+        self.assertTrue(bool, f"error for {files_to_check}")
 
     def test_integration_r(self):
         self.modify_gen_prices(self.mu, self.sigma, self.seed_price_noise_noloss, self.gen_types, self.case_noloss)
@@ -186,7 +186,7 @@ class TestIntegration(unittest.TestCase):
         path_ref = self.expected_folder_noloss
         files_to_check=['solar_p','wind_p']
         bool = self.check_frames_equal(path_out, path_ref, files_to_check)
-        self.assertTrue(bool)
+        self.assertTrue(bool, f"error for {files_to_check}")
 
     def test_integration_lrt_nolosscorrection(self):
         self.modify_gen_prices(self.mu, self.sigma, self.seed_price_noise_noloss, self.gen_types, self.case_noloss)
@@ -207,7 +207,7 @@ class TestIntegration(unittest.TestCase):
         path_out = os.path.join(self.generation_output_folder_noloss, "Scenario_0")
         path_ref = self.expected_folder_noloss
         bool = self.check_frames_equal(path_out, path_ref, self.files_tocheck)
-        self.assertTrue(bool)
+        self.assertTrue(bool, f"error for {self.files_tocheck}")
 
     def test_integration_lrt_withlosscorrection(self):
         self.modify_gen_prices(self.mu, self.sigma, self.seed_price_noise_loss, self.gen_types, self.case_loss)
@@ -232,7 +232,7 @@ class TestIntegration(unittest.TestCase):
             ###
             bool = self.check_frames_equal(path_out, path_ref, self.files_tocheck)
             # Check that we obtain the right result dataframe
-            self.assertTrue(bool)
+            self.assertTrue(bool, f"error for {self.files_tocheck}")
             # Check that we have raised a UserWarning for ramp up (one among all warnings that have been raised)
             boolvec_types = [issubclass(w_.category, UserWarning) for w_ in w]
             self.assertTrue(np.any(boolvec_types))
@@ -263,7 +263,7 @@ class TestIntegration(unittest.TestCase):
             ###
             bool = self.check_frames_equal(path_out, path_ref, self.files_tocheck)
             # Check that we obtain the right result dataframe
-            self.assertTrue(bool)
+            self.assertTrue(bool, f"error for {self.files_tocheck}")
             # Check that we have raised a UserWarning for ramp up (one among all warnings that have been raised)
             #boolvec_types = [issubclass(w_.category, UserWarning) for w_ in w]
             #self.assertTrue(np.any(boolvec_types))
