@@ -27,6 +27,7 @@ def add_data(env: grid2op.Environment.Environment,
              save_ref_curve=False,
              day_lag=6,  # TODO 6 because it's 2050
              debug=False,
+             tol_zero=1e-3
              ):
     """This function adds some data to already existing scenarios.
     
@@ -104,12 +105,15 @@ def add_data(env: grid2op.Environment.Environment,
                           files_to_copy,
                           save_ref_curve,
                           day_lag,
+                          tol_zero,
                           debug
                           ))
     if nb_core == 1:
         for args in argss:
-            path_env, name_gen, gen_type, output_dir, start_date, dt, scen_id, load_seed, renew_seed, \
-                gen_p_forecast_seed, handle_loss, files_to_copy, save_ref_curve, day_lag, debug = args
+            (path_env, name_gen, gen_type, output_dir,
+             start_date, dt, scen_id, load_seed, renew_seed,
+             gen_p_forecast_seed, handle_loss, files_to_copy,
+             save_ref_curve, day_lag, tol_zero, debug) = args
             res_gen = generate_a_scenario(path_env,
                                           name_gen, gen_type,
                                           output_dir,
@@ -121,6 +125,7 @@ def add_data(env: grid2op.Environment.Environment,
                                           files_to_copy=files_to_copy,
                                           save_ref_curve=save_ref_curve,
                                           day_lag=day_lag,
+                                          tol_zero=tol_zero,
                                           debug=debug)
             error_, *_ = res_gen
             if error_ is not None:

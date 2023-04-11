@@ -81,7 +81,8 @@ def get_last_scenario_id(env_chronics_dir):
     return max_
 
 def generate_renewable_energy_sources(path_env, renew_seed, start_date_dt, end_date_dt,
-                                      dt, number_of_minutes, generic_params, gens_charac):
+                                      dt, number_of_minutes, generic_params, gens_charac,
+                                      tol_zero=1e-3):
     """This function generates the amount of power produced by renewable energy sources (res). 
     
     It serves as a maximum value for the economic dispatch. 
@@ -125,7 +126,8 @@ def generate_renewable_energy_sources(path_env, renew_seed, start_date_dt, end_d
                                      res_config_manager=None,
                                      write_results=False)
     tmp_ = renew_backend.run(solar_pattern=solar_pattern,
-                             return_ref_curve=True)
+                             return_ref_curve=True,
+                             tol_zero=tol_zero)
     prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted, solar_ref, wind_ref = tmp_
     return prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted, solar_ref, wind_ref
 
@@ -930,6 +932,7 @@ def generate_a_scenario(path_env,
                         files_to_copy=("maintenance_meta.json",),
                         save_ref_curve=False,
                         day_lag=6, # TODO 6 because it's 2050
+                        tol_zero=1e-3,
                         debug=True  # TODO more feature !
                         ):
     """This function generates and save the data for a scenario.
@@ -1008,7 +1011,8 @@ def generate_a_scenario(path_env,
                                                   dt,
                                                   number_of_minutes,
                                                   generic_params,
-                                                  gens_charac)
+                                                  gens_charac,
+                                                  tol_zero=tol_zero)
     prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted, solar_ref, wind_ref = res_renew
 
     if prod_solar.isna().any().any():
