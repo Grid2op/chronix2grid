@@ -6,7 +6,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
 import os
-import numpy as np
 import json
 from multiprocessing import Pool
 
@@ -14,7 +13,28 @@ import grid2op
 from chronix2grid.grid2op_utils.utils import generate_a_scenario, get_last_scenario_id
 from numpy.random import default_rng
 
-import pdb
+
+# wrapper function for generate_a_scenario
+def generate_a_scenario_wrapper(args):
+    (path_env, name_gen, gen_type, output_dir,
+        start_date, dt, scen_id, load_seed, renew_seed,
+        gen_p_forecast_seed, handle_loss, files_to_copy,
+        save_ref_curve, day_lag, tol_zero, debug) = args
+    res_gen = generate_a_scenario(path_env,
+                                name_gen, gen_type,
+                                output_dir,
+                                start_date, dt,
+                                scen_id,
+                                load_seed, renew_seed, 
+                                gen_p_forecast_seed,
+                                handle_loss,
+                                files_to_copy=files_to_copy,
+                                save_ref_curve=save_ref_curve,
+                                day_lag=day_lag,
+                                tol_zero=tol_zero,
+                                debug=debug)
+    return res_gen
+
 
 def add_data(env: grid2op.Environment.Environment,
              seed=None,
@@ -110,23 +130,7 @@ def add_data(env: grid2op.Environment.Environment,
                           ))
     if nb_core == 1:
         for args in argss:
-            (path_env, name_gen, gen_type, output_dir,
-             start_date, dt, scen_id, load_seed, renew_seed,
-             gen_p_forecast_seed, handle_loss, files_to_copy,
-             save_ref_curve, day_lag, tol_zero, debug) = args
-            res_gen = generate_a_scenario(path_env,
-                                          name_gen, gen_type,
-                                          output_dir,
-                                          start_date, dt,
-                                          scen_id,
-                                          load_seed, renew_seed, 
-                                          gen_p_forecast_seed,
-                                          handle_loss,
-                                          files_to_copy=files_to_copy,
-                                          save_ref_curve=save_ref_curve,
-                                          day_lag=day_lag,
-                                          tol_zero=tol_zero,
-                                          debug=debug)
+            res_gen = generate_a_scenario_wrapper(args)
             error_, *_ = res_gen
             if error_ is not None:
                 print("=============================")
@@ -148,4 +152,4 @@ def add_data(env: grid2op.Environment.Environment,
                     json.dump(errors, fp=f)
     else:
         with Pool(nb_core) as p:
-            p.starmap(generate_a_scenario, argss)
+            p.map(generate_a_scenario_wrapper, argss)
