@@ -17,13 +17,49 @@ from chronix2grid.grid2op_utils.noise_generation_utils import (get_forecast,
                                                                generate_noise)
 
 
+def fix_nan_hydro_i_dont_know_why(arr):
+    # economic_dispatch.make_hydro_constraints_from_res_load_scenario() sometimes return all nans for a given row...
+    # don't ask me why
+    if np.all(np.isfinite(arr)):
+        # nothing to do, data are correct
+        return 1.0 * arr
+    if np.all(~np.isfinite(arr)):
+        # cannot do anything: nothing is finite
+        return arr
+    if np.any(np.isfinite(arr).sum(axis=0) == arr.shape[0]):
+        # there is at least a column full of Nan I cannot do anything either
+        return np.NaN * arr
+    # to fix the nan values, I assign the last known finite value per column
+    res = 1.0 * arr
+    for col_id in range(arr.shape[1]):
+        finite_ind = np.where(np.isfinite(res[:,col_id]))[0]
+        infinite_ind = np.where(~np.isfinite(res[:,col_id]))[0]
+        idx = np.searchsorted(finite_ind, infinite_ind)
+        idx[idx == finite_ind.shape[0]] = finite_ind.shape[0] - 1
+        res[infinite_ind, col_id] = 1.0 * arr[finite_ind[idx], col_id]
+    return res
+
+
+def get_gen_ids_hydro(env):
+    gen_id = 0
+    ids_hyrdo = []
+    for i in range(env.n_gen):
+        if env.gen_redispatchable[i]:
+            if env.gen_type[i] == "hydro":
+                ids_hyrdo.append(gen_id)
+            gen_id += 1
+    ids_hyrdo = np.array(ids_hyrdo)
+    return ids_hyrdo
+    
+
 def fix_forecast_ramps(nb_h,
                        load_p,
                        load_p_forecasted,
                        res_gen_p_df,
                        res_gen_p_forecasted_df,
                        env_for_loss,
-                       hydro_constraints):
+                       hydro_constraints,
+                       params):
     
     #### cvxpy
     total_step = 1 # for now
@@ -31,26 +67,32 @@ def fix_forecast_ramps(nb_h,
     load_f = load_p_forecasted.sum(axis=1)
     scaling_factor = env_for_loss.gen_pmax[env_for_loss.gen_redispatchable]
     scale_for_loads =  np.repeat(scaling_factor.reshape(1,-1), total_step, axis=0)
+    ids_hyrdo = get_gen_ids_hydro(env_for_loss)
     
     p_min = np.repeat(env_for_loss.gen_pmin[env_for_loss.gen_redispatchable].reshape(1,-1)  / scaling_factor,
                       total_step + nb_h,
                       axis=0)
-    p_max = np.repeat(env_for_loss.gen_pmax[env_for_loss.gen_redispatchable].reshape(1,-1) / scaling_factor,
+    p_max = np.repeat(env_for_loss.gen_pmax[env_for_loss.gen_redispatchable].reshape(1,-1) * params["PmaxErrorCorrRatio"] / scaling_factor,
                       total_step + nb_h,
                       axis=0)
     
-    ramp_min = np.repeat(-env_for_loss.gen_max_ramp_down[env_for_loss.gen_redispatchable].reshape(1,-1) / scaling_factor,
+    ramp_min = np.repeat(-env_for_loss.gen_max_ramp_down[env_for_loss.gen_redispatchable].reshape(1,-1) * params["RampErrorCorrRatio"] / scaling_factor,
                          total_step + (nb_h-1),
                          axis=0)
-    ramp_max = np.repeat(env_for_loss.gen_max_ramp_up[env_for_loss.gen_redispatchable].reshape(1,-1) / scaling_factor,
+    ramp_max = np.repeat(env_for_loss.gen_max_ramp_up[env_for_loss.gen_redispatchable].reshape(1,-1) * params["RampErrorCorrRatio"] / scaling_factor,
                          total_step + (nb_h-1),
                          axis=0)
     
+    if "hydro_ramp_reduction_factor" in params:
+        ramp_max[:, ids_hyrdo] /= float(params["hydro_ramp_reduction_factor"])
+        ramp_min[:, ids_hyrdo] /= float(params["hydro_ramp_reduction_factor"])
+        
     res_gen_p = np.zeros((res_gen_p_forecasted_df.shape[0], total_gen))
     amount_curtailed_for = np.zeros((res_gen_p_forecasted_df.shape[0], ))
     has_error = np.zeros(res_gen_p_forecasted_df.shape[0], dtype=bool)
     t0_errors = []
     errors = []
+    indx_forecasts_for_hydro_only = np.arange(0, nb_h + 1)
     for t0 in range(res_gen_p_df.shape[0] - 1):
         # forecast are "consistent from a power system point of view" batch by batch
         # losses are not handled here !
@@ -78,11 +120,17 @@ def fix_forecast_ramps(nb_h,
                                               res_gen_p_forecasted_df.iloc[indx_forecasts, env_for_loss.gen_redispatchable].values),
                                               axis=0).reshape(1+nb_h, total_gen)
         
+        p_max_here = 1.0 * p_max
+        if hydro_constraints is not None:
+            p_max_here[:, ids_hyrdo] = fix_nan_hydro_i_dont_know_why(hydro_constraints["p_max_pu"].values[indx_forecasts_for_hydro_only, :])
+            indx_forecasts_for_hydro_only += 1
+            indx_forecasts_for_hydro_only[indx_forecasts_for_hydro_only > (res_gen_p_df.shape[0] - 1)] = res_gen_p_df.shape[0] - 1
+        
         turned_off_orig = 1.0 * (target_vector == 0.)
         target_vector /= scale_for_loads
         constraints = [real_p[0,:] == res_gen_p_df.iloc[t0, env_for_loss.gen_redispatchable].values,
                        p_t >= p_min,
-                       p_t <= p_max,
+                       p_t <= p_max_here,
                        p_t[1:,:] - p_t[:-1,:] >= ramp_min,
                        p_t[1:,:] - p_t[:-1,:] <= ramp_max,
                        cp.sum(real_p, axis=1) >= (net_load.reshape(-1) + curt_t),
@@ -277,7 +325,8 @@ def generate_forecasts_gen(new_forecasts,
                            load_params,
                            loads_charac,
                            gens_charac,
-                           path_env):
+                           path_env,
+                           opf_params):
     if new_forecasts:
         res_gen_p_forecasted_df, nb_h = generate_new_gen_forecasts(prng,
                                                                    forecasts_params,
@@ -312,6 +361,7 @@ def generate_forecasts_gen(new_forecasts,
                               res_gen_p_df,
                               res_gen_p_forecasted_df,
                               env_for_loss,
-                              hydro_constraints)
+                              hydro_constraints,
+                              opf_params)
     res_gen_p_forecasted_df_res, t0_errors, errors, amount_curtailed_for = tmp_
     return res_gen_p_forecasted_df_res, amount_curtailed_for, t0_errors, errors

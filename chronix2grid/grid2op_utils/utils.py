@@ -31,7 +31,9 @@ from chronix2grid.generation.dispatch.PypsaDispatchBackend import PypsaDispatche
 from chronix2grid.getting_started.example.input.generation.patterns import ref_pattern_path
 from chronix2grid.generation.dispatch.EconomicDispatch import ChroniXScenario
 from chronix2grid.grid2op_utils.loads_utils import generate_loads
-from chronix2grid.grid2op_utils.gen_utils import generate_forecasts_gen
+from chronix2grid.grid2op_utils.gen_utils import (generate_forecasts_gen,
+                                                  fix_nan_hydro_i_dont_know_why,
+                                                  get_gen_ids_hydro)
 
 import warnings
 
@@ -133,7 +135,9 @@ def generate_renewable_energy_sources(path_env, renew_seed, start_date_dt, end_d
 
 
 def generate_economic_dispatch(path_env, start_date_dt, end_date_dt, dt, number_of_minutes, generic_params, 
-                               load_p, prod_solar, prod_wind, name_gen, gen_type, scenario_id, final_gen_p, gens_charac):
+                               load_p, prod_solar, prod_wind, name_gen, gen_type, scenario_id, final_gen_p,
+                               gens_charac,
+                               opf_params):
     """This function emulates a perfect market where all productions need to meet the demand at the minimal cost.
     
     It does not consider limit on powerline, nor contigencies etc. The power network does not exist here. Only the ramps and
@@ -173,13 +177,6 @@ def generate_economic_dispatch(path_env, start_date_dt, end_date_dt, dt, number_
     _type_
         _description_
     """
-    with open(os.path.join(path_env, "params_opf.json"), "r") as f:
-        opf_params = json.load(f)
-    opf_params["start_date"] = start_date_dt
-    opf_params["end_date"] = end_date_dt
-    opf_params["dt"] = int(dt)
-    opf_params["T"] = number_of_minutes
-    opf_params["planned_std"] = float(generic_params["planned_std"])
     
     load = pd.DataFrame(load_p.sum(axis=1))
     total_solar = prod_solar.sum(axis=1)
@@ -234,28 +231,7 @@ def generate_economic_dispatch(path_env, start_date_dt, end_date_dt, dt, number_
     total_wind_curt = total_wind.values.sum() - res_dispatch.chronix.prods_dispatch['agg_wind'].values.sum()
     total_solar_curt = total_solar.values[mask_solar].sum() - res_dispatch.chronix.prods_dispatch['agg_solar'].values[mask_solar].sum()
     return final_gen_p, total_wind_curt, total_solar_curt, hydro_constraints, None
-
-def fix_nan_hydro_i_dont_know_why(arr):
-    # economic_dispatch.make_hydro_constraints_from_res_load_scenario() sometimes return all nans for a given row...
-    # don't ask me why
-    if np.all(np.isfinite(arr)):
-        # nothing to do, data are correct
-        return 1.0 * arr
-    if np.all(~np.isfinite(arr)):
-        # cannot do anything: nothing is finite
-        return arr
-    if np.any(np.isfinite(arr).sum(axis=0) == arr.shape[0]):
-        # there is at least a column full of Nan I cannot do anything either
-        return np.NaN * arr
-    # to fix the nan values, I assign the last known finite value per column
-    res = 1.0 * arr
-    for col_id in range(arr.shape[1]):
-        finite_ind = np.where(np.isfinite(res[:,col_id]))[0]
-        infinite_ind = np.where(~np.isfinite(res[:,col_id]))[0]
-        idx = np.searchsorted(finite_ind, infinite_ind)
-        idx[idx == finite_ind.shape[0]] = finite_ind.shape[0] - 1
-        res[infinite_ind, col_id] = 1.0 * arr[finite_ind[idx], col_id]
-    return res
+    
     
 def _adjust_gens(all_loss_orig,
                  env_for_loss,
@@ -276,6 +252,7 @@ def _adjust_gens(all_loss_orig,
                  max_iter=100,  # declare a failure after this number of iteration
                  iter_quality_decrease=50,  # acept a reduction of the quality after this number of iteration
                  percentile_quality_decrease=99,
+                 hydro_constraints=None,
                  ):
     """This function is an auxilliary function.
     
@@ -331,37 +308,38 @@ def _adjust_gens(all_loss_orig,
     all_loss = all_loss_orig
     res_gen_p = 1.0 * gen_p
     iter_num = 0
-    hydro_constraints = economic_dispatch.make_hydro_constraints_from_res_load_scenario()
+    # hydro_constraints = economic_dispatch.make_hydro_constraints_from_res_load_scenario()
     
     # defined some global variable (used for all optimization problems)
     turned_off_orig = 1.0 * (gen_p[:, env_for_loss.gen_redispatchable] == 0.)
-    ids_hyrdo = []
     total_gen = np.sum(env_for_loss.gen_redispatchable)
     total_step = total_solar.shape[0]
     gen_id = 0
-    for i in range(env_for_loss.n_gen):
-        if env_for_loss.gen_redispatchable[i]:
-            if env_for_loss.gen_type[i] == "hydro":
-                ids_hyrdo.append(gen_id)
-            gen_id += 1
-    ids_hyrdo = np.array(ids_hyrdo)
+    ids_hyrdo = get_gen_ids_hydro(env_for_loss)
     
     # define the constraints    
     scaling_factor = env_for_loss.gen_pmax[env_for_loss.gen_redispatchable]
     p_min = np.repeat(env_for_loss.gen_pmin[env_for_loss.gen_redispatchable].reshape(1,-1)  / scaling_factor,
-                        total_step,
-                        axis=0)
+                      total_step,
+                      axis=0)
     p_max = np.repeat(env_for_loss.gen_pmax[env_for_loss.gen_redispatchable].reshape(1,-1) * params["PmaxErrorCorrRatio"] / scaling_factor,
-                        total_step,
-                        axis=0)
+                      total_step,
+                      axis=0)
     
-    ramp_min = np.repeat(-env_for_loss.gen_max_ramp_down[env_for_loss.gen_redispatchable].reshape(1,-1) * params["RampErrorCorrRatio"]  / scaling_factor,
-                            total_step - 1,
-                            axis=0)
-    ramp_max = np.repeat(env_for_loss.gen_max_ramp_up[env_for_loss.gen_redispatchable].reshape(1,-1) * params["RampErrorCorrRatio"]  / scaling_factor,
-                            total_step - 1,
-                            axis=0)
-    p_max[:, ids_hyrdo] = fix_nan_hydro_i_dont_know_why(hydro_constraints["p_max_pu"].values)
+    ramp_min = np.repeat(-env_for_loss.gen_max_ramp_down[env_for_loss.gen_redispatchable].reshape(1,-1) * params["RampErrorCorrRatio"] / scaling_factor,
+                         total_step - 1,
+                         axis=0)
+    ramp_max = np.repeat(env_for_loss.gen_max_ramp_up[env_for_loss.gen_redispatchable].reshape(1,-1) * params["RampErrorCorrRatio"] / scaling_factor,
+                         total_step - 1,
+                         axis=0)
+    
+    if hydro_constraints is not None:
+        p_max[:, ids_hyrdo] = fix_nan_hydro_i_dont_know_why(hydro_constraints["p_max_pu"].values)
+    
+    if "hydro_ramp_reduction_factor" in params:
+        ramp_max[:, ids_hyrdo] /= float(params["hydro_ramp_reduction_factor"])
+        ramp_min[:, ids_hyrdo] /= float(params["hydro_ramp_reduction_factor"])
+        
     
     for el, el_nm in zip([p_min, p_max, ramp_min, ramp_max],
                          ["p_min", "p_max", "ramp_min", "ramp_max"]):
@@ -506,6 +484,7 @@ def _fix_losses_one_scenario(env_for_loss,
                             max_iter=100,  # maximum number of iteration
                             iter_quality_decrease=20,  # after 20 iteration accept a degradation in the quality
                             percentile_quality_decrease=99,  # replace the "at maximum" by "percentile 99%"
+                            hydro_constraints=None,
                             ):
     """This function is an auxilliary function.
     
@@ -616,7 +595,8 @@ def _fix_losses_one_scenario(env_for_loss,
                                                threshold_stop=threshold_stop,
                                                max_iter=max_iter,
                                                iter_quality_decrease=iter_quality_decrease,
-                                               percentile_quality_decrease=percentile_quality_decrease)
+                                               percentile_quality_decrease=percentile_quality_decrease,
+                                               hydro_constraints=hydro_constraints)
     
     if error_ is not None:
         # the procedure failed
@@ -662,6 +642,7 @@ def handle_losses(path_env,
                   max_iter=100,
                   iter_quality_decrease=20,  # after 20 iteration accept a degradation in the quality
                   percentile_quality_decrease=99,  # replace the "at maximum" by "percentile 99%"
+                  hydro_constraints=None,
                   ):
     """This function is here to make sure that if you run an AC model with the data generated, then the generator setpoints will not change too much 
     (less than `threshold_stop` MW)
@@ -732,7 +713,8 @@ def handle_losses(path_env,
                                                            # after 20 iteration accept a degradation in the quality
                                                            iter_quality_decrease=iter_quality_decrease,  
                                                            # replace the "at maximum" by "percentile 99%"
-                                                           percentile_quality_decrease=percentile_quality_decrease,  
+                                                           percentile_quality_decrease=percentile_quality_decrease,
+                                                           hydro_constraints=hydro_constraints,  
                                                            )
     if error_ is not None:
         return None, error_, None, env_for_loss
@@ -1031,9 +1013,19 @@ def generate_a_scenario(path_env,
         final_gen_p[str(el)] = np.NaN
     final_gen_p = final_gen_p[name_gen]
     
+    with open(os.path.join(path_env, "params_opf.json"), "r") as f:
+        opf_params = json.load(f)
+    opf_params["start_date"] = start_date_dt
+    opf_params["end_date"] = end_date_dt
+    opf_params["dt"] = int(dt)
+    opf_params["T"] = number_of_minutes
+    opf_params["planned_std"] = float(generic_params["planned_std"])
+    
     # generate economic dispatch
-    res_disp = generate_economic_dispatch(path_env, start_date_dt, end_date_dt, dt, number_of_minutes, generic_params,
-                                          load_p, prod_solar, prod_wind, name_gen, gen_type, scenario_id, final_gen_p, gens_charac)
+    res_disp = generate_economic_dispatch(path_env, start_date_dt, end_date_dt, dt, number_of_minutes,
+                                          generic_params,
+                                          load_p, prod_solar, prod_wind, name_gen, gen_type, scenario_id,
+                                          final_gen_p, gens_charac, opf_params)
     gen_p_after_dispatch, total_wind_curt_opf, total_solar_curt_opf, hydro_constraints, error_ = res_disp
     
     if error_ is not None:
@@ -1056,7 +1048,8 @@ def generate_a_scenario(path_env,
                                                                      PmaxErrorCorrRatio=PmaxErrorCorrRatio,
                                                                      RampErrorCorrRatio=RampErrorCorrRatio,
                                                                      threshold_stop=threshold_stop,
-                                                                     max_iter=max_iter)
+                                                                     max_iter=max_iter,
+                                                                     hydro_constraints=hydro_constraints)
         if error_ is not None:
             # TODO log that !
             return error_, None, None, None, None, None, None, None
@@ -1087,7 +1080,8 @@ def generate_a_scenario(path_env,
                                   load_params,
                                   loads_charac,
                                   gens_charac,
-                                  path_env
+                                  path_env,
+                                  opf_params,
                                   )
     res_gen_p_forecasted_df_res, amount_curtailed_for, t0_errors, errors = tmp_
     end_forca = time.perf_counter()
