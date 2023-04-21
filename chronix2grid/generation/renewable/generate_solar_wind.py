@@ -37,7 +37,7 @@ def get_add_dim(params, prods_charac):
 
 
 def main(scenario_destination_path, seed, params, prods_charac, solar_pattern,
-         write_results=True, return_ref_curve=False,
+         write_results=True, return_ref_curve=False, return_prng=False,
          tol_zero=0.):
     """
     This is the solar and wind production generation function, it allows you to generate consumption chronics based on
@@ -227,7 +227,13 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern,
             index=False,
             float_format=cst.FLOATING_POINT_PRECISION_FORMAT
         )
-    if not return_ref_curve:
-        return prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted
-    return prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted, solar_ref, wind_ref
+    if not return_ref_curve and not return_prng:
+        res = prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted
+    elif not return_ref_curve and return_prng:
+        res = prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted, prng
+    elif return_ref_curve and not return_prng:
+        res = prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted, solar_ref, wind_ref
+    elif return_ref_curve and return_prng:
+        res = prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted, solar_ref, wind_ref, prng
+    return res
     

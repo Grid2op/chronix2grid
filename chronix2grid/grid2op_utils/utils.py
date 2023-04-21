@@ -33,7 +33,8 @@ from chronix2grid.generation.dispatch.EconomicDispatch import ChroniXScenario
 from chronix2grid.grid2op_utils.loads_utils import generate_loads
 from chronix2grid.grid2op_utils.gen_utils import (generate_forecasts_gen,
                                                   fix_nan_hydro_i_dont_know_why,
-                                                  get_gen_ids_hydro)
+                                                  get_gen_ids_hydro,
+                                                  apply_maintenance_wind_farm)
 
 import warnings
 
@@ -129,9 +130,10 @@ def generate_renewable_energy_sources(path_env, renew_seed, start_date_dt, end_d
                                      write_results=False)
     tmp_ = renew_backend.run(solar_pattern=solar_pattern,
                              return_ref_curve=True,
+                             return_prng=True,
                              tol_zero=tol_zero)
-    prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted, solar_ref, wind_ref = tmp_
-    return prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted, solar_ref, wind_ref
+    prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted, solar_ref, wind_ref, renew_prng = tmp_
+    return prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted, solar_ref, wind_ref, renew_prng
 
 
 def generate_economic_dispatch(path_env, start_date_dt, end_date_dt, dt, number_of_minutes, generic_params, 
@@ -995,8 +997,17 @@ def generate_a_scenario(path_env,
                                                   generic_params,
                                                   gens_charac,
                                                   tol_zero=tol_zero)
-    prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted, solar_ref, wind_ref = res_renew
+    prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted, solar_ref, wind_ref, renew_prng = res_renew
 
+    path_extra_wind = os.path.join(path_env, "wind_extra_params.json")
+    if os.path.exists(path_extra_wind) and os.path.isfile(path_extra_wind):
+        with open(path_extra_wind, "r", encoding="utf-8") as f:
+            extra_winds_params = json.load(f)
+        prod_wind_init = prod_wind
+        prod_wind = apply_maintenance_wind_farm(extra_winds_params, prod_wind_init,
+                                                start_date_dt, end_date_dt, dt,
+                                                renew_prng)
+        
     if prod_solar.isna().any().any():
         error_ = RuntimeError("Nan generated in solar data")
         return error_, None, None, None, None, None, None, None

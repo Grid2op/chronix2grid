@@ -365,3 +365,44 @@ def generate_forecasts_gen(new_forecasts,
                               opf_params)
     res_gen_p_forecasted_df_res, t0_errors, errors, amount_curtailed_for = tmp_
     return res_gen_p_forecasted_df_res, amount_curtailed_for, t0_errors, errors
+
+
+def apply_maintenance_wind_farm(extra_winds_params, prod_wind_init,
+                                start_date_dt, end_date_dt, dt_min,
+                                renew_prng):
+    res = 1.0 * prod_wind_init
+    # perfom some checks to be sure
+    assert "proba_daily_outage_per_wind_mill" in extra_winds_params  # proba for the time
+    assert "nb_wind_turbine" in extra_winds_params
+    assert "p_geom_failure" in extra_winds_params # proba for the number
+    assert len(extra_winds_params["nb_wind_turbine"]) == prod_wind_init.shape[1]
+    for el in res.columns:
+        assert el in extra_winds_params["nb_wind_turbine"], f"error {el} is not in extra_winds_params.json `nb_wind_turbine`"
+    nb_windturb_per_mill = [extra_winds_params["nb_wind_turbine"][el] for el in res.columns]
+    proba_wind_turb_fails = float(extra_winds_params["p_geom_failure"])
+    
+    # now simulate the "failure" process
+    proba_failure_per_time = float(extra_winds_params["proba_daily_outage_per_wind_mill"]) / (60. * 24. / float(dt_min))
+    do_fail = renew_prng.uniform(size=res.shape)
+    do_fail = do_fail <= proba_failure_per_time  # whether or not an external event caused a failure
+    nb_failure = do_fail.sum(axis=0)  # number of failure in the scenario
+    mult_factor = np.ones(res.shape)
+    for wind_turb_id in range(res.shape[1]):
+        nb_turb_in_service = np.full(shape=res.shape[0], fill_value=nb_windturb_per_mill[wind_turb_id])
+        time_start_failure = np.where(do_fail[:,wind_turb_id])[0]
+        
+        # simulate intensity and duration of failures
+        fail_id = 0
+        while fail_id < nb_failure[wind_turb_id]:
+            ts_start = time_start_failure[fail_id]
+            # intensity of the external event : number of wind_mill affected
+            do_turbine_fail = renew_prng.uniform(size=nb_turb_in_service[ts_start]) <=  proba_wind_turb_fails
+            # duration of the outage
+            duration = int(60 * 24 / float(dt_min))  # fixed at 1 day for now  # TODO !
+            # and now update everything
+            duration_ids = np.arange(duration) + ts_start
+            duration_ids = duration_ids[duration_ids < res.shape[0]]
+            nb_turb_in_service[duration_ids] -= do_turbine_fail.sum()
+            fail_id += 1
+        mult_factor[:, wind_turb_id] = nb_turb_in_service / nb_windturb_per_mill[wind_turb_id]
+    return res * mult_factor
