@@ -624,7 +624,12 @@ def make_env_for_loss(path_env, env_param, load_p, load_q, final_gen_p,
                                     "prod_v": gen_v,  # np.concatenate([gen_v[0].reshape(1,-1), gen_v])}
                                     "start_datetime": start_date_dt,
                                     "time_interval": dt_dt,
-            }
+            },
+            opponent_budget_per_ts=0.,
+            opponent_init_budget=0.,
+            opponent_class=BaseOpponent,
+            opponent_budget_class=NeverAttackBudget,
+            opponent_action_class=DontAct,
             )
     return env_for_loss
 
