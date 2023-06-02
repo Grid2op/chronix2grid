@@ -19,7 +19,22 @@ from . import consumption_utils as conso
 from .. import generation_utils as utils
 
 
-def main(scenario_destination_path, seed, params, loads_charac, load_weekly_pattern, write_results = True, day_lag=0):
+def get_add_dim(params, loads_charac):
+    add_dim = 0
+    dx_corr = int(params['dx_corr'])
+    dy_corr = int(params['dy_corr'])
+    for x,y  in zip(loads_charac["x"], loads_charac["y"]):
+        x_plus = int(x // dx_corr + 1)
+        y_plus = int(y // dy_corr + 1)
+        add_dim = max(y_plus, add_dim)
+        add_dim = max(x_plus, add_dim)
+    return add_dim
+
+
+def main(scenario_destination_path, seed, params, loads_charac,
+         load_weekly_pattern, write_results = True, day_lag=0,
+         return_ref_curve=False,
+         use_legacy=True):
     """
     This is the load generation function, it allows you to generate consumption chronics based on demand nodes characteristics and on weekly demand patterns.
 
@@ -48,16 +63,7 @@ def main(scenario_destination_path, seed, params, loads_charac, load_weekly_patt
         end=params['end_date'],
         freq=str(params['dt']) + 'min')
 
-
-    add_dim = 0
-    dx_corr = int(params['dx_corr'])
-    dy_corr = int(params['dy_corr'])
-    for x,y  in zip(loads_charac["x"], loads_charac["y"]):
-        x_plus = int(x // dx_corr + 1)
-        y_plus = int(y // dy_corr + 1)
-        add_dim = max(y_plus, add_dim)
-        add_dim = max(x_plus, add_dim)
-        #add_dim=0 #to get back to when this parameter did not exist - to be removed
+    add_dim = get_add_dim(params, loads_charac)
     
     # Generate GLOBAL temperature noise
     print('Computing global auto-correlated spatio-temporal noise for thermosensible demand...') ## temperature is simply to reflect the fact that loads is correlated spatially, and so is the real "temperature". It is not the real temperature.
@@ -71,7 +77,11 @@ def main(scenario_destination_path, seed, params, loads_charac, load_weekly_patt
                                        load_weekly_pattern,
                                        start_day=start_day,
                                        add_dim=add_dim,
-                                       day_lag=day_lag)
+                                       day_lag=day_lag,
+                                       return_ref_curve=return_ref_curve,
+                                       use_legacy=use_legacy)
+    if return_ref_curve:
+        loads_series, ref_curve = loads_series
     loads_series['datetime'] = datetime_index
 
     # Save files
@@ -91,5 +101,7 @@ def main(scenario_destination_path, seed, params, loads_charac, load_weekly_patt
         write_results=write_results,
         index=False
     )
-    
-    return load_p, load_p_forecasted
+    if not return_ref_curve:
+        return load_p, load_p_forecasted
+    else:
+        return load_p, load_p_forecasted, ref_curve

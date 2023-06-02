@@ -9,7 +9,7 @@
 import numpy as np
 import pandas as pd
 import copy 
-import pypsa
+import warnings
 
 from chronix2grid.generation.dispatch.utils import RampMode
 
@@ -268,7 +268,7 @@ def get_grouped_snapshots(snapshot, mode):
     """    
     # Define all posibilities mode
     periods = {'day': snapshot.groupby(snapshot.day).values(),
-               'week': snapshot.groupby(snapshot.week).values(),
+               'week': snapshot.groupby(snapshot.isocalendar().week).values(),
                'month': snapshot.groupby(snapshot.month).values()
     }
     return periods[mode]
@@ -307,7 +307,7 @@ def run_opf(net,
         Results of OPF dispatch
     """    
     to_disp = {'day': demand.index.day.unique().values[0],
-               'week': demand.index.week.unique().values[0],
+               'week': demand.index.isocalendar().week.unique()[0],
                'month': demand.index.month.unique().values[0],
     }
     mode = params['mode_opf']
@@ -351,7 +351,10 @@ def run_opf(net,
     net.generators_t.p_min_pu = net.generators_t.p_min_pu.iloc[0:0, 0:0]
     
     # Set snapshots
-    net.set_snapshots(demand.index)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning)
+        # pypsa and pandas version
+        net.set_snapshots(demand.index)
     
     
     # ++  ++  ++  ++  ++  ++  ++  ++  ++  ++  ++ 

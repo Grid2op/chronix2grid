@@ -66,7 +66,8 @@ setup(name='Chronix2Grid',
                         "widgetsnbextension>=3.5.1",
                         "lightsim2grid",
                         "pypsa",
-                        "cvxpy"
+                        "cvxpy",
+                        "scikit-learn"
                         ],
       extras_require = {
                         "optional": [

@@ -178,3 +178,4 @@ tests/data/output/generation/case118_l2rpn_wcci/agent_results/
 !tests/data/output/generation/expected_case118_l2rpn_neurips_1x_modifySlackBeforeChronixGeneration
 !tests/data/output/generation/expected_case118_l2rpn_neurips_1x_hydro
 getting_started/example/input/generation/case118_l2rpn_wcci_Scenario_0/
+test_fix_forecast.py

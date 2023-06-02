@@ -12,7 +12,14 @@ an economic dispatch based on RES and consumption time series"""
 import numpy as np
 import pandas as pd
 from collections import namedtuple
-import pypsa
+import warnings
+
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=RuntimeWarning)
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    # TODO logger !
+    # some warnings on some pypsa / numpy versions
+    import pypsa
 
 from ._EDispatch_L2RPN2020.run_economic_dispatch import main_run_disptach
 
@@ -120,7 +127,10 @@ class PypsaDispatcher(Dispatcher, pypsa.Network):
         -------
         net: :class:`pypsa.Network`
         """
-        net = cls()
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            # issue with pypsa on some version of numpy 
+            net = cls()
         net._df = env_df
 
         carrier_types_to_exclude = ['wind', 'solar']
