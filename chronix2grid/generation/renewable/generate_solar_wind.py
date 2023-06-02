@@ -54,13 +54,17 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern,
     solar_pattern (pandas.DataFrame): hourly solar production pattern for a year. It represent specificity of the production region considered
     smoothdist (float): parameter for smoothing
     write_results (boolean): whether to write results or not. Default is True
-
+    return_ref_curve (bool): whether to return the reference curve or not.
+    return_prng (bool): whether to return (or not) the pseudo random number generator used.
+    
     Returns
     -------
     pandas.DataFrame: solar production chronics generated at every node with additional gaussian noise
     pandas.DataFrame: solar production chronics forecasted for the scenario without additional gaussian noise
     pandas.DataFrame: wind production chronics generated at every node with additional gaussian noise
     pandas.DataFrame: wind production chronics forecasted for the scenario without additional gaussian noise
+
+    And a few other arguments depending on the flags (*eg* return_ref_curve or return_prng)
     """
 
     prng = default_rng(seed)
