@@ -15,7 +15,7 @@ with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     
     
 setup(name='Chronix2Grid',
-      version='1.2.0',
+      version='1.2.0.post1',
       description='A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)',
       long_description=long_description,
       long_description_content_type='text/markdown',
@@ -25,6 +25,7 @@ setup(name='Chronix2Grid',
           'Programming Language :: Python :: 3.8',
           'Programming Language :: Python :: 3.9',
           'Programming Language :: Python :: 3.10',
+          'Programming Language :: Python :: 3.11',
           "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
           "Intended Audience :: Developers",
           "Intended Audience :: Education",
