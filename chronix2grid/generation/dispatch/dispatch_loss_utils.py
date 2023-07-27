@@ -127,14 +127,22 @@ def run_grid2op_simulation_donothing(grid_path, agent_result_path,  nb_core = 1,
     runner = Runner(**env.get_params_for_runner())
     # do regular computation as you would with grid2op
     path_save = None
-    if(write_results):
-        path_save=os.path.join(agent_results_path,'agent_results')
+    if write_results:
+        path_save = os.path.join(agent_results_path, 'agent_results')
         os.makedirs(path_save, exist_ok=True)
 
-    name_chron, cum_reward, nb_time_step, episode_data =runner.run_one_episode(path_save=path_save,
-                             indx=scen_id,
-                             pbar=True,
-                             detailed_output=True)
+    try:
+        # recent grid2op version: run_one_episode has the same signature as runner.run
+        *_, episode_data = runner.run_one_episode(path_save=path_save,
+                                                  indx=scen_id,
+                                                  pbar=True,
+                                                  detailed_output=True)
+    except ValueError:
+        # old grid2op version
+        name_chron, cum_reward, nb_time_step, episode_data = runner.run_one_episode(path_save=path_save,
+                                                                                    indx=scen_id,
+                                                                                    pbar=True,
+                                                                                    detailed_output=True)
     #res = runner.run(nb_episode=nb_episode, nb_process=NB_CORE, pbar=True, add_detailed_output=True)
     #                 #path_save=simulation_data_folder
     #id_chron, name_chron, cum_reward, nb_timestep, max_ts, episode_data = res.pop()
