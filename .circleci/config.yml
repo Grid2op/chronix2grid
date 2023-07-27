@@ -35,8 +35,8 @@ jobs:
           # pip-dependency-file: test-requirements.txt  # if you have a different name for your requirements file, maybe one that combines your runtime and test requirements.
       - run: sudo apt-get update
       - run: sudo apt-get install -y coinor-cbc
-      - run: pip install .
       - run: pip install -r requirements.txt
+      - run: pip install -e .
       - run: pip freeze
       - run:
           name: Run basic tests
