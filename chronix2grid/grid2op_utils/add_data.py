@@ -13,27 +13,32 @@ import grid2op
 from chronix2grid.grid2op_utils.utils import generate_a_scenario, get_last_scenario_id
 from numpy.random import default_rng
 
-
+  
 # wrapper function for generate_a_scenario
 def generate_a_scenario_wrapper(args):
     (path_env, name_gen, gen_type, output_dir,
         start_date, dt, scen_id, load_seed, renew_seed,
         gen_p_forecast_seed, handle_loss, files_to_copy,
-        save_ref_curve, day_lag, tol_zero, debug, load_weekly_pattern) = args
-    res_gen = generate_a_scenario(path_env,
-                                  name_gen, gen_type,
-                                  output_dir,
-                                  start_date, dt,
-                                  scen_id,
-                                  load_seed, renew_seed, 
-                                  gen_p_forecast_seed,
-                                  handle_loss,
+        save_ref_curve, day_lag, tol_zero, debug, load_weekly_pattern, 
+        kwargs) = args
+    res_gen = generate_a_scenario(path_env=path_env,
+                                  name_gen=name_gen, 
+                                  gen_type=gen_type,
+                                  output_dir=output_dir,
+                                  start_date=start_date,
+                                  dt=dt,
+                                  scen_id=scen_id,
+                                  load_seed=load_seed,
+                                  renew_seed=renew_seed, 
+                                  gen_p_forecast_seed=gen_p_forecast_seed,
+                                  handle_loss=handle_loss,
                                   files_to_copy=files_to_copy,
                                   save_ref_curve=save_ref_curve,
                                   day_lag=day_lag,
                                   tol_zero=tol_zero,
                                   debug=debug,
-                                  load_weekly_pattern=load_weekly_pattern)
+                                  load_weekly_pattern=load_weekly_pattern,
+                                  **kwargs)
     return res_gen
 
 
@@ -50,6 +55,7 @@ def add_data(env: grid2op.Environment.Environment,
              debug=False,
              tol_zero=1e-3,
              load_weekly_pattern=None,
+             **kwargs
              ):
     """This function adds some data to already existing scenarios.
     
@@ -118,7 +124,6 @@ def add_data(env: grid2op.Environment.Environment,
     path_env = env.get_path_env()
     name_gen = env.name_gen
     gen_type = env.gen_type
-    errors = {}
     argss = []
     for j, scen_id in enumerate(scen_ids):
         for i, start_date in enumerate(li_months):
@@ -141,18 +146,21 @@ def add_data(env: grid2op.Environment.Environment,
                           day_lag,
                           tol_zero,
                           debug,
-                          load_weekly_pattern
+                          load_weekly_pattern,
+                          kwargs,
                           ))
     if nb_core == 1:
+        errors = {}
         for args in argss:
             res_gen = generate_a_scenario_wrapper(args)
             error_, *_ = res_gen
             if error_ is not None:
+                error_date = args[4]
                 print("=============================")
-                print(f"     Error for {start_date} {scen_id}        ")
+                print(f"     Error for {error_date} {scen_id}        ")
                 print(f"{error_}")
                 print("=============================")
-                errors[f'{start_date}_{scen_id}'] = f"{error_}"
+                errors[f'{error_date}_{scen_id}'] = f"{error_}"
                 
                 # load previous data
                 path_json_error = os.path.join(output_dir, "errors.json")

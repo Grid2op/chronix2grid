@@ -182,10 +182,16 @@ def create_csv(prng, dict_, path, forecasted=False, reordering=True, noise=None,
     df = df.head(len(df)-1)  # Last value is lonely for another day
     if reordering:
         value = []
-        for name in list(df):
-            value.append(utils.natural_keys(name))
-        new_ordering = [x for _, x in sorted(zip(value, list(df)))]
-        df = df[new_ordering]
+        grid2op_default_name = True
+        try:
+            for name in list(df):
+                value.append(utils.natural_keys(name))
+        except IndexError:
+            grid2op_default_name = False
+            # cannot reorder in this case
+        if grid2op_default_name:
+            new_ordering = [x for _ ,x in sorted(zip(value ,list(df)))]
+            df = df[new_ordering]
     if shift:
         df = df.shift(-1)
         df = df.fillna(0)
