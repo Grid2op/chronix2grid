@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 import json
 import shutil
 import time
+import grid2op.Environment
 import pandas as pd
 import os
 import cvxpy as cp
@@ -23,6 +24,7 @@ from grid2op.Parameters import Parameters
 from grid2op.Chronics import FromNPY
 from grid2op.Action import DontAct
 from grid2op.Opponent import NeverAttackBudget, BaseOpponent
+from grid2op.Exceptions import Grid2OpException
 from lightsim2grid import LightSimBackend
 
 
@@ -388,15 +390,28 @@ def _adjust_gens(all_loss_orig,
                        p_t[1:,:] - p_t[:-1,:] <= ramp_max,
                        cp.sum(real_p, axis=1) == load.reshape(-1),
                       ]
-        cost = cp.sum_squares(p_t - target_vector) + cp.norm1(cp.multiply(p_t, turned_off_orig))
+        # for some environment (on more realistic data), we need to put a constant before the norm1
+        # otherwise it diverges
+        cost = cp.sum_squares(p_t - target_vector) + 1e-2 * cp.norm1(cp.multiply(p_t, turned_off_orig))
         prob = cp.Problem(cp.Minimize(cost), constraints)
         try:
             res = prob.solve()
         except cp.error.SolverError as exc_:
-            error_ = RuntimeError(f"cvxpy failed to find a solution at iteration {iter_num}, error {exc_}")
-            res_gen_p = None
-            quality_ = None
-            break
+            # we try different tolerance to increase the "likelyhood"
+            # of convergence, and also because we do not really care in this routine
+            # to be optimal
+            print("cvxpy failed with given tolerance, trying to relax them to 1e-4")
+            try:
+                res = prob.solve(verbose=True, eps_abs=1e-4, eps_rel=1e-4)
+            except cp.error.SolverError as exc_:
+                print("cvxpy failed with given tolerance, trying to relax them to 1e-3")
+                try:
+                    res = prob.solve(verbose=True, eps_abs=1e-3, eps_rel=1e-3)
+                except cp.error.SolverError as exc_:
+                    error_ = RuntimeError(f"cvxpy failed to find a solution at iteration {iter_num}, error {exc_}")
+                    res_gen_p = None
+                    quality_ = None
+                    break
         
         if not np.isfinite(res):
             error_ = RuntimeError(f"cvxpy failed to find a solution at iteration {iter_num}, and return a non finite cost")
@@ -425,26 +440,33 @@ def _adjust_gens(all_loss_orig,
                 id_redisp += 1
         
         # re evaluate the losses
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore")
-            env_fixed = grid2op.make(
-                env_path,
-                test=True,
-                # grid_path=grid_path, # assign it the 118 grid
-                param=env_param,
-                backend=LightSimBackend(**backend_kwargs_data),
-                chronics_class=FromNPY,
-                # chronics_path=path_chronix2grid,
-                data_feeding_kwargs={"load_p": load_p,
-                                     "load_q": load_q,
-                                     "prod_p": 1.0 * res_gen_p,
-                                     "prod_v": gen_v},
-                opponent_budget_per_ts=0.,
-                opponent_init_budget=0.,
-                opponent_class=BaseOpponent,
-                opponent_budget_class=NeverAttackBudget,
-                opponent_action_class=DontAct,
-                )
+        try:
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore")
+                env_fixed = grid2op.make(
+                    env_path,
+                    test=True,
+                    # grid_path=grid_path, # assign it the 118 grid
+                    param=env_param,
+                    backend=LightSimBackend(**backend_kwargs_data),
+                    chronics_class=FromNPY,
+                    # chronics_path=path_chronix2grid,
+                    data_feeding_kwargs={"load_p": load_p,
+                                         "load_q": load_q,
+                                         "prod_p": 1.0 * res_gen_p,
+                                         "prod_v": gen_v},
+                    opponent_budget_per_ts=0.,
+                    opponent_init_budget=0.,
+                    opponent_class=BaseOpponent,
+                    opponent_budget_class=NeverAttackBudget,
+                    opponent_action_class=DontAct,
+                    )
+        except Grid2OpException as exc_:
+            error_ = RuntimeError(f"grid2op cannot create the environment at iteration {iter_num}, error {exc_}")
+            res_gen_p = None
+            quality_ = None
+            break
+        
         diff_ = np.full((env_fixed.max_episode_duration(), env_fixed.n_gen), fill_value=np.NaN)
         all_loss[:] = np.NaN
         
@@ -458,6 +480,12 @@ def _adjust_gens(all_loss_orig,
             obs, reward, done, info = env_fixed.step(env_fixed.action_space())
             i += 1
             if done:
+                if info["exception"]:
+                    # there is a powerflow error here
+                    res_gen_p = None
+                    quality_ = None
+                    error_ = RuntimeError(f"lightsim2grid cannot compute powerflow at iteration {iter_num}, error {info['exception']}")
+                    return res_gen_p, error_, quality_
                 break
             all_loss[i] = np.sum(obs.gen_p) - np.sum(obs.load_p)
             diff_[i] = obs.gen_p - res_gen_p[i]
@@ -499,7 +527,7 @@ def _adjust_gens(all_loss_orig,
     return res_gen_p, error_, quality_
 
 
-def _fix_losses_one_scenario(env_for_loss,
+def _fix_losses_one_scenario(env_for_loss : grid2op.Environment.Environment,
                              scenario_id,
                              params,
                              env_path,
@@ -574,6 +602,9 @@ def _fix_losses_one_scenario(env_for_loss,
     while not done:
         obs, reward, done, info = env_for_loss.step(env_for_loss.action_space())
         if done:
+            if info["exception"]:
+                # there is a powerflow error here
+                return None, f"Error at first losses computation: {info['exception']}", None
             break
         i += 1
         all_loss_orig[i] = np.sum(obs.gen_p) - np.sum(obs.load_p)
@@ -651,32 +682,35 @@ def make_env_for_loss(path_env, env_param, load_p, load_q, final_gen_p,
                       gen_v, start_date_dt, dt_dt, backend_kwargs_data):
     if backend_kwargs_data is None:
         backend_kwargs_data = {}
-        
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore")
-        env_for_loss = grid2op.make(
-            path_env,
-            test=True,
-            # grid_path=grid_path, # assign it the 118 grid
-            param=env_param,
-            backend=LightSimBackend(**backend_kwargs_data),
-            chronics_class=FromNPY,
-            # chronics_path=path_chronix2grid,
-            data_feeding_kwargs={"load_p": load_p.values,  # np.concatenate([load_p.values[0].reshape(1,-1), load_p.values]),
-                                 "load_q": load_q.values,  # np.concatenate([load_q.values[0].reshape(1,-1), load_q.values]),
-                                 "prod_p": 1.0 * final_gen_p.values,  # 1.0 * np.concatenate([final_gen_p.values[0].reshape(1,-1), final_gen_p.values]),
-                                 "prod_v": gen_v,  # np.concatenate([gen_v[0].reshape(1,-1), gen_v])}
-                                 "start_datetime": start_date_dt,
-                                 "time_interval": dt_dt,
-            },
-            opponent_budget_per_ts=0.,
-            opponent_init_budget=0.,
-            opponent_class=BaseOpponent,
-            opponent_budget_class=NeverAttackBudget,
-            opponent_action_class=DontAct,
-            _add_to_name="_env_for_loss"
-            )
-    return env_for_loss
+    try:
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore")
+            env_for_loss = grid2op.make(
+                path_env,
+                test=True,
+                # grid_path=grid_path, # assign it the 118 grid
+                param=env_param,
+                backend=LightSimBackend(**backend_kwargs_data),
+                chronics_class=FromNPY,
+                # chronics_path=path_chronix2grid,
+                data_feeding_kwargs={"load_p": load_p.values,  # np.concatenate([load_p.values[0].reshape(1,-1), load_p.values]),
+                                    "load_q": load_q.values,  # np.concatenate([load_q.values[0].reshape(1,-1), load_q.values]),
+                                    "prod_p": 1.0 * final_gen_p.values,  # 1.0 * np.concatenate([final_gen_p.values[0].reshape(1,-1), final_gen_p.values]),
+                                    "prod_v": gen_v,  # np.concatenate([gen_v[0].reshape(1,-1), gen_v])}
+                                    "start_datetime": start_date_dt,
+                                    "time_interval": dt_dt,
+                },
+                opponent_budget_per_ts=0.,
+                opponent_init_budget=0.,
+                opponent_class=BaseOpponent,
+                opponent_budget_class=NeverAttackBudget,
+                opponent_action_class=DontAct,
+                _add_to_name="_env_for_loss"
+                )
+    except Grid2OpException as exc_:
+        return None, exc_
+    return env_for_loss, None
+
 
 def handle_losses(path_env,
                   n_gen,
@@ -761,9 +795,13 @@ def handle_losses(path_env,
     gen_v = np.tile(np.array([float(gens_charac.loc[gens_charac["name"] == nm_gen].V.iloc[0]) for nm_gen in name_gen ]),
                     load_p.shape[0]).reshape(-1, n_gen)
     
-    env_for_loss = make_env_for_loss(path_env, env_param, load_p, load_q,
-                                     final_gen_p, gen_v, start_date_dt, dt_dt,
-                                     backend_kwargs_data=backend_kwargs_data)
+    env_for_loss, exc_ = make_env_for_loss(path_env, env_param, load_p, load_q,
+                                           final_gen_p, gen_v, start_date_dt, dt_dt,
+                                           backend_kwargs_data=backend_kwargs_data)
+    
+    if exc_ is not None:
+        return None, exc_, None, None
+    
     res_gen_p, error_, quality_ = _fix_losses_one_scenario(env_for_loss,
                                                            scenario_id,
                                                            loss_param,
@@ -1178,12 +1216,14 @@ def generate_a_scenario(path_env,
         env_param.NO_OVERFLOW_DISCONNECTION = True
         gen_v = np.tile(np.array([float(gens_charac.loc[gens_charac["name"] == nm_gen].V) for nm_gen in name_gen ]),
                         load_p.shape[0]).reshape(-1, n_gen)
-        env_for_loss = make_env_for_loss(path_env, env_param,
-                                         load_p, load_q,
-                                         final_gen_p, gen_v,
-                                         start_date_dt, dt_dt,
-                                         backend_kwargs_data=backend_kwargs_data)
-    
+        env_for_loss, exc_ = make_env_for_loss(path_env, env_param,
+                                               load_p, load_q,
+                                               final_gen_p, gen_v,
+                                               start_date_dt, dt_dt,
+                                               backend_kwargs_data=backend_kwargs_data)
+        if exc_ is not None:
+            return exc_, None, None, None, None, None, None, None
+            
     prng = default_rng(gen_p_forecast_seed)
     beg_forca = time.perf_counter()
     tmp_ = generate_forecasts_gen(new_forecasts,

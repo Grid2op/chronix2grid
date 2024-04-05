@@ -11,6 +11,7 @@ import os
 import time
 from typing import Dict, Literal
 
+import numpy as np
 import pandas as pd
 import pypsa
 
@@ -95,8 +96,10 @@ def main_run_disptach(pypsa_net,
             # user specified a pmin for the slack bus
             slack_pmin = float(params["slack_pmin"]) / float(pypsa_net.generators.loc[slack_name].p_nom)
             if slack_name not in gen_constraints["p_min_pu"]:
-                print(gen_constraints["p_min_pu"].columns)
-                raise RuntimeError("Unknown error in chronix2grid: the provided slack has no constraints on the pypsa grid...")
+                gen_constraints["p_min_pu"][slack_name] = slack_pmin
+            else:
+                gen_constraints["p_min_pu"][slack_name] = np.maximum(slack_pmin, gen_constraints["p_min_pu"][slack_name].values)
+                
             if slack_pmin < gen_constraints["p_min_pu"][slack_name].min():
                 raise RuntimeError("Wrong configuration detected: you put in 'params_opf' "
                                    "a minimum value for the slack ('slack_pmin') below its pmin.")
@@ -106,14 +109,15 @@ def main_run_disptach(pypsa_net,
             # user specified a pmin for the slack bus
             slack_pmax = float(params["slack_pmax"]) / float(pypsa_net.generators.loc[slack_name].p_nom)
             if slack_name not in gen_constraints["p_max_pu"]:
-                print(gen_constraints["p_min_pu"].columns)
-                raise RuntimeError("Unknown error in chronix2grid: the provided slack has no constraints on the pypsa grid...")
+                gen_constraints["p_max_pu"][slack_name] = slack_pmax
+            else:
+                gen_constraints["p_max_pu"][slack_name] = np.minimum(slack_pmin, gen_constraints["p_max_pu"][slack_name].values)
             if slack_pmax > gen_constraints["p_max_pu"][slack_name].max():
                 raise RuntimeError("Wrong configuration detected: you put in 'params_opf' "
                                    "a maximum value for the slack ('slack_pmax') above its pmax.")
             if slack_pmax > 1.:
                 print("Doubtful parameters: slack pmax would be higher than its pmax, basically "
-                      "the parameters `slack_pmin` of `params_opf.json` is ignored.")
+                      "the parameters `slack_pmax` of `params_opf.json` is ignored.")
         
     error_ = False
     start = time.time()
