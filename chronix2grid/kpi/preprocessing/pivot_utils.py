@@ -395,7 +395,7 @@ def chronics_to_kpi(chronics_repo, timestep, params, thermal = True):
 
     # Return with price if dispatch has been made
     if not thermal:
-        return prod_p, load_p
+        return prod_p, load_p, None
     else:#if thermal:
         if(price is not None):
             price['Time'] = pd.to_datetime(price['Time'])

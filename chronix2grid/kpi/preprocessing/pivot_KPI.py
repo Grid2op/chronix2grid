@@ -67,8 +67,9 @@ def pivot_format_ref_data(paramsKPI, kpi_input_folder, year, prods_charac, loads
 
     kpi_case_input_folder = None
 
-    if kpi_input_folder and os.path.exists(os.path.join(kpi_input_folder, case)):
-        kpi_case_input_folder= os.path.join(kpi_input_folder, case)
+    kpi_case_input_path=os.path.join(kpi_input_folder, case)
+    if kpi_input_folder and os.path.exists(kpi_case_input_path):
+        kpi_case_input_folder= kpi_case_input_path
         # Read json parameters for KPI configuration
         comparison = paramsKPI['comparison']
         timestep = paramsKPI['timestep']
@@ -135,15 +136,11 @@ def kpi_synthetic_data(chronics_folder, paramsKPI, wind_solar_only, params):
 
     # Format generated chronics
     timestep = paramsKPI['timestep']
-    prices=None
-    if wind_solar_only:
-        syn_prod, syn_load = chronics_to_kpi(chronics_folder, timestep, params,
-                                             thermal=not wind_solar_only)
-        return syn_prod, syn_load,prices
-    else:
-        syn_prod, syn_load, prices = chronics_to_kpi(
-            chronics_folder, timestep, params, thermal=not wind_solar_only)
-        return syn_prod, syn_load, prices
+
+    has_thermal=not wind_solar_only
+
+    return chronics_to_kpi(
+            chronics_folder, timestep, params, thermal=has_thermal)
 
 def read_params_kpi_config(kpi_input_folder,case):
     if kpi_input_folder and os.path.exists(os.path.join(kpi_input_folder, case)):
