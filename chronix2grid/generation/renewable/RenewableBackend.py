@@ -38,10 +38,21 @@ class RenewableBackend:
         self.seed = seed
         self.out_path = out_path
 
-    def run(self, solar_pattern=None):
+    def run(self,
+            solar_pattern=None,
+            return_ref_curve=False,
+            return_prng=False,
+            tol_zero=0.):
         """
         Runs the generation model in ``chronix2grid.generation.renewable.generate_solar_wind`` and writes chronics
+        
+        
+        # NB `tol_zero` is set to 0.1 for legacy behaviour, otherwise tests do not pass, but this is a TERRIBLE idea.
         """
         if solar_pattern is None:
             solar_pattern = self.res_config_manager.read_specific()
-        return main(self.out_path, self.seed, self.params, self.loads_charac, solar_pattern, self.write_results)
+        return main(self.out_path, self.seed, self.params, self.loads_charac,
+                    solar_pattern, self.write_results,
+                    return_ref_curve=return_ref_curve,
+                    return_prng=return_prng,
+                    tol_zero=tol_zero)

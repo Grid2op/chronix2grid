@@ -6,7 +6,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # This file is part of Chronix2Grid, A python package to generate "en-masse" chronics for loads and productions (thermal, renewable)
 import os
-import numpy as np
 import json
 from multiprocessing import Pool
 
@@ -14,13 +13,42 @@ import grid2op
 from chronix2grid.grid2op_utils.utils import generate_a_scenario, get_last_scenario_id
 from numpy.random import default_rng
 
-import pdb
+
+# wrapper function for generate_a_scenario
+def generate_a_scenario_wrapper(args):
+    (path_env, name_gen, gen_type, output_dir,
+        start_date, dt, scen_id, load_seed, renew_seed,
+        gen_p_forecast_seed, handle_loss, files_to_copy,
+        save_ref_curve, day_lag, tol_zero, debug) = args
+    res_gen = generate_a_scenario(path_env,
+                                name_gen, gen_type,
+                                output_dir,
+                                start_date, dt,
+                                scen_id,
+                                load_seed, renew_seed, 
+                                gen_p_forecast_seed,
+                                handle_loss,
+                                files_to_copy=files_to_copy,
+                                save_ref_curve=save_ref_curve,
+                                day_lag=day_lag,
+                                tol_zero=tol_zero,
+                                debug=debug)
+    return res_gen
+
 
 def add_data(env: grid2op.Environment.Environment,
              seed=None,
              nb_scenario=1,
              nb_core=1,  # TODO
-             with_loss=True):
+             with_loss=True,
+             files_to_copy=("maintenance_meta.json",
+                            "params_load.json",
+                            "params_forecasts.json"),
+             save_ref_curve=False,
+             day_lag=6,  # TODO 6 because it's 2050
+             debug=False,
+             tol_zero=1e-3
+             ):
     """This function adds some data to already existing scenarios.
     
     .. warning::
@@ -73,7 +101,6 @@ def add_data(env: grid2op.Environment.Environment,
             gen_p_forecast_seeds.append(gen_p_forecast_seed)
     
     # generate the data
-    # TODO multi proc
     path_env = env.get_path_env()
     name_gen = env.name_gen
     gen_type = env.gen_type
@@ -81,6 +108,8 @@ def add_data(env: grid2op.Environment.Environment,
     argss = []
     for j, scen_id in enumerate(scen_ids):
         for i, start_date in enumerate(li_months):
+            # if start_date != "2035-03-12":
+            #     continue
             seed_num = i + j * len(li_months)
             argss.append((path_env,
                           name_gen,
@@ -92,14 +121,16 @@ def add_data(env: grid2op.Environment.Environment,
                           load_seeds[seed_num],
                           renew_seeds[seed_num],
                           gen_p_forecast_seeds[seed_num],
-                          with_loss
+                          with_loss,
+                          files_to_copy,
+                          save_ref_curve,
+                          day_lag,
+                          tol_zero,
+                          debug
                           ))
     if nb_core == 1:
         for args in argss:
-            path_env, name_gen, gen_type, output_dir, start_date, dt, scen_id, load_seed, renew_seed, \
-                gen_p_forecast_seed, handle_loss = args
-            res_gen = generate_a_scenario(path_env, name_gen, gen_type, output_dir, start_date, dt, scen_id, load_seed, renew_seed, 
-                                          gen_p_forecast_seed, handle_loss)
+            res_gen = generate_a_scenario_wrapper(args)
             error_, *_ = res_gen
             if error_ is not None:
                 print("=============================")
@@ -121,4 +152,4 @@ def add_data(env: grid2op.Environment.Environment,
                     json.dump(errors, fp=f)
     else:
         with Pool(nb_core) as p:
-            p.starmap(generate_a_scenario, argss)
+            p.map(generate_a_scenario_wrapper, argss)

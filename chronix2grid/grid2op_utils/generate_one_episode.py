@@ -20,7 +20,8 @@ def generate_one_episode(env: grid2op.Environment.Environment,
                          start_date,
                          nb_steps=None,
                          seed=None,
-                         with_loss=True):
+                         with_loss=True,
+                         files_to_copy=("maintenance_meta.json", "params_load.json", "params_forecasts.json")):
     """This function adds some data to already existing scenarios.
     
     .. warning::
@@ -57,6 +58,7 @@ def generate_one_episode(env: grid2op.Environment.Environment,
     output_dir = None
     while error_ is not None:
         res_gen = generate_a_scenario(path_env, name_gen, gen_type, output_dir, start_date, dt, scen_id, load_seed, renew_seed, 
-                                      gen_p_forecast_seed, with_loss, nb_steps=nb_steps)
+                                      gen_p_forecast_seed, with_loss, nb_steps=nb_steps,
+                                      files_to_copy=files_to_copy)
         error_, quality_, load_p, load_p_forecasted, load_q, load_q_forecasted, res_gen_p_df, res_gen_p_forecasted_df = res_gen
     return load_p, load_p_forecasted, load_q, load_q_forecasted, res_gen_p_df, res_gen_p_forecasted_df

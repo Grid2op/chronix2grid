@@ -32,6 +32,24 @@ def make_generation_input_output_directories(input_folder, case, year, output_fo
     return dispatch_input_folder, dispatch_input_folder_case, dispatch_output_folder
 
 
+def get_nx_ny_nt(data_type, params, add_dim):
+    # Get computation domain size
+    Lx = params['Lx']
+    Ly = params['Ly']
+    T = params['T']
+
+    # Get the decay parameter for each dimension
+    dx_corr = params['dx_corr']
+    dy_corr = params['dy_corr']
+    dt_corr = params[data_type + '_corr']
+
+    # Compute number of element in each dimension
+    Nx_comp = int(Lx // dx_corr + 1) + add_dim
+    Ny_comp = int(Ly // dy_corr + 1) + add_dim
+    Nt_comp = int(T // dt_corr + 1) + add_dim
+    return Nx_comp, Ny_comp, Nt_comp
+
+
 def generate_coarse_noise(prng, params, data_type, add_dim):
     """
     This function generates a spatially and temporally correlated noise.
@@ -47,21 +65,8 @@ def generate_coarse_noise(prng, params, data_type, add_dim):
         (np.array) 3D autocorrelated noise
     """
 
-    # Get computation domain size
-    Lx = params['Lx']
-    Ly = params['Ly']
-    T = params['T']
-
-    # Get the decay parameter for each dimension
-    dx_corr = params['dx_corr']
-    dy_corr = params['dy_corr']
-    dt_corr = params[data_type + '_corr']
-
-    # Compute number of element in each dimension
-    Nx_comp = int(Lx // dx_corr + 1) + add_dim
-    Ny_comp = int(Ly // dy_corr + 1) + add_dim
-    Nt_comp = int(T // dt_corr + 1) + add_dim
-
+    Nx_comp, Ny_comp, Nt_comp = get_nx_ny_nt(data_type, params, add_dim)
+    
     # Generate gaussian noise input·
     #output = np.random.normal(0, 1, (Nx_comp, Ny_comp, Nt_comp))
     output = prng.normal(0, 1, (Nx_comp, Ny_comp, Nt_comp))

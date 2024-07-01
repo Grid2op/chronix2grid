@@ -20,10 +20,30 @@ from .. import generation_utils as utils
 import chronix2grid.constants as cst
 
 
-def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, write_results = True):
+def get_add_dim(params, prods_charac):
+    scale_solar_coord_for_correlation = float(params["scale_solar_coord_for_correlation"]) if "scale_solar_coord_for_correlation" in params else None
+    add_dim = 0
+    dx_corr = int(params['dx_corr'])
+    dy_corr = int(params['dy_corr'])
+    for x, y, type_gen  in zip(prods_charac["x"], prods_charac["y"], prods_charac["type"]):
+        if type_gen == "solar" and scale_solar_coord_for_correlation is not None:
+            x = scale_solar_coord_for_correlation * x
+            y = scale_solar_coord_for_correlation * y
+        x_plus = int(x // dx_corr + 1)
+        y_plus = int(y // dy_corr + 1)
+        add_dim = max(y_plus, add_dim)
+        add_dim = max(x_plus, add_dim)
+    return add_dim
+
+
+def main(scenario_destination_path, seed, params, prods_charac, solar_pattern,
+         write_results=True, return_ref_curve=False, return_prng=False,
+         tol_zero=0.):
     """
     This is the solar and wind production generation function, it allows you to generate consumption chronics based on
     production nodes characteristics and on a solar typical yearly production patterns.
+    
+    # NB tol is set to 0.1 for legacy behaviour, otherwise tests do not pass, but this is a TERRIBLE idea.
 
     Parameters
     ----------
@@ -34,13 +54,17 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
     solar_pattern (pandas.DataFrame): hourly solar production pattern for a year. It represent specificity of the production region considered
     smoothdist (float): parameter for smoothing
     write_results (boolean): whether to write results or not. Default is True
-
+    return_ref_curve (bool): whether to return the reference curve or not.
+    return_prng (bool): whether to return (or not) the pseudo random number generator used.
+    
     Returns
     -------
     pandas.DataFrame: solar production chronics generated at every node with additional gaussian noise
     pandas.DataFrame: solar production chronics forecasted for the scenario without additional gaussian noise
     pandas.DataFrame: wind production chronics generated at every node with additional gaussian noise
     pandas.DataFrame: wind production chronics forecasted for the scenario without additional gaussian noise
+
+    And a few other arguments depending on the flags (*eg* return_ref_curve or return_prng)
     """
 
     prng = default_rng(seed)
@@ -69,17 +93,7 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
     # Generate GLOBAL temperature noise
     print('Computing global auto-correlated spatio-temporal noise for sun and wind...')
     scale_solar_coord_for_correlation = float(params["scale_solar_coord_for_correlation"]) if "scale_solar_coord_for_correlation" in params else None
-    add_dim = 0
-    dx_corr = int(params['dx_corr'])
-    dy_corr = int(params['dy_corr'])
-    for x, y, type_gen  in zip(prods_charac["x"], prods_charac["y"], prods_charac["type"]):
-        if type_gen == "solar" and scale_solar_coord_for_correlation is not None:
-            x = scale_solar_coord_for_correlation * x
-            y = scale_solar_coord_for_correlation * y
-        x_plus = int(x // dx_corr + 1)
-        y_plus = int(y // dy_corr + 1)
-        add_dim = max(y_plus, add_dim)
-        add_dim = max(x_plus, add_dim)
+    add_dim = get_add_dim(params, prods_charac)
 
     solar_noise = utils.generate_coarse_noise(prng, params, 'solar', add_dim=add_dim)
     long_scale_wind_noise = utils.generate_coarse_noise(prng, params, 'long_wind', add_dim=add_dim)
@@ -89,12 +103,16 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
     # Compute Wind and solar series of scenario
     print('Generating solar and wind production chronics')
     prods_series = {}
+    solar_ref = None
+    wind_ref = None
+    i_solar = 0
+    i_wind = 0
     for name in prods_charac['name']:
         mask = (prods_charac['name'] == name)
         if prods_charac[mask]['type'].values == 'solar':
             locations = [prods_charac[mask]['x'].values[0], prods_charac[mask]['y'].values[0]]
             Pmax = prods_charac[mask]['Pmax'].values[0]
-            prods_series[name] = swutils.compute_solar_series(
+            tmp_ = swutils.compute_solar_series(
                 prng,
                 locations,
                 Pmax,
@@ -102,12 +120,20 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
                 params, solar_pattern, smoothdist,
                 time_scale=params['solar_corr'],
                 add_dim=add_dim,
-                scale_solar_coord_for_correlation=scale_solar_coord_for_correlation)
-
+                scale_solar_coord_for_correlation=scale_solar_coord_for_correlation,
+                return_ref_curve=return_ref_curve,
+                tol=tol_zero)
+            if return_ref_curve:
+                if solar_ref is None:
+                    solar_ref = np.zeros((tmp_[0].shape[0], (prods_charac['type'].values == 'solar').sum()))
+                prods_series[name], solar_ref[:,i_solar] = tmp_
+            else:
+                prods_series[name] = tmp_
+            i_solar += 1
         elif prods_charac[mask]['type'].values == 'wind':
             locations = [prods_charac[mask]['x'].values[0], prods_charac[mask]['y'].values[0]]
             Pmax = prods_charac[mask]['Pmax'].values[0]
-            prods_series[name] = swutils.compute_wind_series(
+            tmp_ = swutils.compute_wind_series(
                 prng,
                 locations,
                 Pmax,
@@ -115,7 +141,16 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
                 medium_scale_wind_noise,
                 short_scale_wind_noise,
                 params, smoothdist,
-                add_dim=add_dim)
+                add_dim=add_dim,
+                return_ref_curve=return_ref_curve,
+                tol=tol_zero)
+            if return_ref_curve:
+                if wind_ref is None:
+                    wind_ref = np.zeros((tmp_[0].shape[0], (prods_charac['type'].values == 'wind').sum()))
+                prods_series[name], wind_ref[:,i_wind] = tmp_
+            else:
+                prods_series[name] = tmp_
+            i_wind += 1
 
     # Séparation ds séries solaires et éoliennes
     solar_series = {}
@@ -196,5 +231,13 @@ def main(scenario_destination_path, seed, params, prods_charac, solar_pattern, w
             index=False,
             float_format=cst.FLOATING_POINT_PRECISION_FORMAT
         )
-
-    return prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted
+    if not return_ref_curve and not return_prng:
+        res = prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted
+    elif not return_ref_curve and return_prng:
+        res = prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted, prng
+    elif return_ref_curve and not return_prng:
+        res = prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted, solar_ref, wind_ref
+    elif return_ref_curve and return_prng:
+        res = prod_solar, prod_solar_forecasted, prod_wind, prod_wind_forecasted, solar_ref, wind_ref, prng
+    return res
+    

@@ -88,8 +88,8 @@ class EconomicDispatchValidator:
             os.mkdir(os.path.join(self.image_repo, 'thermal_load_kpi'))
             os.mkdir(os.path.join(self.image_repo, 'load_kpi'))
 
-
         # Aggregate chronics variables
+<<<<<<< HEAD
         if not self.kpi_on_syn_data_only:
             self.ref_agg_conso = ref_consumption.sum(axis=1)
         else:
@@ -100,6 +100,12 @@ class EconomicDispatchValidator:
         else:
             self.agg_ref_dispatch=None
         self.agg_syn_dispatch = synthetic_dispatch.sum(axis=1)
+=======
+        self.ref_agg_conso = ref_consumption.drop("Time", axis=1).sum(axis=1)
+        self.syn_agg_conso = syn_consumption.drop("Time", axis=1).sum(axis=1)
+        self.agg_ref_dispatch = ref_dispatch.drop("Time", axis=1).sum(axis=1)
+        self.agg_syn_dispatch = synthetic_dispatch.drop("Time", axis=1).sum(axis=1)
+>>>>>>> master
         
         # Read grid characteristics
         if prods_charac is not None:
@@ -158,6 +164,7 @@ class EconomicDispatchValidator:
                 df_ref = df_ref/df_ref.max()
             df_syn = df_syn / df_syn.max()
 
+<<<<<<< HEAD
         plt.ioff()  # to not launch windows with plot in os
         if self.kpi_on_syn_data_only:
             fig, axes = plt.subplots(1, 1, figsize=(17, 5))
@@ -165,6 +172,17 @@ class EconomicDispatchValidator:
             axes.set_title('Synthetic '+title_component, size = 9)
             if every_nth is not None:
                 for n, label in enumerate(axes.xaxis.get_ticklabels()):
+=======
+        fig, axes = plt.subplots(1, 2, figsize=(17, 5))
+        sns.barplot(x=df_ref.index, y=df_ref, ax=axes[0])
+        sns.barplot(x=df_syn.index, y=df_syn, ax=axes[1])
+        axes[0].set_title('Reference '+title_component, size = 9)
+        axes[1].set_title('Synthetic '+title_component, size = 9)
+
+        if every_nth is not None:
+            for i in range(2):
+                for n, label in enumerate(axes[i].xaxis.get_ticklabels()):
+>>>>>>> master
                     if n % every_nth != 0:
                         label.set_visible(False)
         else:
@@ -190,14 +208,14 @@ class EconomicDispatchValidator:
 
         # Sum of production per generator type
         if not self.kpi_on_syn_data_only:
-            ref_prod_per_gen = self.ref_dispatch.sum(axis = 0)
-            ref_prod_per_gen = pd.DataFrame({"Prod": ref_prod_per_gen.values, "name":ref_prod_per_gen.index})
-            ref_prod_per_gen = ref_prod_per_gen.merge(self.prod_charac[["name","type"]], how = 'left',
-                                                      on = 'name')
+            ref_prod_per_gen = self.ref_dispatch.drop("Time", axis=1).sum(axis=0)
+            ref_prod_per_gen = pd.DataFrame({"Prod": ref_prod_per_gen.values, "name": ref_prod_per_gen.index})
+            ref_prod_per_gen = ref_prod_per_gen.merge(self.prod_charac[["name", "type"]], how='left',
+                                                      on='name')
             ref_prod_per_gen = ref_prod_per_gen.groupby('type').sum()
             ref_prod_per_gen = ref_prod_per_gen.sort_index()
 
-        syn_prod_per_gen = self.syn_dispatch.sum(axis=0)
+        syn_prod_per_gen = self.syn_dispatch.drop("Time", axis=1).sum(axis=0)
         syn_prod_per_gen = pd.DataFrame({"Prod": syn_prod_per_gen.values, "name": syn_prod_per_gen.index})
         syn_prod_per_gen = syn_prod_per_gen.merge(self.prod_charac[["name", "type"]], how='left',
                                                   on='name')
@@ -1362,6 +1380,7 @@ class EconomicDispatchValidator:
 
         ## Plot results
         # By day
+<<<<<<< HEAD
         plt.ioff()  # to not launch windows with plot in os
         if self.kpi_on_syn_data_only:
             fig, axes = plt.subplots(1, 1, figsize=(17, 5))
@@ -1373,12 +1392,20 @@ class EconomicDispatchValidator:
             sns.barplot(conso_day.index, conso_day, ax=axes[1])
             axes[0].set_title('Reference - Normalized load per day of week', size=9)
             axes[1].set_title('Synthetic - Normalized load per day of week', size=9)
+=======
+        fig, axes = plt.subplots(1, 2, figsize=(17, 5))
+        sns.barplot(x=conso_day_ref.index, y=conso_day_ref, ax=axes[0])
+        sns.barplot(x=conso_day.index, y=conso_day, ax=axes[1])
+        axes[0].set_title('Reference - Normalized load per day of week', size=9)
+        axes[1].set_title('Synthetic - Normalized load per day of week', size=9)
+>>>>>>> master
 
         if save_plots:
             fig.savefig(os.path.join(self.image_repo,'load_kpi','load_by_day_of_week.png'))
 
         # By week of year
         every_nth = 3
+<<<<<<< HEAD
         if self.kpi_on_syn_data_only:
             fig, axes = plt.subplots(1, 1, figsize=(17, 5))
             sns.barplot(conso_week.index, conso_week)
@@ -1401,6 +1428,20 @@ class EconomicDispatchValidator:
             for n, label in enumerate(axes[1].xaxis.get_ticklabels()):
                 if n % every_nth != 0:
                     label.set_visible(False)
+=======
+
+        fig, axes = plt.subplots(1, 2, figsize=(17, 5))
+        sns.barplot(x=conso_week_ref.index, y=conso_week_ref, ax=axes[0])
+        sns.barplot(x=conso_week.index, y=conso_week, ax=axes[1])
+        axes[0].set_title('Normalized load per week of year', size=9)
+        for n, label in enumerate(axes[0].xaxis.get_ticklabels()):
+            if n % every_nth != 0:
+                label.set_visible(False)
+        axes[1].set_title('Normalized load per week of year', size=9)
+        for n, label in enumerate(axes[1].xaxis.get_ticklabels()):
+            if n % every_nth != 0:
+                label.set_visible(False)
+>>>>>>> master
         if save_plots:
             fig.savefig(os.path.join(self.image_repo, 'load_kpi', 'load_by_week_of_year.png'))
 

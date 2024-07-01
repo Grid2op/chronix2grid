@@ -190,7 +190,12 @@ def eco2mix_to_kpi_regional(kpi_input_folder, timestep, prods_charac, loads_char
         # Time formatting
         df['Space'] = ' '
         df['Time'] = df['Date']+df['Space']+df['Heures']
-        df['Time'] = pd.to_datetime(df['Time'], infer_datetime_format=True)
+        try:
+            # try the default format
+            df["Time"] = pd.to_datetime(df["Time"], format="%d/%m/%Y %H:%M")
+        except ValueError:
+            # otherwise try to infer it
+            df['Time'] = pd.to_datetime(df['Time'], infer_datetime_format=True)
         df.set_index('Time', drop=False, inplace=True)
 
         # Production formatting
@@ -304,7 +309,12 @@ def renewableninja_to_kpi(kpi_input_folder, timestep, loads_charac,
         # Time formatting
         df['Space'] = ' '
         df['Time'] = df['Date'] + df['Space'] + df['Heures']
-        df['Time'] = pd.to_datetime(df['Time'], infer_datetime_format=True)
+        try:
+            # try the default format
+            df["Time"] = pd.to_datetime(df["Time"], format="%d/%m/%Y %H:%M")
+        except ValueError:
+            # otherwise try to infer it
+            df['Time'] = pd.to_datetime(df['Time'], infer_datetime_format=True)
         df.set_index('Time', drop=False, inplace=True)
 
         # Correct some strange values in eco2mix data
