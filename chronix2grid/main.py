@@ -111,7 +111,7 @@ def generate_mp_core(prng, case, start_date, weeks, by_n_weeks, n_scenarios, mod
 
     print('initial_seeds')
     print(initial_seeds)
-    if mode!='K':#if data is generated
+    if mode!='K':#if data is being generated, so if we are not only computing KPIs on existing generated data
         dump_seeds(generation_output_folder, initial_seeds, scenario_name)
 
     if n_scenarios >= 2:
@@ -131,16 +131,15 @@ def generate_mp_core(prng, case, start_date, weeks, by_n_weeks, n_scenarios, mod
             seeds_for_loads, seeds_for_res, seeds_for_disp, ignore_warnings,i)
     else:
     # multi-processing
-        pool = multiprocessing.Pool(nb_core)
-        iterable = [i for i in range(n_scenarios)]
-        multiprocessing_func = partial(
-            generate_per_scenario,
-            case, start_date, weeks, by_n_weeks, mode, input_folder,
-            kpi_output_folder, generation_output_folder, scen_names,
-            seeds_for_loads, seeds_for_res, seeds_for_disp, ignore_warnings)
+        with multiprocessing.Pool(nb_core) as pool:
+            iterable = [i for i in range(n_scenarios)]
+            multiprocessing_func = partial(
+                generate_per_scenario,
+                case, start_date, weeks, by_n_weeks, mode, input_folder,
+                kpi_output_folder, generation_output_folder, scen_names,
+                seeds_for_loads, seeds_for_res, seeds_for_disp, ignore_warnings)
 
-        pool.map(multiprocessing_func, iterable)
-        pool.close()
+            pool.map(multiprocessing_func, iterable)
         print('multiprocessing done')
         print('Time taken = {} seconds'.format(time.time() - start_time))
         print('removing temporary folders if exist:')
