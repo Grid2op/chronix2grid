@@ -349,18 +349,18 @@ def chronics_to_kpi(chronics_repo, timestep, params, thermal = True):
 
     has_price=False
     price=None
+    load_p = pd.read_csv(os.path.join(chronics_repo, 'load_p.csv.bz2'),
+                         sep=';', decimal='.')
     if thermal:
         ## Format when all dispatch is generated
 
         # Read generated chronics after dispatch phase
         prod_p = pd.read_csv(os.path.join(chronics_repo, 'prod_p.csv.bz2'),
                              sep=';', decimal='.')
-        load_p = pd.read_csv(os.path.join(chronics_repo, 'load_p.csv.bz2'),
-                             sep=';', decimal='.')
 
         path_file_prices=os.path.join(chronics_repo, 'prices.csv.bz2')
         if(os.path.exists(path_file_prices)):
-            price = pd.read_csv(os.path.join(chronics_repo, 'prices.csv.bz2'),
+            price = pd.read_csv(path_file_prices,
                                 sep=';', decimal='.')
             has_price=True
 
@@ -369,8 +369,6 @@ def chronics_to_kpi(chronics_repo, timestep, params, thermal = True):
         solar_p = pd.read_csv(os.path.join(chronics_repo, 'solar_p.csv.bz2'), sep=';', decimal='.')
         wind_p = pd.read_csv(os.path.join(chronics_repo, 'wind_p.csv.bz2'), sep=';', decimal='.')
         prod_p = pd.concat([solar_p, wind_p], axis=1)
-
-        load_p = pd.read_csv(os.path.join(chronics_repo, 'load_p.csv.bz2'), sep=';', decimal='.')
 
     # Rebuild timeline
     datetime_index = pd.date_range(
