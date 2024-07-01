@@ -160,7 +160,7 @@ class EconomicDispatchValidator:
         #plt.ioff()  # to not launch windows with plot in os
         if self.kpi_on_syn_data_only:
             fig, axes = plt.subplots(1, 1, figsize=(17, 5))
-            sns.barplot(df_syn.index, df_syn)
+            sns.barplot(x=df_syn.index, y=df_syn)
             axes.set_title('Synthetic '+title_component, size = 9)
             if every_nth is not None:
                 for n, label in enumerate(axes.xaxis.get_ticklabels()):
@@ -169,8 +169,8 @@ class EconomicDispatchValidator:
 
         else:
             fig, axes = plt.subplots(1, 2, figsize=(17, 5))
-            sns.barplot(df_ref.index, df_ref, ax=axes[0])
-            sns.barplot(df_syn.index, df_syn, ax=axes[1])
+            sns.barplot(x=df_ref.index, y=df_ref, ax=axes[0])
+            sns.barplot(x=df_syn.index, y=df_syn, ax=axes[1])
             axes[0].set_title('Reference '+title_component, size = 9)
             axes[1].set_title('Synthetic '+title_component, size = 9)
 
@@ -1365,12 +1365,12 @@ class EconomicDispatchValidator:
         #plt.ioff()  # to not launch windows with plot in os
         if self.kpi_on_syn_data_only:
             fig, axes = plt.subplots(1, 1, figsize=(17, 5))
-            sns.barplot(conso_day.index, conso_day)
+            sns.barplot(x=conso_day.index, y=conso_day)
             axes.set_title('Synthetic - Normalized load per day of week', size=9)
         else:
             fig, axes = plt.subplots(1, 2, figsize=(17, 5))
-            sns.barplot(conso_day_ref.index, conso_day_ref, ax=axes[0])
-            sns.barplot(conso_day.index, conso_day, ax=axes[1])
+            sns.barplot(x=conso_day_ref.index, y=conso_day_ref, ax=axes[0])
+            sns.barplot(x=conso_day.index, y=conso_day, ax=axes[1])
             axes[0].set_title('Reference - Normalized load per day of week', size=9)
             axes[1].set_title('Synthetic - Normalized load per day of week', size=9)
 
@@ -1381,7 +1381,7 @@ class EconomicDispatchValidator:
         every_nth = 3
         if self.kpi_on_syn_data_only:
             fig, axes = plt.subplots(1, 1, figsize=(17, 5))
-            sns.barplot(conso_week.index, conso_week)
+            sns.barplot(x=conso_week.index, y=conso_week)
             for n, label in enumerate(axes.xaxis.get_ticklabels()):
                 if n % every_nth != 0:
                     label.set_visible(False)
