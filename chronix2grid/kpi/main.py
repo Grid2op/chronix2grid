@@ -268,7 +268,7 @@ def list_dirs_with_chronics(generation_output_folder):
 def update_time_params_scenario(scenario_generation_output_folder,params):
     for_start_date = GridStateFromFile(scenario_generation_output_folder)
     for_start_date._init_date_time()
-    start_datetime, time_interval = for_start_date.start_datetime, for_start_date.time_interva
+    start_datetime, time_interval = for_start_date.start_datetime, for_start_date.time_interval
     
     #start_datetime, time_interval = init_date_time(scenario_generation_output_folder,params['start_date'],params['dt'])
     params['end_date'] += start_datetime - params['start_date']
