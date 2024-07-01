@@ -163,7 +163,7 @@ class EconomicDispatchValidator:
             sns.barplot(df_syn.index, df_syn)
             axes.set_title('Synthetic '+title_component, size = 9)
             if every_nth is not None:
-                for n, label in enumerate(axes[i].xaxis.get_ticklabels()):
+                for n, label in enumerate(axes.xaxis.get_ticklabels()):
                     if n % every_nth != 0:
                         label.set_visible(False)
 
