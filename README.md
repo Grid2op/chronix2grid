@@ -190,7 +190,7 @@ Some general parameters have to be set in *INPUT_FOLDER/kpi/paramsKPI.json*
 
 **Note**: if you just want to generate the KPIs from your synthetic data without comparison to reference chronics, you can set 
 ```json
-"comprison":null
+"comparison":null
 ```
 ## Model interface
 
