@@ -62,18 +62,7 @@ def main(kpi_input_folder, generation_output_folder, scenario_names,
     # Format and compute KPI for each scenario
     chronic_dirs=list_dirs_with_chronics(generation_output_folder)
     for scenario_num in range(min(n_scenarios,len(chronic_dirs))):
-        #if n_scenarios > 1:
-        #    scenario_name = scenario_names(scenario_num)
-        #else:
-        #    scenario_name = scenario_names(scenario_id)
 
-        #################
-        # here go for some existing scenarios if that is the case
-
-
-        #scenario_generation_output_folder = os.path.join(
-        #    generation_output_folder, scenario_name
-        #)
 
         if n_scenarios > 1:
             scenario_generation_output_folder = chronic_dirs[scenario_num]
@@ -112,27 +101,10 @@ def main(kpi_input_folder, generation_output_folder, scenario_names,
             print('Warning: KPI are incomplete. Computation has been made on '+str(params['weeks'])+' weeks, but are meant to be computed on 52 weeks')
 
         # Read reference and synthetic chronics, but also KPI configuration, in pivot format. 2 modes: with or without full dispatch
-        #if wind_solar_only:
-        #    # Get reference and synthetic dispatch and loads
-        #    (ref_dispatch, ref_consumption, syn_dispatch, syn_consumption,
-        #     paramsKPI) = pivot_format(
-        #        scenario_generation_output_folder, kpi_input_folder, year,
-        #        prods_charac, loads_charac,
-        #        params, case,wind_solar_only,kpi_on_syn_data_only)
-        #    ref_prices = None
-        #    prices = None
-        #
         ref_dispatch, ref_load, syn_dispatch, syn_load,ref_prices, prices, paramsKPI,kpi_on_syn_data_only=ref_syn_data(scenario_generation_output_folder,
                                                                                           kpi_input_folder, year,
                                                                                           prods_charac, loads_charac, params, case,
                                                                                           wind_solar_only)
-        #else:
-        #    # Get reference and synthetic dispatch and loads
-        #    (ref_dispatch, ref_consumption, syn_dispatch, syn_consumption,
-        #     ref_prices, prices, paramsKPI) = pivot_format(
-        #        scenario_generation_output_folder, kpi_input_folder, year,
-        #        prods_charac, loads_charac,
-        #        params, case,wind_solar_only,kpi_on_syn_data_only)
 
         ## Start and Run Economic dispatch validator
         # -- + -- + -- + -- + -- + -- + --
