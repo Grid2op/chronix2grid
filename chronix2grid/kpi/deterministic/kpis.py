@@ -209,7 +209,7 @@ class EconomicDispatchValidator:
         labels = syn_prod_per_gen.index.unique()
 
         # Distribution of prod
-        plt.ioff()  # to not launch windows with plot in os
+        #plt.ioff()  # to not launch windows with plot in os
         if self.kpi_on_syn_data_only:
             fig, axes = plt.subplots(1, 1, figsize=(17, 5))
             axes.pie(syn_prod_per_gen["Prod"], labels=labels, autopct='%1.1f%%')
@@ -640,7 +640,7 @@ class EconomicDispatchValidator:
 
         # Plot results
         # Correlation heatmaps
-        plt.ioff()  # to not launch windows with plot in os
+        #plt.ioff()  # to not launch windows with plot in os
         if self.kpi_on_syn_data_only:
             fig, axes = plt.subplots(1, 1, figsize=(17,5))
             sns.heatmap(syn_corr_wind, annot = True, linewidths=.5)
@@ -889,7 +889,7 @@ class EconomicDispatchValidator:
         # -- + -- +
 
         # Distribution of prod
-        plt.ioff()  # to not launch windows with plot in os
+        #plt.ioff()  # to not launch windows with plot in os
         if self.kpi_on_syn_data_only:
             fig, axes = plt.subplots(1, 1, figsize=(17, 5))
             sns.distplot(agg_syn_solar)
@@ -1054,7 +1054,7 @@ class EconomicDispatchValidator:
 
         # Plot results
         # Correlation heatmaps
-        plt.ioff()  # to not launch windows with plot in os
+        #plt.ioff()  # to not launch windows with plot in os
         for i, region in enumerate(self.regions):
             if self.kpi_on_syn_data_only:
                 fig, axes = plt.subplots(1, 1, figsize=(18, 8))
@@ -1094,7 +1094,7 @@ class EconomicDispatchValidator:
 
 
         # Distribution of prod
-        plt.ioff()  # to not launch windows with plot in os
+        #plt.ioff()  # to not launch windows with plot in os
         if self.kpi_on_syn_data_only:
             fig, axes = plt.subplots(1, 1, figsize=(17, 5))
             axes.hist(agg_nuclear_syn, bins=100, alpha=1)
@@ -1304,7 +1304,7 @@ class EconomicDispatchValidator:
 
         # Plot results
         # Correlation heatmaps
-        plt.ioff()  # to not launch windows with plot in os
+        #plt.ioff()  # to not launch windows with plot in os
         for i, region in enumerate(self.regions):
             if self.kpi_on_syn_data_only:
                 fig, axes = plt.subplots(1, 1, figsize=(18, 8))
