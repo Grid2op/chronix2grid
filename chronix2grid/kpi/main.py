@@ -212,65 +212,13 @@ def list_dirs_with_chronics(generation_output_folder):
 
     return chronic_dirs
 
-#def init_date_time(scenario_folder,start_datetime_ref,time_interval_ref):
-#
-#    """
-#    Get start_date and time resolution for a given generated scenario
-#
-#    Parameters
-#    ----------
-#    scenario_folder: ``str``
-#        path to folder which contains generated scenario
-#    start_datetime_ref: :class:`Timestamps`
-#        user input reference start date of scenario if not in info file
-#    time_interval_ref: :class:`int`
-#        user input reference time resolution in minutes if not in info file
-#
-#    Returns
-#    -------
-#    start_datetime: :class:`Timestamps`
-#        start date of scenario
-#    time_interval: :class:`int`
-#        time resolution in minutes
-#    """
-#    start_datetime=start_datetime_ref
-#    time_interval=time_interval_ref
-#
-#    if os.path.exists(os.path.join(scenario_folder, "start_datetime.info")):
-#        with open(os.path.join(scenario_folder, "start_datetime.info"), "r") as f:
-#            a = f.read().rstrip().lstrip()
-#        try:
-#            tmp=pd.to_datetime(a, format='%Y-%m-%d')
-#        except Exception:
-#            raise Exception(
-#                'Impossible to understand the content of "start_datetime.info". Make sure '
-#                'it\'s composed of only one line with a datetime in the "%Y-%m-%d %H:%M"'
-#                "format."
-#            )
-#        start_datetime = tmp
-#
-#    if os.path.exists(os.path.join(scenario_folder, "time_interval.info")):
-#        with open(os.path.join(scenario_folder, "time_interval.info"), "r") as f:
-#            a = f.read().rstrip().lstrip()
-#        try:
-#            tmp = datetime.strptime(a, "%H:%M")
-#        except ValueError:
-#            tmp = datetime.strptime(a, "%M")
-#        except Exception:
-#            raise Exception(
-#                'Impossible to understand the content of "time_interval.info". Make sure '
-#                'it\'s composed of only one line with a datetime in the "%H:%M"'
-#                "format."
-#            )
-#        time_interval = timedelta(hours=tmp.hour, minutes=tmp.minute).total_seconds()/60
-#    return start_datetime,time_interval
-
 def update_time_params_scenario(scenario_generation_output_folder,params):
-    for_start_date = GridStateFromFile(scenario_generation_output_folder)
+    for_start_date = GridStateFromFile(scenario_generation_output_folder,start_datetime=params['start_date'],time_interval=timedelta(minutes=params['dt']))
     for_start_date._init_date_time()
     start_datetime, time_interval = for_start_date.start_datetime, for_start_date.time_interval
-    
-    #start_datetime, time_interval = init_date_time(scenario_generation_output_folder,params['start_date'],params['dt'])
+
+    time_interval = time_interval.total_seconds() / 60
+
     params['end_date'] += start_datetime - params['start_date']
     params['start_date'] = start_datetime
     params['dt'] = time_interval
