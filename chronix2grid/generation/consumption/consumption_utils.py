@@ -156,7 +156,10 @@ def compute_load_pattern(params,
                          isoweekday_lwp=None,
                          hour_minutes_lwp=None,
                          load_name=None,
-                         weekly_pattern_datetimes=None):
+                         weekly_pattern_datetimes=None,
+                         use_cache=True,  # TODO propagate to function calling this one
+                         fill_na=True,  # TODO propagate to function calling this one
+                         ):
     """
     Loads a typical hourly pattern, and interpolates it to generate
     a smooth solar generation pattern between 0 and 1
@@ -187,8 +190,21 @@ def compute_load_pattern(params,
             pattern_path = weekly_pattern / f"{load_name}.csv.gz"
             if not pattern_path.exists():
                 raise RuntimeError(f"Unable to locate the weekly pattern for load {load_name} at {weekly_pattern}")
-        tmp_weekly_pattern = pd.read_csv(pattern_path, sep=";")
-        used_weekly_pattern = 1. * tmp_weekly_pattern["values"].values
+        if not use_cache:
+            tmp_weekly_pattern = pd.read_csv(pattern_path, sep=";")
+            if tmp_weekly_pattern.isna().any().any():
+                print(f"WARNING: NA detected for load pattern {pattern_path}")
+        else:
+            if pattern_path in __CACHED__DATA:
+                tmp_weekly_pattern = __CACHED__DATA[pattern_path]
+                print(f"Using cached data for {pattern_path}")
+            else:
+                tmp_weekly_pattern = pd.read_csv(pattern_path, sep=";")
+                if tmp_weekly_pattern.isna().any().any():
+                    print(f"WARNING: NA detected for load pattern {pattern_path}")
+                print(f"Loading cached data for {pattern_path}")
+                __CACHED__DATA[pattern_path] = tmp_weekly_pattern
+        used_weekly_pattern = tmp_weekly_pattern["values"].values
         if isoweekday_lwp is None or hour_minutes_lwp is None:
             raise RuntimeError(f"When provided a different pattern for each loads, you should also provide "
                                f"the isoweekday to simulate and also the hours / minute")
@@ -231,7 +247,21 @@ def compute_load_pattern(params,
     # now extract right week of data
     last_index = first_index + index_weekly_perweek
     used_weekly_pattern = 1.0 * used_weekly_pattern[first_index:last_index]
-    used_weekly_pattern /= np.mean(used_weekly_pattern)
+    not_finite = ~np.isfinite(used_weekly_pattern)
+    if not_finite.any():
+        print(f"WARNING: NA detected for load pattern for load index {index} (name {load_name})")
+        if fill_na:
+            if not not_finite.all():
+                used_weekly_pattern[not_finite] = np.nanmean(used_weekly_pattern)
+            else:
+                print(f"WARNING: pattern full of nan for for load index {index} (name {load_name}), replaced by 1.")
+                used_weekly_pattern[:] = 1.
+    avg_ = np.mean(used_weekly_pattern)
+    if np.abs(avg_) > 1e-5:
+        used_weekly_pattern /= avg_
+    else:
+        print(f"WARNING: for load index {index} (name {load_name}): average value too small, pattern replaced by all one")
+        used_weekly_pattern[:] = 1.
 
     # now generate an ouput of the right length
     if isoweekday_lwp is None or hour_minutes_lwp is None:
