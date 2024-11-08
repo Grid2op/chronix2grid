@@ -197,12 +197,10 @@ def compute_load_pattern(params,
         else:
             if pattern_path in __CACHED__DATA:
                 tmp_weekly_pattern = __CACHED__DATA[pattern_path]
-                print(f"Using cached data for {pattern_path}")
             else:
                 tmp_weekly_pattern = pd.read_csv(pattern_path, sep=";")
                 if tmp_weekly_pattern.isna().any().any():
                     print(f"WARNING: NA detected for load pattern {pattern_path}")
-                print(f"Loading cached data for {pattern_path}")
                 __CACHED__DATA[pattern_path] = tmp_weekly_pattern
         used_weekly_pattern = tmp_weekly_pattern["values"].values
         if isoweekday_lwp is None or hour_minutes_lwp is None:

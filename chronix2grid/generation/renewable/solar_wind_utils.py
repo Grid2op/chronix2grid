@@ -126,7 +126,7 @@ def compute_solar_pattern(params, solar_pattern, tol=0.0):
     end_min = int(pd.Timedelta(params['end_date'] - start_year).total_seconds() // 60)
 
     Nt_inter_hr = int(end_min // 60 + 1)
-    N_repet = int((Nt_inter_hr - 1) // len(solar_pattern) + 1)
+    N_repet = int((Nt_inter_hr) // len(solar_pattern) + 1) # thanks DEUCE1957, see issue https://github.com/Grid2op/chronix2grid/issues/83
     stacked_solar_pattern = solar_pattern
     for i in range(N_repet - 1):
         stacked_solar_pattern = np.append(stacked_solar_pattern, solar_pattern)
