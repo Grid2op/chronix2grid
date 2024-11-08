@@ -126,7 +126,7 @@ def compute_solar_pattern(params, solar_pattern, tol=0.0):
     end_min = int(pd.Timedelta(params['end_date'] - start_year).total_seconds() // 60)
 
     Nt_inter_hr = int(end_min // 60 + 1)
-    N_repet = int((Nt_inter_hr - 1) // len(solar_pattern) + 1)
+    N_repet = int((Nt_inter_hr) // len(solar_pattern) + 1) # thanks DEUCE1957, see issue https://github.com/Grid2op/chronix2grid/issues/83
     stacked_solar_pattern = solar_pattern
     for i in range(N_repet - 1):
         stacked_solar_pattern = np.append(stacked_solar_pattern, solar_pattern)
@@ -242,10 +242,16 @@ def create_csv(prng, dict_, path, reordering=True, noise=None, shift=False,
     df = df.head(len(df ) -1)
     if reordering:
         value = []
-        for name in list(df):
-            value.append(utils.natural_keys(name))
-        new_ordering = [x for _ ,x in sorted(zip(value ,list(df)))]
-        df = df[new_ordering]
+        grid2op_default_name = True
+        try:
+            for name in list(df):
+                value.append(utils.natural_keys(name))
+        except IndexError:
+            grid2op_default_name = False
+            # cannot reorder in this case
+        if grid2op_default_name:
+            new_ordering = [x for _ ,x in sorted(zip(value ,list(df)))]
+            df = df[new_ordering]
     if noise is not None:
         df *= ( 1 +noise * prng.normal(0, 1, df.shape))
         #df *= (1 + noise * np.random.normal(0, 1, df.shape)) #older version - to be removed
