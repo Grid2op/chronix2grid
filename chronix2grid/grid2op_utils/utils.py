@@ -422,8 +422,8 @@ def _adjust_gens(all_loss_orig,
                 opponent_budget_class=NeverAttackBudget,
                 opponent_action_class=DontAct,
                 )
-        diff_ = np.full((env_fixed.max_episode_duration(), env_fixed.n_gen), fill_value=np.NaN)
-        all_loss[:] = np.NaN
+        diff_ = np.full((env_fixed.max_episode_duration(), env_fixed.n_gen), fill_value=np.nan)
+        all_loss[:] = np.nan
         
         i = 0
         obs = env_fixed.reset()
@@ -518,10 +518,10 @@ def _fix_losses_one_scenario(env_for_loss,
     _type_
         _description_
     """
-    gen_p_orig = np.full((env_for_loss.max_episode_duration(), env_for_loss.n_gen), fill_value=np.NaN, dtype=np.float32)
-    final_gen_v = np.full((env_for_loss.max_episode_duration(), env_for_loss.n_gen), fill_value=np.NaN, dtype=np.float32)
-    final_load_p = np.full((env_for_loss.max_episode_duration(), env_for_loss.n_load), fill_value=np.NaN, dtype=np.float32)
-    final_load_q = np.full((env_for_loss.max_episode_duration(), env_for_loss.n_load), fill_value=np.NaN, dtype=np.float32)
+    gen_p_orig = np.full((env_for_loss.max_episode_duration(), env_for_loss.n_gen), fill_value=np.nan, dtype=np.float32)
+    final_gen_v = np.full((env_for_loss.max_episode_duration(), env_for_loss.n_gen), fill_value=np.nan, dtype=np.float32)
+    final_load_p = np.full((env_for_loss.max_episode_duration(), env_for_loss.n_load), fill_value=np.nan, dtype=np.float32)
+    final_load_q = np.full((env_for_loss.max_episode_duration(), env_for_loss.n_load), fill_value=np.nan, dtype=np.float32)
     all_loss_orig = np.zeros(env_for_loss.max_episode_duration())
     max_diff_orig = np.zeros(env_for_loss.max_episode_duration())
     datetimes = np.zeros(env_for_loss.max_episode_duration(), dtype=datetime)
@@ -1026,7 +1026,7 @@ def generate_a_scenario(path_env,
     for el in name_gen:
         if el in final_gen_p:
             continue
-        final_gen_p[str(el)] = np.NaN
+        final_gen_p[str(el)] = np.nan
     final_gen_p = final_gen_p[name_gen]
     
     with open(os.path.join(path_env, "params_opf.json"), "r") as f:
