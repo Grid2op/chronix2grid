@@ -74,16 +74,15 @@ def main_run_disptach(pypsa_net,
     slack_pmin = None
     slack_pmax = None
     if 'slack_name' in params:
+        slack_name = str(params["slack_name"])
         if 'slack_pmin' in params:
             # user specified a pmin for the slack bus
-            slack_name = str(params["slack_name"])
             slack_pmin = float(params["slack_pmin"]) / float(pypsa_net.generators.loc[slack_name].p_nom)
 
         if 'slack_pmax' in params:
             # user specified a pmin for the slack bus
-            slack_name = str(params["slack_name"])
             slack_pmax = float(params["slack_pmax"]) / float(pypsa_net.generators.loc[slack_name].p_nom)
-        
+            
     error_ = False
     start = time.time()
     results, termination_conditions = [], []

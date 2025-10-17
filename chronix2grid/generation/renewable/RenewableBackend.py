@@ -72,12 +72,13 @@ class RenewableBackend:
 
         # legacy mode: load the single .npy pattern as base_solar_pattern
         if not use_zonal:
-            base_solar_pattern = self.res_config_manager.read_specific()
-
+            if solar_pattern is not None:
+                base_solar_pattern = solar_pattern
+            else:
+                base_solar_pattern = self.res_config_manager.read_specific()
         else:
             # zonal mode: no .npy needed; main() will use per-zone patterns
             base_solar_pattern = None
-
 
 
         return main(
