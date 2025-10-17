@@ -48,7 +48,7 @@ def get_gen_ids_hydro(env):
             if env.gen_type[i] == "hydro":
                 ids_hyrdo.append(gen_id)
             gen_id += 1
-    ids_hyrdo = np.array(ids_hyrdo)
+    ids_hyrdo = np.array(ids_hyrdo, dtype=int)
     return ids_hyrdo
     
 
@@ -309,7 +309,7 @@ def generate_new_gen_forecasts(prng,
         
     res_gen_p_forecasted = res_gen_p_forecasted.reshape(nb_gen, (nb_t - 1) * nb_h)
     res_gen_p_forecasted = np.transpose(res_gen_p_forecasted, (1, 0))
-    res_gen_p_forecasted_df = pd.DataFrame(res_gen_p_forecasted, columns=gens_charac["name"])
+    res_gen_p_forecasted_df = pd.DataFrame(res_gen_p_forecasted, columns=gens_charac["name"]).astype(float)
     return res_gen_p_forecasted_df, nb_h
 
 

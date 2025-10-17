@@ -1,0 +1,8 @@
+{
+    "with_loss": true,
+    "files_to_copy": ["params_load.json",
+                      "params_forecasts.json"],
+    "save_ref_curve": false,
+    "day_lag": 0,
+    "debug": false
+}

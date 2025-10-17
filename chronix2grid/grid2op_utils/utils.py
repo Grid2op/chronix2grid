@@ -125,7 +125,7 @@ def generate_renewable_energy_sources(path_env, renew_seed, start_date_dt, end_d
     renew_backend = RenewableBackend(out_path=None,
                                      seed=renew_seed,
                                      params=renew_params,
-                                     loads_charac=gens_charac,
+                                     prods_charac=gens_charac,
                                      res_config_manager=None,
                                      write_results=False)
     tmp_ = renew_backend.run(solar_pattern=solar_pattern,
@@ -191,10 +191,16 @@ def generate_economic_dispatch(path_env, start_date_dt, end_date_dt, dt, number_
     gens_charac_this["cost_per_mw"] = gens_charac_this["marginal_cost"]
     economic_dispatch = PypsaDispatcher.from_dataframe(gens_charac_this)
     
+    # debug
+    ratio = 1.  # put ratio = 1.
+    this_load = ratio * load_p
+    this_total_solar = ratio * total_solar
+    this_total_wind = ratio * total_wind
+    
     # need to hack it to work...
     n_gen = len(name_gen)
     gen_p_orig = np.zeros((prod_solar.shape[0], n_gen))
-    economic_dispatch._chronix_scenario = ChroniXScenario(loads=1.0 * load_p,
+    economic_dispatch._chronix_scenario = ChroniXScenario(loads=this_load,
                                                           prods=pd.DataFrame(1.0 * gen_p_orig, columns=name_gen),
                                                           scenario_name=scenario_id,
                                                           res_names={"wind": name_gen[gen_type == "wind"],
@@ -203,9 +209,9 @@ def generate_economic_dispatch(path_env, start_date_dt, end_date_dt, dt, number_
                                                          )
     economic_dispatch.read_hydro_guide_curves(os.path.join(ref_pattern_path, 'hydro_french.csv'))
     hydro_constraints = economic_dispatch.make_hydro_constraints_from_res_load_scenario()
-    res_dispatch = economic_dispatch.run(load * (1.0 + 0.01 * float(opf_params["losses_pct"])),
-                                         total_solar,
-                                         total_wind,
+    res_dispatch = economic_dispatch.run(this_load * (1.0 + 0.01 * float(opf_params["losses_pct"])),
+                                         this_total_solar,
+                                         this_total_wind,
                                          opf_params,
                                          gen_constraints=hydro_constraints,
                                          pyomo=False,
@@ -213,7 +219,7 @@ def generate_economic_dispatch(path_env, start_date_dt, end_date_dt, dt, number_
     
     if res_dispatch is None:     
         error_ = RuntimeError("Pypsa failed to find a solution")
-        return None, None, None, error_
+        return None, None, None, None, error_
     
     # now assign the results
     final_gen_p = 1.0 * final_gen_p  # copy the data frame to avoid modify the original one
@@ -704,7 +710,7 @@ def handle_losses(path_env,
         
     env_param = Parameters()
     env_param.NO_OVERFLOW_DISCONNECTION = True
-    gen_v = np.tile(np.array([float(gens_charac.loc[gens_charac["name"] == nm_gen].V) for nm_gen in name_gen ]),
+    gen_v = np.tile(np.array([float(gens_charac.loc[gens_charac["name"] == nm_gen].V.iloc[0]) for nm_gen in name_gen ]),
                     load_p.shape[0]).reshape(-1, n_gen)
     
     env_for_loss = make_env_for_loss(path_env, env_param, load_p, load_q,

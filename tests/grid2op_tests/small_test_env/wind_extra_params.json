@@ -1,0 +1,5 @@
+{
+	"proba_daily_outage_per_wind_mill": 0.02747253,
+	"nb_wind_turbine": {"gen_5_2": 40},
+	"p_geom_failure": 0.1
+}
