@@ -41,7 +41,7 @@ jobs:
       - run:
           name: Run basic tests
           # This assumes pytest is installed via the install-package step above
-          command: pytest tests --ignore tests/unit_tests
+          command: pytest tests --ignore tests/integration_tests --ignore tests/grid2op_tests
       - run:
           name: Run integration tests
           # This assumes pytest is installed via the install-package step above
