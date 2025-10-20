@@ -250,7 +250,7 @@ def preprocess_net(net, every_min, input_data_resolution=5):
     try:
         # recent version of pypsa
         net.remove('Load', name=net.loads.index)  
-    except AttributeError:
+    except (AttributeError, TypeError):
         # legacy pypsa version
         net.mremove('Load', names=net.loads.index) 
     net.add('Load', name='agg_load', bus=net.buses.index.tolist()[0])

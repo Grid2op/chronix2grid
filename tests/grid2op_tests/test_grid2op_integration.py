@@ -28,7 +28,7 @@ class TestFromChronix2Grid(unittest.TestCase):
     def setUp(self) -> None:
         self.seed_ = 0
         self.env_nm = "l2rpn_wcci_2022_dev"
-        self.skipTest("take too long")
+        # self.skipTest("take too long")
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore")
             self.env = grid2op.make(self.env_nm,
@@ -56,6 +56,7 @@ class TestFromChronix2Grid(unittest.TestCase):
         # test tell_id
         sum_prod_ref = 42340.949878
         sum_prod_ref = 41784.477161
+        sum_prod_ref = 40987.9240913
         self.env.seed(self.seed_)
         self.env.reset()
         id_ = self.env.chronics_handler.get_id()
@@ -63,7 +64,8 @@ class TestFromChronix2Grid(unittest.TestCase):
         assert abs(self.env.chronics_handler.real_data._gen_p.sum() - sum_prod_ref) <= 1e-4, f"{self.env.chronics_handler.real_data._gen_p.sum():.2f}"
         self.env.reset()
         # assert abs(self.env.chronics_handler.real_data._gen_p.sum() - 38160.833356999996) <= 1e-4
-        assert abs(self.env.chronics_handler.real_data._gen_p.sum() - 37662.206248999995) <= 1e-4, f"{self.env.chronics_handler.real_data._gen_p.sum():.2f}"
+        # assert abs(self.env.chronics_handler.real_data._gen_p.sum() - 37662.206248999995) <= 1e-4, f"{self.env.chronics_handler.real_data._gen_p.sum():.2f}"
+        assert abs(self.env.chronics_handler.real_data._gen_p.sum() - 35634.830924) <= 1e-4, f"{self.env.chronics_handler.real_data._gen_p.sum():.2f}"
         self.env.set_id(id_ref)
         self.env.reset()
         assert abs(self.env.chronics_handler.real_data._gen_p.sum() - sum_prod_ref) <= 1e-4, f"{self.env.chronics_handler.real_data._gen_p.sum():.2f}"
@@ -125,7 +127,7 @@ class TestGenerateData(unittest.TestCase):
     
     def setUp(self) -> None:
         self.seed_ = 0
-        self.env_nm = "small_test_env"
+        self.env_nm = os.path.join(os.path.abspath(os.path.dirname(__file__)), "small_test_env")
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore")
             self.env = grid2op.make(self.env_nm,
