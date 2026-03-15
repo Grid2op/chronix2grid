@@ -247,7 +247,7 @@ def preprocess_net(net, every_min, input_data_resolution=5):
     """      
     # Remove all loads modelled in PyPSA
     # and create one single agg_load.
-    net.mremove('Load', names=net.loads.index)  
+    net.remove('Load', name=net.loads.index)  
     net.add('Load', name='agg_load', bus=net.buses.index.tolist()[0])
     # Adapt ramps according to the skipping time
     # configured to run the OPF. 
